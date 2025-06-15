@@ -13,20 +13,16 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-  const [dbReady, setDbReady] = useState(false);
+  });  const [dbReady, setDbReady] = useState(false);
 
   // Initialize database
   useEffect(() => {
     const setupDatabase = async () => {
       try {
-        console.log('🔄 Inicializando base de datos...');
         await initializeDatabase();
-        console.log('🎉 ¡Base de datos lista para usar!');
         setDbReady(true);
       } catch (error) {
-        console.error('💥 Error al inicializar la base de datos:', error);
-        // Continuar sin BD por ahora
+        console.error('Error al inicializar la base de datos:', error);
         setDbReady(true);
       }
     };

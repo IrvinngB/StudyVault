@@ -24,16 +24,16 @@ export async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
     // Open database connection
     db = await SQLite.openDatabaseAsync(DATABASE_CONFIG.name);
     
-    console.log('✅ Database connection established');
-    
     // Run initial migration
     const { MigrationRunner } = await import('./migrations/migration.runner');
     const migrationRunner = new MigrationRunner();
     await migrationRunner.runMigrations();
     
+    console.log('✅ StudyVault iniciado correctamente - Base de datos lista');
+    
     return db;
   } catch (error) {
-    console.error('❌ Failed to initialize database:', error);
+    console.error('Failed to initialize database:', error);
     throw error;
   }
 }
@@ -55,7 +55,6 @@ export async function closeDatabase(): Promise<void> {
   if (db) {
     await db.closeAsync();
     db = null;
-    console.log('📦 Database connection closed');
   }
 }
 
@@ -83,8 +82,6 @@ export async function resetDatabase(): Promise<void> {
   if (!db) return;
 
   try {
-    console.log('🗑️ Resetting database...');
-    
     // Drop all tables
     await db.execAsync(`
       DROP TABLE IF EXISTS notes_fts;
@@ -102,10 +99,8 @@ export async function resetDatabase(): Promise<void> {
     const { MigrationRunner } = await import('./migrations/migration.runner');
     const migrationRunner = new MigrationRunner();
     await migrationRunner.runMigrations();
-    
-    console.log('✅ Database reset completed');
   } catch (error) {
-    console.error('❌ Database reset failed:', error);
+    console.error('Database reset failed:', error);
     throw error;
   }
 }

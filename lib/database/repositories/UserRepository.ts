@@ -9,19 +9,10 @@ import { BaseRepository, DatabaseError, NotFoundError } from './base.repository'
 export class UserRepository implements BaseRepository<User> {
   private get db(): SQLite.SQLiteDatabase {
     return getDatabase();
-  }
-  async create(userData: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User> {
+  }  async create(userData: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User> {
     try {
       const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const now = new Date().toISOString();
-
-      console.log('🔍 Creating user with data:', {
-        id,
-        name: userData.name,
-        email: userData.email,
-        avatar_url: userData.avatar_url,
-        preferences: userData.preferences
-      });
 
       await this.db.runAsync(
         `INSERT INTO users (
@@ -44,15 +35,12 @@ export class UserRepository implements BaseRepository<User> {
         ]
       );
 
-      console.log('✅ User inserted successfully, fetching...');
       const createdUser = await this.getById(id);
       if (!createdUser) {
         throw new Error('User was created but could not be retrieved');
       }
       return createdUser;
     } catch (error) {
-      console.error('❌ Failed to create user:', error);
-      console.error('Error details:', (error as Error).message);
       throw new DatabaseError('Failed to create user', error as Error);
     }
   }

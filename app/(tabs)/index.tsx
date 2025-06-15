@@ -1,4 +1,3 @@
-// app/(tabs)/index.tsx
 import {
   ThemedButton,
   ThemedCard,
@@ -6,16 +5,11 @@ import {
   ThemedView
 } from '@/components/ui/ThemedComponents';
 import { useTheme } from '@/hooks/useTheme';
-import { useDatabaseCleanTest } from '@/lib/hooks/useDatabaseCleanTest';
-import { useDatabaseTest } from '@/lib/hooks/useDatabaseTest';
 import React from 'react';
-import { ScrollView, Switch, Text } from 'react-native';
+import { ScrollView } from 'react-native';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
-  const [useCleanTest, setUseCleanTest] = React.useState(false);
-  const { isReady, stats, error } = useDatabaseTest();
-  const cleanTestStatus = useDatabaseCleanTest(useCleanTest);
 
   return (
     <ThemedView variant="background" style={{ flex: 1 }}>
@@ -36,163 +30,61 @@ export default function HomeScreen() {
           </ThemedText>
         </ThemedView>
         
-        {/* Database Status Card */}
+        {/* Status Card */}
         <ThemedCard style={{ marginBottom: theme.spacing.md }}>
           <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
-            🔧 Estado de la Base de Datos
+            ✅ Sistema Operativo
           </ThemedText>
           
-          {error ? (
-            <ThemedText color="error">
-              ❌ Error: {error}
-            </ThemedText>
-          ) : !isReady ? (
-            <ThemedText color="secondary">
-              🔄 Inicializando base de datos...
-            </ThemedText>
-          ) : (
-            <ThemedView>
-              <ThemedText color="success" style={{ marginBottom: theme.spacing.xs }}>
-                ✅ Base de datos lista
-              </ThemedText>
-                {stats && (
-                <ThemedView style={{ marginTop: theme.spacing.sm }}>
-                  <ThemedText variant="caption" color="secondary">
-                    📊 Estadísticas:
-                  </ThemedText>
-                  <Text style={{ 
-                    fontFamily: 'SpaceMono', 
-                    fontSize: 12, 
-                    color: '#666',
-                    marginTop: theme.spacing.xs 
-                  }}>
-                    {JSON.stringify(stats, null, 2)}
-                  </Text>
-                </ThemedView>
-              )}
-            </ThemedView>
-          )}
-        </ThemedCard>
-        
-        {/* Clean Migration Test Card */}
-        <ThemedCard style={{ marginBottom: theme.spacing.md }}>
-          <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
-            🧹 Prueba de Migración Limpia
+          <ThemedText color="success" style={{ marginBottom: theme.spacing.xs }}>
+            Base de datos inicializada correctamente
           </ThemedText>
-          
-          <ThemedView style={{ 
-            flexDirection: 'row', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: theme.spacing.sm 
-          }}>
-            <ThemedText>Estado: {cleanTestStatus.phase}</ThemedText>
-            <Switch 
-              value={useCleanTest} 
-              onValueChange={setUseCleanTest}
-              disabled={cleanTestStatus.phase !== 'init'} 
-            />
-          </ThemedView>
-          
-          {cleanTestStatus.error ? (
-            <ThemedText color="error">
-              ❌ Error: {cleanTestStatus.error}
-            </ThemedText>
-          ) : cleanTestStatus.isComplete ? (
-            <ThemedView>
-              <ThemedText color="success" style={{ marginBottom: theme.spacing.xs }}>
-                ✅ Prueba completada exitosamente
-              </ThemedText>
-              {cleanTestStatus.results && (
-                <ThemedView style={{ marginTop: theme.spacing.sm }}>
-                  <ThemedText variant="caption" color="secondary">
-                    📊 Resultados:
-                  </ThemedText>
-                  <Text style={{ 
-                    fontFamily: 'SpaceMono', 
-                    fontSize: 12, 
-                    color: '#666',
-                    marginTop: theme.spacing.xs 
-                  }}>
-                    {JSON.stringify({
-                      dbHealth: cleanTestStatus.results.dbHealth,
-                      userCount: cleanTestStatus.results.users?.length || 0,
-                      courseCount: cleanTestStatus.results.courses?.length || 0
-                    }, null, 2)}
-                  </Text>
-                </ThemedView>
-              )}
-            </ThemedView>
-          ) : cleanTestStatus.phase !== 'init' ? (            <ThemedText color="primary">
-              🔄 Ejecutando prueba de migración limpia ({cleanTestStatus.phase})...
-            </ThemedText>
-          ) : (
-            <ThemedText color="secondary">
-              ⏸️ La prueba no se ha iniciado (activa el switch para probar)
-            </ThemedText>
-          )}
+          <ThemedText variant="caption" color="secondary">
+            Todas las migraciones aplicadas • Sistema listo para usar
+          </ThemedText>
         </ThemedCard>
 
-        {/* Stats Cards */}
-        <ThemedView style={{ 
-          flexDirection: 'row', 
-          gap: theme.spacing.sm, 
-          marginBottom: theme.spacing.lg 
+        {/* Quick Stats */}
+        <ThemedView style={{
+          flexDirection: 'row',
+          gap: theme.spacing.sm,
+          marginBottom: theme.spacing.lg
         }}>
           <ThemedCard variant="elevated" padding="medium" style={{ flex: 1 }}>
             <ThemedText variant="h2" color="primary" style={{ textAlign: 'center' }}>
               5
             </ThemedText>
-            <ThemedText variant="caption" color="muted" style={{ textAlign: 'center' }}>
-              Tareas Pendientes
+            <ThemedText variant="caption" color="secondary" style={{ textAlign: 'center' }}>
+              Cursos
             </ThemedText>
           </ThemedCard>
-
+          
           <ThemedCard variant="elevated" padding="medium" style={{ flex: 1 }}>
-            <ThemedText variant="h2" color="success" style={{ textAlign: 'center' }}>
+            <ThemedText variant="h2" color="warning" style={{ textAlign: 'center' }}>
               12
             </ThemedText>
-            <ThemedText variant="caption" color="muted" style={{ textAlign: 'center' }}>
-              Completadas
+            <ThemedText variant="caption" color="secondary" style={{ textAlign: 'center' }}>
+              Tareas
+            </ThemedText>
+          </ThemedCard>
+          
+          <ThemedCard variant="elevated" padding="medium" style={{ flex: 1 }}>
+            <ThemedText variant="h2" color="success" style={{ textAlign: 'center' }}>
+              28
+            </ThemedText>
+            <ThemedText variant="caption" color="secondary" style={{ textAlign: 'center' }}>
+              Notas
             </ThemedText>
           </ThemedCard>
         </ThemedView>
 
-        {/* Quick Actions */}
-        <ThemedCard variant="elevated" padding="medium" style={{ marginBottom: theme.spacing.lg }}>
-          <ThemedText variant="h3" style={{ marginBottom: theme.spacing.md }}>
-            ⚡ Acciones Rápidas
-          </ThemedText>
-          
-          <ThemedView style={{ gap: theme.spacing.sm }}>
-            <ThemedButton 
-              title="📝 Nueva Tarea" 
-              variant="primary" 
-              size="medium"
-            />
-            <ThemedButton 
-              title="📅 Ver Calendario" 
-              variant="outline" 
-              size="medium"
-            />
-            <ThemedButton 
-              title="📋 Mis Notas" 
-              variant="secondary" 
-              size="medium"
-            />
-          </ThemedView>
-        </ThemedCard>
-
         {/* Recent Tasks */}
-        <ThemedCard variant="elevated" padding="medium" style={{ marginBottom: theme.spacing.lg }}>
+        <ThemedCard style={{ marginBottom: theme.spacing.md }}>
           <ThemedText variant="h3" style={{ marginBottom: theme.spacing.md }}>
-            📋 Tareas Recientes
+            📋 Tareas Próximas
           </ThemedText>
           
-          {/* Task Items */}
           <ThemedView style={{ gap: theme.spacing.sm }}>
-            
-            {/* Task 1 */}
             <ThemedView style={{ 
               backgroundColor: theme.colors.surfaceLight,
               padding: theme.spacing.sm,
@@ -203,14 +95,14 @@ export default function HomeScreen() {
             }}>
               <ThemedView style={{ flex: 1 }}>
                 <ThemedText variant="body" style={{ fontWeight: '600' }}>
-                  Estudiar Cálculo Integral
+                  Examen de Cálculo Diferencial
                 </ThemedText>
-                <ThemedText variant="bodySmall" color="secondary">
-                  Vence: Mañana
+                <ThemedText variant="caption" color="secondary">
+                  Matemáticas III • Vence mañana
                 </ThemedText>
               </ThemedView>
               <ThemedView style={{ 
-                backgroundColor: theme.colors.warning,
+                backgroundColor: theme.colors.error,
                 paddingHorizontal: theme.spacing.sm,
                 paddingVertical: theme.spacing.xs,
                 borderRadius: theme.borderRadius.sm
@@ -221,7 +113,6 @@ export default function HomeScreen() {
               </ThemedView>
             </ThemedView>
 
-            {/* Task 2 */}
             <ThemedView style={{ 
               backgroundColor: theme.colors.surfaceLight,
               padding: theme.spacing.sm,
@@ -232,10 +123,38 @@ export default function HomeScreen() {
             }}>
               <ThemedView style={{ flex: 1 }}>
                 <ThemedText variant="body" style={{ fontWeight: '600' }}>
-                  Leer Capítulo 5 - Historia
+                  Proyecto Final - Base de Datos
                 </ThemedText>
-                <ThemedText variant="bodySmall" color="secondary">
-                  Vence: En 3 días
+                <ThemedText variant="caption" color="secondary">
+                  Programación • Vence en 5 días
+                </ThemedText>
+              </ThemedView>
+              <ThemedView style={{ 
+                backgroundColor: theme.colors.warning,
+                paddingHorizontal: theme.spacing.sm,
+                paddingVertical: theme.spacing.xs,
+                borderRadius: theme.borderRadius.sm
+              }}>
+                <ThemedText variant="caption" style={{ color: '#FFFFFF', fontWeight: '600' }}>
+                  MEDIA
+                </ThemedText>
+              </ThemedView>
+            </ThemedView>
+
+            <ThemedView style={{ 
+              backgroundColor: theme.colors.surfaceLight,
+              padding: theme.spacing.sm,
+              borderRadius: theme.borderRadius.md,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <ThemedView style={{ flex: 1 }}>
+                <ThemedText variant="body" style={{ fontWeight: '600' }}>
+                  Leer Capítulo 8 - Historia
+                </ThemedText>
+                <ThemedText variant="caption" color="secondary">
+                  Historia • Vence en 1 semana
                 </ThemedText>
               </ThemedView>
               <ThemedView style={{ 
@@ -249,48 +168,47 @@ export default function HomeScreen() {
                 </ThemedText>
               </ThemedView>
             </ThemedView>
+          </ThemedView>
+        </ThemedCard>
 
-            {/* Task 3 */}
-            <ThemedView style={{ 
-              backgroundColor: theme.colors.surfaceLight,
-              padding: theme.spacing.sm,
-              borderRadius: theme.borderRadius.md,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <ThemedView style={{ flex: 1 }}>
-                <ThemedText variant="body" style={{ fontWeight: '600' }}>
-                  Proyecto Final - Química
-                </ThemedText>
-                <ThemedText variant="bodySmall" color="secondary">
-                  Vence: Próxima semana
-                </ThemedText>
-              </ThemedView>
-              <ThemedView style={{ 
-                backgroundColor: theme.colors.primary,
-                paddingHorizontal: theme.spacing.sm,
-                paddingVertical: theme.spacing.xs,
-                borderRadius: theme.borderRadius.sm
-              }}>
-                <ThemedText variant="caption" style={{ color: '#FFFFFF', fontWeight: '600' }}>
-                  MEDIA
-                </ThemedText>
-              </ThemedView>
+        {/* Quick Actions */}
+        <ThemedCard style={{ marginBottom: theme.spacing.md }}>
+          <ThemedText variant="h3" style={{ marginBottom: theme.spacing.md }}>
+            ⚡ Acciones Rápidas
+          </ThemedText>
+          
+          <ThemedView style={{ gap: theme.spacing.sm }}>
+            <ThemedButton 
+              title="📝 Nueva Tarea"
+              variant="primary" 
+              onPress={() => {}}
+            />
+            
+            <ThemedView style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+              <ThemedButton 
+                title="📚 Agregar Curso"
+                variant="secondary" 
+                onPress={() => {}}
+                style={{ flex: 1 }}
+              />
+              
+              <ThemedButton 
+                title="📓 Tomar Nota"
+                variant="secondary" 
+                onPress={() => {}}
+                style={{ flex: 1 }}
+              />
             </ThemedView>
-
           </ThemedView>
         </ThemedCard>
 
         {/* Today's Schedule */}
-        <ThemedCard variant="elevated" padding="medium" style={{ marginBottom: theme.spacing.lg }}>
+        <ThemedCard style={{ marginBottom: theme.spacing.md }}>
           <ThemedText variant="h3" style={{ marginBottom: theme.spacing.md }}>
-            🕐 Horario de Hoy
+            📅 Horario de Hoy
           </ThemedText>
           
           <ThemedView style={{ gap: theme.spacing.sm }}>
-            
-            {/* Schedule Item 1 */}
             <ThemedView style={{ 
               flexDirection: 'row',
               alignItems: 'center',
@@ -298,28 +216,24 @@ export default function HomeScreen() {
               borderBottomWidth: 1,
               borderBottomColor: theme.colors.border
             }}>
-              <ThemedView style={{ 
-                width: 60,
-                alignItems: 'center'
-              }}>
-                <ThemedText variant="bodySmall" color="primary" style={{ fontWeight: '600' }}>
+              <ThemedView style={{ width: 60 }}>
+                <ThemedText variant="caption" color="primary" style={{ fontWeight: '600' }}>
                   09:00
                 </ThemedText>
-                <ThemedText variant="caption" color="muted">
+                <ThemedText variant="caption" color="secondary">
                   10:30
                 </ThemedText>
               </ThemedView>
               <ThemedView style={{ flex: 1, marginLeft: theme.spacing.md }}>
                 <ThemedText variant="body" style={{ fontWeight: '600' }}>
-                  Matemáticas II
+                  Cálculo Diferencial
                 </ThemedText>
-                <ThemedText variant="bodySmall" color="secondary">
-                  Aula 205 - Prof. García
+                <ThemedText variant="caption" color="secondary">
+                  Aula 304 • Prof. García
                 </ThemedText>
               </ThemedView>
             </ThemedView>
 
-            {/* Schedule Item 2 */}
             <ThemedView style={{ 
               flexDirection: 'row',
               alignItems: 'center',
@@ -327,61 +241,53 @@ export default function HomeScreen() {
               borderBottomWidth: 1,
               borderBottomColor: theme.colors.border
             }}>
-              <ThemedView style={{ 
-                width: 60,
-                alignItems: 'center'
-              }}>
-                <ThemedText variant="bodySmall" color="primary" style={{ fontWeight: '600' }}>
-                  14:00
+              <ThemedView style={{ width: 60 }}>
+                <ThemedText variant="caption" color="primary" style={{ fontWeight: '600' }}>
+                  11:00
                 </ThemedText>
-                <ThemedText variant="caption" color="muted">
-                  15:30
+                <ThemedText variant="caption" color="secondary">
+                  12:30
                 </ThemedText>
               </ThemedView>
               <ThemedView style={{ flex: 1, marginLeft: theme.spacing.md }}>
                 <ThemedText variant="body" style={{ fontWeight: '600' }}>
-                  Laboratorio Química
+                  Programación Avanzada
                 </ThemedText>
-                <ThemedText variant="bodySmall" color="secondary">
-                  Lab 3 - Prof. Martínez
+                <ThemedText variant="caption" color="secondary">
+                  Lab 2 • Prof. Rodríguez
                 </ThemedText>
               </ThemedView>
             </ThemedView>
 
-            {/* Schedule Item 3 */}
             <ThemedView style={{ 
               flexDirection: 'row',
               alignItems: 'center',
               paddingVertical: theme.spacing.sm
             }}>
-              <ThemedView style={{ 
-                width: 60,
-                alignItems: 'center'
-              }}>
-                <ThemedText variant="bodySmall" color="primary" style={{ fontWeight: '600' }}>
-                  16:00
+              <ThemedView style={{ width: 60 }}>
+                <ThemedText variant="caption" color="primary" style={{ fontWeight: '600' }}>
+                  14:00
                 </ThemedText>
-                <ThemedText variant="caption" color="muted">
-                  17:00
+                <ThemedText variant="caption" color="secondary">
+                  15:30
                 </ThemedText>
               </ThemedView>
               <ThemedView style={{ flex: 1, marginLeft: theme.spacing.md }}>
                 <ThemedText variant="body" style={{ fontWeight: '600' }}>
-                  Sesión de Estudio
+                  Historia Contemporánea
                 </ThemedText>
-                <ThemedText variant="bodySmall" color="secondary">
-                  Biblioteca - Preparar examen
+                <ThemedText variant="caption" color="secondary">
+                  Aula 201 • Prof. López
                 </ThemedText>
               </ThemedView>
             </ThemedView>
-
           </ThemedView>
         </ThemedCard>
 
-        {/* Progress Section */}
-        <ThemedCard variant="elevated" padding="medium">
+        {/* Progress Card */}
+        <ThemedCard>
           <ThemedText variant="h3" style={{ marginBottom: theme.spacing.md }}>
-            📈 Progreso Semanal
+            📊 Progreso de la Semana
           </ThemedText>
           
           <ThemedView style={{ 
@@ -390,24 +296,23 @@ export default function HomeScreen() {
             borderRadius: theme.borderRadius.md,
             alignItems: 'center'
           }}>
-            <ThemedText variant="h2" color="success" style={{ marginBottom: theme.spacing.xs }}>
-              75%
+            <ThemedText variant="h1" color="success" style={{ marginBottom: theme.spacing.xs }}>
+              73%
             </ThemedText>
-            <ThemedText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-              ¡Buen trabajo! Has completado el 75% de tus tareas esta semana.
+            <ThemedText variant="body" color="secondary" style={{ textAlign: 'center', marginBottom: theme.spacing.md }}>
+              Has completado 8 de 11 tareas programadas esta semana
             </ThemedText>
             
-            {/* Progress Bar Visual */}
+            {/* Progress Bar */}
             <ThemedView style={{ 
               width: '100%',
               height: 8,
               backgroundColor: theme.colors.border,
               borderRadius: theme.borderRadius.full,
-              marginTop: theme.spacing.md,
               overflow: 'hidden'
             }}>
               <ThemedView style={{ 
-                width: '75%',
+                width: '73%',
                 height: '100%',
                 backgroundColor: theme.colors.success,
                 borderRadius: theme.borderRadius.full

@@ -17,13 +17,10 @@ export interface Migration {
 
 export class MigrationRunner {
   private db = getDatabase();
-
   /**
    * Run all pending migrations
    */
   async runMigrations(): Promise<void> {
-    console.log('🔄 Checking for database migrations...');
-    
     // First, ensure schema_versions table exists
     await this.ensureSchemaVersionsTable();
     
@@ -33,17 +30,12 @@ export class MigrationRunner {
     const pendingMigrations = migrations.filter(m => m.version > currentVersion);
     
     if (pendingMigrations.length === 0) {
-      console.log('✅ Database is up to date');
       return;
     }
-
-    console.log(`📊 Running ${pendingMigrations.length} migration(s)...`);
 
     for (const migration of pendingMigrations) {
       await this.runMigration(migration);
     }
-
-    console.log('✅ All migrations completed successfully');
   }
   /**
    * Get current schema version
@@ -59,13 +51,10 @@ export class MigrationRunner {
       return 0;
     }
   }
-
   /**
    * Run a single migration
    */
   private async runMigration(migration: Migration): Promise<void> {
-    console.log(`⚡ Running migration ${migration.version}: ${migration.description}`);
-
     await this.db.withTransactionAsync(async () => {
       // Run the migration
       await migration.up();
@@ -76,8 +65,6 @@ export class MigrationRunner {
         [migration.version, migration.description]
       );
     });
-
-    console.log(`✅ Migration ${migration.version} completed`);
   }
 
   /**
@@ -100,12 +87,9 @@ export class MigrationRunner {
    * Get all available migrations
    */  private getMigrations(): Migration[] {
     return [
-      {
-        version: 1,
+      {        version: 1,
         description: 'Initial StudyVault database setup with all tables',
         up: async () => {
-          console.log('🏗️ Creating StudyVault database structure...');
-          
           // Enable foreign keys
           await executeWrite('PRAGMA foreign_keys = ON');
 
@@ -263,7 +247,7 @@ export class MigrationRunner {
             )
           `);
 
-          console.log('📊 Creating database indexes...');
+          // Create database indexes
           
           // Create all indexes
           const indexes = [
@@ -321,7 +305,7 @@ export class MigrationRunner {
             await executeWrite(index);
           }
 
-          console.log('⚡ Creating database triggers...');
+          // Create database triggers
           
           // Create triggers for automatic timestamp updates
           const triggers = [
@@ -364,7 +348,7 @@ export class MigrationRunner {
             await executeWrite(trigger);
           }
 
-          console.log('📚 Creating full-text search...');
+          // Create full-text search
           
           // Create full-text search for notes
           await executeWrite(`
@@ -403,7 +387,7 @@ export class MigrationRunner {
             await executeWrite(trigger);
           }
 
-          console.log('✅ StudyVault database structure created successfully!');
+          // Database structure created successfully
         },
         down: async () => {
           // Drop all tables in reverse order for clean rollback
