@@ -27,10 +27,10 @@ export function useDatabaseTest() {
 
         // Test 3: If no users, create a test user
         if (userCount === 0) {
-          console.log('👤 Creando usuario de prueba...');
-          const testUser = await userRepo.create({
+          console.log('👤 Creando usuario de prueba...');          const testUser = await userRepo.create({
             name: "Usuario de Prueba",
             email: "test@studyvault.com",
+            password_hash: "f44f9df3098300f1d342e647d239afca401be22ae36f82d261c5e06e7d9bb45d", // "testpassword" hashed
             preferences: {
               theme: 'system',
               notifications_enabled: true,

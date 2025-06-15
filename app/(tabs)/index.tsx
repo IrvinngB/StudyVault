@@ -5,11 +5,31 @@ import {
   ThemedView
 } from '@/components/ui/ThemedComponents';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/lib/hooks/useAuth';
 import React from 'react';
-import { ScrollView } from 'react-native';
+import { Alert, ScrollView } from 'react-native';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Cerrar Sesión',
+      '¿Estás seguro de que quieres cerrar sesión?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Cerrar Sesión',
+          style: 'destructive',
+          onPress: logout,
+        },
+      ]
+    );
+  };
 
   return (
     <ThemedView variant="background" style={{ flex: 1 }}>
@@ -21,13 +41,31 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <ThemedView style={{ marginBottom: theme.spacing.lg }}>
-          <ThemedText variant="h1" style={{ marginBottom: theme.spacing.xs }}>
-            📚 StudyVault
-          </ThemedText>
-          <ThemedText variant="body" color="secondary">
-            ¡Bienvenido de vuelta! Organiza tu estudio de manera eficiente.
-          </ThemedText>
+        <ThemedView style={{ 
+          marginBottom: theme.spacing.lg,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start'
+        }}>
+          <ThemedView style={{ flex: 1 }}>
+            <ThemedText variant="h1" style={{ marginBottom: theme.spacing.xs }}>
+              📚 StudyVault
+            </ThemedText>
+            <ThemedText variant="body" color="secondary">
+              ¡Bienvenido de vuelta{user?.name ? `, ${user.name}` : ''}! Organiza tu estudio de manera eficiente.
+            </ThemedText>
+          </ThemedView>
+          
+          <ThemedButton
+            title="Logout"
+            variant="outline"
+            onPress={handleLogout}
+            style={{ 
+              paddingHorizontal: theme.spacing.sm,
+              paddingVertical: theme.spacing.xs,
+              marginTop: theme.spacing.xs
+            }}
+          />
         </ThemedView>
         
         {/* Status Card */}

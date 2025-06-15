@@ -91,20 +91,16 @@ export class MigrationRunner {
         description: 'Initial StudyVault database setup with all tables',
         up: async () => {
           // Enable foreign keys
-          await executeWrite('PRAGMA foreign_keys = ON');
-
-          // Users table
+          await executeWrite('PRAGMA foreign_keys = ON');          // Users table
           await executeWrite(`
             CREATE TABLE IF NOT EXISTS users (
               id TEXT PRIMARY KEY,
               name TEXT NOT NULL,
-              email TEXT UNIQUE,
+              email TEXT UNIQUE NOT NULL,
+              password_hash TEXT NOT NULL,
+              last_login DATETIME,
               avatar_url TEXT,
-              theme TEXT DEFAULT 'system' CHECK (theme IN ('light', 'dark', 'system')),
-              notifications_enabled INTEGER DEFAULT 1,
-              default_reminder_time INTEGER DEFAULT 15,
-              study_goal_hours_per_day REAL DEFAULT 4.0,
-              first_day_of_week INTEGER DEFAULT 1 CHECK (first_day_of_week IN (0, 1)),
+              preferences TEXT NOT NULL DEFAULT '{"theme":"system","notifications_enabled":true,"default_reminder_time":15,"study_goal_hours_per_day":4,"first_day_of_week":1}',
               created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
               updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )

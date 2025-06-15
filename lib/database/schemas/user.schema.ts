@@ -4,7 +4,9 @@
 export interface User {
   id: string;
   name: string;
-  email?: string;
+  email: string;
+  password_hash: string;
+  last_login?: string;
   avatar_url?: string;
   created_at: string;
   updated_at: string;
@@ -24,13 +26,11 @@ export const CREATE_USERS_TABLE = `
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    email TEXT UNIQUE,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    last_login DATETIME,
     avatar_url TEXT,
-    theme TEXT DEFAULT 'system' CHECK (theme IN ('light', 'dark', 'system')),
-    notifications_enabled INTEGER DEFAULT 1,
-    default_reminder_time INTEGER DEFAULT 15,
-    study_goal_hours_per_day REAL DEFAULT 4.0,
-    first_day_of_week INTEGER DEFAULT 1 CHECK (first_day_of_week IN (0, 1)),
+    preferences TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );

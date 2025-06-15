@@ -16,20 +16,23 @@ export class UserRepository implements BaseRepository<User> {
 
       await this.db.runAsync(
         `INSERT INTO users (
-          id, name, email, avatar_url, theme, notifications_enabled, 
-          default_reminder_time, study_goal_hours_per_day, first_day_of_week,
-          created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, name, email, password_hash, last_login, avatar_url, 
+          preferences, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           userData.name,
-          userData.email || null,
+          userData.email,
+          userData.password_hash,
+          null,
           userData.avatar_url || null,
-          userData.preferences?.theme || 'system',
-          userData.preferences?.notifications_enabled ? 1 : 0,
-          userData.preferences?.default_reminder_time || 15,
-          userData.preferences?.study_goal_hours_per_day || 4.0,
-          userData.preferences?.first_day_of_week || 1,
+          JSON.stringify(userData.preferences || {
+            theme: 'system',
+            notifications_enabled: true,
+            default_reminder_time: 15,
+            study_goal_hours_per_day: 4,
+            first_day_of_week: 1
+          }),
           now,
           now
         ]
@@ -95,29 +98,33 @@ export class UserRepository implements BaseRepository<User> {
       if (updates.avatar_url !== undefined) {
         updateFields.push('avatar_url = ?');
         updateValues.push(updates.avatar_url);
+      }      if (updates.password_hash !== undefined) {
+        updateFields.push('password_hash = ?');
+        updateValues.push(updates.password_hash);
+      }
+
+      if (updates.last_login !== undefined) {
+        updateFields.push('last_login = ?');
+        updateValues.push(updates.last_login);
       }
 
       if (updates.preferences) {
-        if (updates.preferences.theme !== undefined) {
-          updateFields.push('theme = ?');
-          updateValues.push(updates.preferences.theme);
-        }
-        if (updates.preferences.notifications_enabled !== undefined) {
-          updateFields.push('notifications_enabled = ?');
-          updateValues.push(updates.preferences.notifications_enabled ? 1 : 0);
-        }
-        if (updates.preferences.default_reminder_time !== undefined) {
-          updateFields.push('default_reminder_time = ?');
-          updateValues.push(updates.preferences.default_reminder_time);
-        }
-        if (updates.preferences.study_goal_hours_per_day !== undefined) {
-          updateFields.push('study_goal_hours_per_day = ?');
-          updateValues.push(updates.preferences.study_goal_hours_per_day);
-        }
-        if (updates.preferences.first_day_of_week !== undefined) {
-          updateFields.push('first_day_of_week = ?');
-          updateValues.push(updates.preferences.first_day_of_week);
-        }
+        // Actualizar el objeto preferences completo
+        const currentPrefs = existing.preferences || {
+          theme: 'system',
+          notifications_enabled: true,
+          default_reminder_time: 15,
+          study_goal_hours_per_day: 4,
+          first_day_of_week: 1
+        };
+        
+        const updatedPrefs = { 
+          ...currentPrefs,
+          ...updates.preferences
+        };
+        
+        updateFields.push('preferences = ?');
+        updateValues.push(JSON.stringify(updatedPrefs));
       }
 
       if (updateFields.length === 0) {
@@ -189,22 +196,36 @@ export class UserRepository implements BaseRepository<User> {
       throw new DatabaseError('Failed to get user by email', error as Error);
     }
   }
-
   private mapRowToUser(row: any): User {
+    let preferences;    try {
+      preferences = row.preferences ? JSON.parse(row.preferences) : {
+        theme: 'system',
+        notifications_enabled: true,
+        default_reminder_time: 15,
+        study_goal_hours_per_day: 4,
+        first_day_of_week: 1
+      };
+    } catch (_) {
+      // Fallback en caso de error de parsing
+      preferences = {
+        theme: 'system',
+        notifications_enabled: true,
+        default_reminder_time: 15,
+        study_goal_hours_per_day: 4,
+        first_day_of_week: 1
+      };
+    }
+    
     return {
       id: row.id,
       name: row.name,
       email: row.email,
+      password_hash: row.password_hash,
+      last_login: row.last_login,
       avatar_url: row.avatar_url,
       created_at: row.created_at,
       updated_at: row.updated_at,
-      preferences: {
-        theme: row.theme,
-        notifications_enabled: Boolean(row.notifications_enabled),
-        default_reminder_time: row.default_reminder_time,
-        study_goal_hours_per_day: row.study_goal_hours_per_day,
-        first_day_of_week: row.first_day_of_week,
-      },
+      preferences,
     };
   }
 }
