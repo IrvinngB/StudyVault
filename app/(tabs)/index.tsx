@@ -6,11 +6,16 @@ import {
   ThemedView
 } from '@/components/ui/ThemedComponents';
 import { useTheme } from '@/hooks/useTheme';
+import { useDatabaseCleanTest } from '@/lib/hooks/useDatabaseCleanTest';
+import { useDatabaseTest } from '@/lib/hooks/useDatabaseTest';
 import React from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, Switch, Text } from 'react-native';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
+  const [useCleanTest, setUseCleanTest] = React.useState(false);
+  const { isReady, stats, error } = useDatabaseTest();
+  const cleanTestStatus = useDatabaseCleanTest(useCleanTest);
 
   return (
     <ThemedView variant="background" style={{ flex: 1 }}>
@@ -30,6 +35,103 @@ export default function HomeScreen() {
             ¡Bienvenido de vuelta! Organiza tu estudio de manera eficiente.
           </ThemedText>
         </ThemedView>
+        
+        {/* Database Status Card */}
+        <ThemedCard style={{ marginBottom: theme.spacing.md }}>
+          <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
+            🔧 Estado de la Base de Datos
+          </ThemedText>
+          
+          {error ? (
+            <ThemedText color="error">
+              ❌ Error: {error}
+            </ThemedText>
+          ) : !isReady ? (
+            <ThemedText color="secondary">
+              🔄 Inicializando base de datos...
+            </ThemedText>
+          ) : (
+            <ThemedView>
+              <ThemedText color="success" style={{ marginBottom: theme.spacing.xs }}>
+                ✅ Base de datos lista
+              </ThemedText>
+                {stats && (
+                <ThemedView style={{ marginTop: theme.spacing.sm }}>
+                  <ThemedText variant="caption" color="secondary">
+                    📊 Estadísticas:
+                  </ThemedText>
+                  <Text style={{ 
+                    fontFamily: 'SpaceMono', 
+                    fontSize: 12, 
+                    color: '#666',
+                    marginTop: theme.spacing.xs 
+                  }}>
+                    {JSON.stringify(stats, null, 2)}
+                  </Text>
+                </ThemedView>
+              )}
+            </ThemedView>
+          )}
+        </ThemedCard>
+        
+        {/* Clean Migration Test Card */}
+        <ThemedCard style={{ marginBottom: theme.spacing.md }}>
+          <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
+            🧹 Prueba de Migración Limpia
+          </ThemedText>
+          
+          <ThemedView style={{ 
+            flexDirection: 'row', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: theme.spacing.sm 
+          }}>
+            <ThemedText>Estado: {cleanTestStatus.phase}</ThemedText>
+            <Switch 
+              value={useCleanTest} 
+              onValueChange={setUseCleanTest}
+              disabled={cleanTestStatus.phase !== 'init'} 
+            />
+          </ThemedView>
+          
+          {cleanTestStatus.error ? (
+            <ThemedText color="error">
+              ❌ Error: {cleanTestStatus.error}
+            </ThemedText>
+          ) : cleanTestStatus.isComplete ? (
+            <ThemedView>
+              <ThemedText color="success" style={{ marginBottom: theme.spacing.xs }}>
+                ✅ Prueba completada exitosamente
+              </ThemedText>
+              {cleanTestStatus.results && (
+                <ThemedView style={{ marginTop: theme.spacing.sm }}>
+                  <ThemedText variant="caption" color="secondary">
+                    📊 Resultados:
+                  </ThemedText>
+                  <Text style={{ 
+                    fontFamily: 'SpaceMono', 
+                    fontSize: 12, 
+                    color: '#666',
+                    marginTop: theme.spacing.xs 
+                  }}>
+                    {JSON.stringify({
+                      dbHealth: cleanTestStatus.results.dbHealth,
+                      userCount: cleanTestStatus.results.users?.length || 0,
+                      courseCount: cleanTestStatus.results.courses?.length || 0
+                    }, null, 2)}
+                  </Text>
+                </ThemedView>
+              )}
+            </ThemedView>
+          ) : cleanTestStatus.phase !== 'init' ? (            <ThemedText color="primary">
+              🔄 Ejecutando prueba de migración limpia ({cleanTestStatus.phase})...
+            </ThemedText>
+          ) : (
+            <ThemedText color="secondary">
+              ⏸️ La prueba no se ha iniciado (activa el switch para probar)
+            </ThemedText>
+          )}
+        </ThemedCard>
 
         {/* Stats Cards */}
         <ThemedView style={{ 

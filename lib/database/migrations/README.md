@@ -4,13 +4,14 @@
 
 Esta carpeta maneja las migraciones de base de datos y el versionado de esquemas.
 
-## Archivos que se crearán:
+## Archivos en el Sistema de Migraciones:
 
 ### SQLite Migrations (V1.0)
-- **`001_initial_setup.sql`** - Creación inicial de todas las tablas
-- **`002_add_tags_system.sql`** - Sistema de etiquetas
-- **`003_add_analytics_tables.sql`** - Tablas de métricas
-- **`004_add_notifications.sql`** - Sistema de notificaciones
+- **`001_initial_setup.sql`** - Creación inicial completa de todas las tablas
+
+> **NOTA**: Se ha simplificado el enfoque para usar una única migración inicial completa.
+> Esto asegura que todas las instalaciones nuevas tengan una estructura de base de datos
+> limpia y completa desde el principio, sin necesidad de migraciones incrementales.
 
 ### Migration Runner
 - **`migration.runner.ts`** - Ejecutor de migraciones
@@ -65,11 +66,8 @@ CREATE TABLE schema_versions (
 ```
 
 ### Control de Versiones
-- **Version 1**: Esquema inicial básico
-- **Version 2**: Sistema de etiquetas y categorías
-- **Version 3**: Analytics y métricas
-- **Version 4**: Notificaciones inteligentes
-- **Version 5**: Migración a Firebase (preparación)
+- **Version 1**: Esquema inicial completo (incluye todas las tablas, índices, triggers y configuración)
+- **Version 2+**: Para expansiones futuras (se agregarán según sea necesario)
 
 ## Proceso de Migración SQLite → Firebase
 
