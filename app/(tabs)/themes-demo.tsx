@@ -1,10 +1,10 @@
 // app/(tabs)/themes-demo.tsx
 import {
-    ThemedButton,
-    ThemedCard,
-    ThemedInput,
-    ThemedText,
-    ThemedView
+  ThemedButton,
+  ThemedCard,
+  ThemedInput,
+  ThemedText,
+  ThemedView
 } from '@/components/ui/ThemedComponents';
 import { ThemeSelector } from '@/components/ui/ThemeSelector';
 import { useTheme } from '@/hooks/useTheme';
@@ -59,6 +59,9 @@ export default function ThemesDemo() {
               </ThemedText>
               <ThemedText variant="bodySmall" color="muted">
                 🔴 Rojo Carmesí → 🌹 Rojo Carmesí Claro
+              </ThemedText>
+              <ThemedText variant="bodySmall" color="muted" style={{ color: theme.colors.success }}>
+                🍀 Verde Esmeralda → 🌿 Verde Esmeralda Claro
               </ThemedText>
             </ThemedView>
           </ThemedView>
@@ -286,7 +289,8 @@ function shouldUseWhiteText(backgroundColor: string): boolean {
     '#1E3A8A', '#7C3AED', '#DA1E37', '#641220', '#6E1423', '#85182A', // Temas oscuros originales
     '#0F172A', '#1E293B', '#334155', '#475569', // Deep blue dark
     '#1C1917', '#292524', '#44403C', '#57534E', // Purple dark  
-    '#A11D33', '#BD1F36', '#C71F37' // Crimson red dark
+    '#A11D33', '#BD1F36', '#C71F37', // Crimson red dark
+    '#064E3B', '#065F46', '#047857', '#10B981' // Verde Esmeralda dark
   ];
   
   // Verificar si el color está en la lista de colores oscuros

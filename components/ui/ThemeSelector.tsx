@@ -58,8 +58,7 @@ export function ThemeSelector({
         )}
       </TouchableOpacity>
     );
-  };
-  const getThemePreviewColor = (themeName: string): string => {
+  };  const getThemePreviewColor = (themeName: string): string => {
     const themeColors: Record<string, string> = {
       light: '#4F46E5',
       deepBlue: '#1E3A8A',
@@ -68,6 +67,8 @@ export function ThemeSelector({
       purpleLight: '#7C3AED',
       crimsonRed: '#DA1E37',
       crimsonRedLight: '#DC2626',
+      emeraldGreen: '#10B981',
+      emeraldGreenLight: '#059669',
     };
     return themeColors[themeName] || '#4F46E5';
   };
