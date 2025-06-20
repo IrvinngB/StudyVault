@@ -6,19 +6,18 @@ import {
     ThemedView
 } from '@/components/ui/ThemedComponents';
 import { useTheme } from '@/hooks/useTheme';
-import { useAuth } from '@/lib/hooks/useAuth';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
 export default function LoginScreen() {
   const { theme } = useTheme();
-  const { login, isLoading } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
     // Limpiar errores
@@ -40,14 +39,16 @@ export default function LoginScreen() {
       return;
     }
 
-    // Intentar login
-    const result = await login(formData);
-    
-    if (result.success) {
-      router.replace('/(tabs)');
-    } else {
-      Alert.alert('Error', result.error || 'Error desconocido');
-    }
+    // Simular login (sin base de datos)
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      Alert.alert(
+        'Login exitoso', 
+        '¡Bienvenido a StudyVault!',
+        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
+      );
+    }, 1000);
   };
 
   return (

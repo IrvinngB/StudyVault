@@ -1,18 +1,16 @@
 import {
-  ThemedButton,
-  ThemedText,
-  ThemedView
+    ThemedButton,
+    ThemedText,
+    ThemedView
 } from '@/components/ui/ThemedComponents';
 import { useTheme } from '@/hooks/useTheme';
-import { useAuth } from '@/lib/hooks/useAuth';
 import { router } from 'expo-router';
 import React from 'react';
 import { Alert, ScrollView } from 'react-native';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
-  const { user, logout } = useAuth();
-
+  
   const handleLogout = () => {
     Alert.alert(
       'Cerrar Sesión',
@@ -25,8 +23,7 @@ export default function HomeScreen() {
         {
           text: 'Cerrar Sesión',
           style: 'destructive',
-          onPress: async () => {
-            await logout();
+          onPress: () => {
             router.replace('/(auth)/login');
           },
         },
@@ -36,15 +33,15 @@ export default function HomeScreen() {
 
   return (
     <ThemedView variant="background" style={{ flex: 1 }}>
-      <ScrollView 
-        contentContainerStyle={{ 
+      <ScrollView
+        contentContainerStyle={{
           padding: theme.spacing.md,
-          paddingBottom: theme.spacing.xxl 
+          paddingBottom: theme.spacing.xxl
         }}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <ThemedView style={{ 
+        <ThemedView style={{
           marginBottom: theme.spacing.lg,
           flexDirection: 'row',
           justifyContent: 'space-between',
@@ -55,23 +52,47 @@ export default function HomeScreen() {
               📚 StudyVault
             </ThemedText>
             <ThemedText variant="body" color="secondary">
-              ¡Bienvenido de vuelta{user?.name ? `, ${user.name}` : ''}! Organiza tu estudio de manera eficiente.
+              ¡Bienvenido! Organiza tu estudio de manera eficiente.
             </ThemedText>
           </ThemedView>
           
           <ThemedButton
-            title="Logout"
+            title="Salir"
             variant="outline"
             onPress={handleLogout}
-            style={{ 
+            style={{
               paddingHorizontal: theme.spacing.sm,
               paddingVertical: theme.spacing.xs,
               marginTop: theme.spacing.xs
             }}
-          />
+          />        
         </ThemedView>
         
-        {/* Aquí irán los datos de la base de datos más adelante */}
+        {/* Sección de acceso rápido */}
+        <ThemedView style={{
+          marginBottom: theme.spacing.xl,
+          padding: theme.spacing.md,
+          backgroundColor: theme.colors.surface,
+          borderRadius: theme.borderRadius.lg
+        }}>         
+          <ThemedText variant="h2" style={{ marginBottom: theme.spacing.md }}>
+            Acceso Rápido
+          </ThemedText>          
+          
+          <ThemedButton
+            title="Mis Cursos"
+            variant="primary"
+            onPress={() => {
+              try {
+                router.push("/courses" as any);
+              } catch (error) {
+                console.log('Error de navegación:', error);
+                router.navigate("/courses" as any);
+              }
+            }}
+            style={{ marginBottom: theme.spacing.sm }}
+          />
+        </ThemedView>
       </ScrollView>
     </ThemedView>
   );

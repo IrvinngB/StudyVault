@@ -6,14 +6,12 @@ import {
     ThemedView
 } from '@/components/ui/ThemedComponents';
 import { useTheme } from '@/hooks/useTheme';
-import { useAuth } from '@/lib/hooks/useAuth';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
 export default function RegisterScreen() {
   const { theme } = useTheme();
-  const { register, isLoading } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -21,6 +19,7 @@ export default function RegisterScreen() {
     confirmPassword: ''
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
     // Limpiar errores
@@ -54,22 +53,16 @@ export default function RegisterScreen() {
       return;
     }
 
-    // Intentar registro
-    const result = await register({
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      password: formData.password
-    });
-    
-    if (result.success) {
+    // Simular registro (sin base de datos)
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
       Alert.alert(
         'Registro exitoso', 
         '¡Bienvenido a StudyVault!',
         [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
       );
-    } else {
-      Alert.alert('Error', result.error || 'Error desconocido');
-    }
+    }, 1000);
   };
 
   return (

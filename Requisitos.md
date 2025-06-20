@@ -110,7 +110,7 @@ A continuación se presenta el orden recomendado de desarrollo, el nivel de prio
 - Componentes interactivos optimizados para experiencia educativa
 
 ### 2. Backend y Almacenamiento
-- Opciones: Firebase (sincronización en tiempo real), Supabase (escalabilidad)
+- Opciones: supabase (sincronización en tiempo real), Supabase (escalabilidad)
 - Almacenamiento: Local (SQLite), Nube (storage optimizado)
 
 ### 3. Integración de IA/NLP
