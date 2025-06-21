@@ -26,7 +26,12 @@ export class ApiClient {
         this.authSession = JSON.parse(savedSession)
 
         if (this.authSession && this.authSession.expires_at < Date.now()) {
-          await this.refreshToken()
+          console.log("🔄 Token expirado, intentando refrescar...")
+          const refreshed = await this.refreshToken()
+          if (!refreshed) {
+            console.log("❌ No se pudo refrescar el token, limpiando sesión")
+            await this.clearAuthSession()
+          }
         }
       }
     } catch (error) {
@@ -51,9 +56,6 @@ export class ApiClient {
 
     if (this.authSession?.access_token) {
       headers["Authorization"] = `Bearer ${this.authSession.access_token}`
-      console.log('🔑 Adding Authorization header with token:', this.authSession.access_token.substring(0, 10) + '...')
-    } else {
-      console.log('❌ No access token available for Authorization header')
     }
 
     return headers
@@ -62,48 +64,77 @@ export class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseURL}${endpoint}`
-      console.log('🌐 API Request:', options.method || 'GET', url)
+
+      // ❌ REMOVER ESTA VERIFICACIÓN - Era el problema principal
+      // No verificar autenticación aquí, dejar que el servidor responda
       
+      const headers = {
+        ...this.getAuthHeaders(),
+        ...options.headers,
+      };
+
       const response = await fetch(url, {
         ...options,
-        headers: {
-          ...this.getAuthHeaders(),
-          ...options.headers,
-        },
+        headers,
       })
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        console.error("❌ Error parsing JSON response:", parseError)
+        data = { message: "Error parsing server response" }
+      }
 
       if (!response.ok) {
-        console.error('❌ API Error:', response.status, data)
+        console.error("❌ API Error:", response.status, data)
+
+        // Manejar errores de autenticación
+        if (response.status === 401) {
+          console.log("🔄 Token inválido, limpiando sesión...")
+          await this.clearAuthSession()
+          return {
+            success: false,
+            error: "Sesión expirada. Por favor, inicia sesión nuevamente.",
+          }
+        }
+
         return {
           success: false,
-          error: data.detail || data.message || "Request failed",
+          error: data.detail || data.message || `HTTP ${response.status}: ${response.statusText}`,
         }
       }
 
-      console.log('✅ API Success:', data)
       return {
         success: true,
         data,
       }
     } catch (error) {
       console.error("API request failed:", error)
+
+      // Manejar errores de red
+      if (error instanceof TypeError && error.message.includes("Network request failed")) {
+        return {
+          success: false,
+          error: "Error de conexión. Verifica tu conexión a internet.",
+        }
+      }
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Network error",
+        error: error instanceof Error ? error.message : "Error de red desconocido",
       }
     }
   }
 
   // ==================== HTTP METHODS ====================
-  
+
   /**
    * Realizar petición GET
    */
   public async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
     let url = endpoint
-    
+
     if (params) {
       const searchParams = new URLSearchParams()
       Object.entries(params).forEach(([key, value]) => {
@@ -117,12 +148,12 @@ export class ApiClient {
       }
     }
 
-    const response = await this.request<T>(url, { method: 'GET' })
-    
+    const response = await this.request<T>(url, { method: "GET" })
+
     if (!response.success) {
-      throw new Error(response.error || 'GET request failed')
+      throw new Error(response.error || "GET request failed")
     }
-    
+
     return response.data!
   }
 
@@ -131,14 +162,14 @@ export class ApiClient {
    */
   public async post<T>(endpoint: string, data?: any): Promise<T> {
     const response = await this.request<T>(endpoint, {
-      method: 'POST',
+      method: "POST",
       body: data ? JSON.stringify(data) : undefined,
     })
-    
+
     if (!response.success) {
-      throw new Error(response.error || 'POST request failed')
+      throw new Error(response.error || "POST request failed")
     }
-    
+
     return response.data!
   }
 
@@ -147,14 +178,14 @@ export class ApiClient {
    */
   public async put<T>(endpoint: string, data?: any): Promise<T> {
     const response = await this.request<T>(endpoint, {
-      method: 'PUT',
+      method: "PUT",
       body: data ? JSON.stringify(data) : undefined,
     })
-    
+
     if (!response.success) {
-      throw new Error(response.error || 'PUT request failed')
+      throw new Error(response.error || "PUT request failed")
     }
-    
+
     return response.data!
   }
 
@@ -163,14 +194,14 @@ export class ApiClient {
    */
   public async patch<T>(endpoint: string, data?: any): Promise<T> {
     const response = await this.request<T>(endpoint, {
-      method: 'PATCH',
+      method: "PATCH",
       body: data ? JSON.stringify(data) : undefined,
     })
-    
+
     if (!response.success) {
-      throw new Error(response.error || 'PATCH request failed')
+      throw new Error(response.error || "PATCH request failed")
     }
-    
+
     return response.data!
   }
 
@@ -178,30 +209,26 @@ export class ApiClient {
    * Realizar petición DELETE
    */
   public async delete<T = void>(endpoint: string): Promise<T> {
-    const response = await this.request<T>(endpoint, { method: 'DELETE' })
-    
+    const response = await this.request<T>(endpoint, { method: "DELETE" })
+
     if (!response.success) {
-      throw new Error(response.error || 'DELETE request failed')
+      throw new Error(response.error || "DELETE request failed")
     }
-    
+
     return response.data!
   }
 
   // ==================== AUTH METHODS ====================
 
   public async signUp(email: string, password: string, name?: string): Promise<ApiResponse<AuthSession>> {
-    console.log('🔄 Attempting to create user:', { email, name });
-    
     const response = await this.request<any>("/auth/signup", {
       method: "POST",
-      body: JSON.stringify({ 
-        email, 
+      body: JSON.stringify({
+        email,
         password,
-        name: name || email.split('@')[0]
+        name: name || email.split("@")[0],
       }),
     })
-
-    console.log('📡 SignUp API Response:', response);
 
     if (response.success && response.data) {
       const session: AuthSession = {
@@ -210,26 +237,20 @@ export class ApiClient {
         expires_at: Date.now() + (response.data.session?.expires_in || response.data.expires_in || 3600) * 1000,
         user: response.data.user,
       }
-      
-      console.log('✅ User created successfully, saving session');
+
       await this.saveAuthSession(session)
       return { success: true, data: session }
     }
 
-    console.log('❌ User creation failed:', response.error);
     return response
   }
 
   public async signIn(email: string, password: string): Promise<ApiResponse<AuthSession>> {
-    console.log('🔄 Attempting to sign in:', { email });
-    
     const response = await this.request<any>("/auth/signin", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     })
 
-    console.log('📡 SignIn API Response:', response);
-
     if (response.success && response.data) {
       const session: AuthSession = {
         access_token: response.data.session?.access_token || response.data.access_token,
@@ -237,13 +258,11 @@ export class ApiClient {
         expires_at: Date.now() + (response.data.session?.expires_in || response.data.expires_in || 3600) * 1000,
         user: response.data.user,
       }
-      
-      console.log('✅ Sign in successful, saving session');
+
       await this.saveAuthSession(session)
       return { success: true, data: session }
     }
 
-    console.log('❌ Sign in failed:', response.error);
     return response
   }
 
@@ -257,9 +276,13 @@ export class ApiClient {
   }
 
   public async refreshToken(): Promise<boolean> {
-    if (!this.authSession?.refresh_token) return false
+    if (!this.authSession?.refresh_token) {
+      console.log("❌ No refresh token available")
+      return false
+    }
 
     try {
+      console.log("🔄 Attempting to refresh token...")
       const response = await fetch(`${this.baseURL}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -274,7 +297,10 @@ export class ApiClient {
           expires_at: Date.now() + data.expires_in * 1000,
         }
         await this.saveAuthSession(newSession)
+        console.log("✅ Token refreshed successfully")
         return true
+      } else {
+        console.log("❌ Token refresh failed:", response.status)
       }
     } catch (error) {
       console.error("Token refresh failed:", error)
@@ -286,17 +312,19 @@ export class ApiClient {
 
   public isAuthenticated(): boolean {
     const hasSession = this.authSession !== null
+    const hasToken = !!this.authSession?.access_token
     const notExpired = this.authSession?.expires_at ? this.authSession.expires_at > Date.now() : false
-    const result = hasSession && notExpired
-    
-    console.log('🔐 isAuthenticated check:', {
+    const result = hasSession && hasToken && notExpired
+
+    console.log("🔐 isAuthenticated check:", {
       hasSession,
+      hasToken,
       notExpired,
       expires_at: this.authSession?.expires_at,
       current_time: Date.now(),
-      result
+      result,
     })
-    
+
     return result
   }
 
@@ -315,10 +343,10 @@ export class ApiClient {
    */
   public async healthCheck(): Promise<boolean> {
     try {
-      await this.get('/health')
+      await this.get("/health")
       return true
     } catch (error) {
-      console.error('Health check failed:', error)
+      console.error("Health check failed:", error)
       return false
     }
   }
@@ -329,7 +357,7 @@ export class ApiClient {
   public async upload<T>(endpoint: string, formData: FormData): Promise<T> {
     try {
       const url = `${this.baseURL}${endpoint}`
-      console.log('🌐 UPLOAD Request:', url)
+      console.log("🌐 UPLOAD Request:", url)
 
       const headers: Record<string, string> = {}
       if (this.authSession?.access_token) {
@@ -337,7 +365,7 @@ export class ApiClient {
       }
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: formData,
       })
@@ -345,12 +373,12 @@ export class ApiClient {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.detail || data.message || 'Upload failed')
+        throw new Error(data.detail || data.message || "Upload failed")
       }
 
       return data
     } catch (error) {
-      console.error('UPLOAD Request failed:', error)
+      console.error("UPLOAD Request failed:", error)
       throw error
     }
   }

@@ -5,12 +5,11 @@ import {
   ThemedText,
   ThemedView
 } from '@/components/ui/ThemedComponents';
-import { ApiClient } from '@/database/api/client';
-import { classService } from '@/database/services/courseService';
+import { classService, CreateClassRequest } from '@/database/services/courseService';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Alert, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, TouchableOpacity, View } from 'react-native';
 
 interface CourseFormData {
   name: string;
@@ -20,6 +19,7 @@ interface CourseFormData {
   credits?: number;
   semester?: string;
   description?: string;
+  syllabus_url?: string;
   is_active: boolean;
 }
 
@@ -31,14 +31,14 @@ const defaultCourse: CourseFormData = {
   name: '',
   code: '',
   instructor: '',
-  color: '#3B82F6', // default color
+  color: '#3B82F6',
   credits: undefined,
   semester: '2025-1',
   description: '',
+  syllabus_url: '',
   is_active: true
 };
 
-// Colores predefinidos para los cursos
 const courseColors = [
   '#3B82F6', '#EF4444', '#10B981', '#F59E0B',
   '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
@@ -50,46 +50,8 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
   const [errors, setErrors] = useState<{[key: string]: string | undefined}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Debug: Verificar estado de autenticación al montar
-  useEffect(() => {
-    const checkAuth = async () => {
-      const apiClient = ApiClient.getInstance();
-      
-      console.log('🔍 DEBUGGING AUTH STATE:');
-      console.log('1. ApiClient instance:', !!apiClient);
-      
-      // Inicializar el cliente si no está inicializado
-      await apiClient.initialize();
-      
-      const isAuth = apiClient.isAuthenticated();
-      const currentUser = apiClient.getCurrentUser();
-      
-      console.log('2. Is authenticated:', isAuth);
-      console.log('3. Current user:', currentUser);
-      console.log('4. Has access_token:', !!currentUser?.access_token);
-      console.log('5. Token preview:', currentUser?.access_token?.substring(0, 20) + '...');
-      console.log('6. Token expires at:', currentUser?.expires_at);
-      console.log('7. Current time:', Date.now());
-      console.log('8. Token is expired:', currentUser?.expires_at ? currentUser.expires_at < Date.now() : 'No expiry');
-      
-      if (!isAuth) {
-        Alert.alert(
-          'Sesión requerida',
-          'Debes iniciar sesión para crear cursos.',
-          [{ 
-            text: 'Ir a Login', 
-            onPress: () => router.replace('/(auth)/login') 
-          }]
-        );
-      }
-    };
-    
-    checkAuth();
-  }, []);
-
   const handleChange = (field: keyof CourseFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when field is edited
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
@@ -98,22 +60,25 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
   const validateForm = (): boolean => {
     const newErrors: {[key: string]: string | undefined} = {};
 
-    // Required fields validation
     if (!formData.name.trim()) {
       newErrors.name = 'El nombre del curso es requerido';
     }
 
-    if (!formData.semester?.trim()) {
-      newErrors.semester = 'El semestre es requerido';
-    }
-
-    // Credits validation if provided
-    if (formData.credits !== undefined && (isNaN(Number(formData.credits)) || Number(formData.credits) <= 0)) {
-      newErrors.credits = 'Los créditos deben ser un número positivo';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const showSyllabusInfo = () => {
+    Alert.alert(
+      '📚 ¿Qué es el Aula Virtual?',
+      'Es el enlace donde tu universidad publica la información del curso:\n\n' +
+      '• eCampus (UTP)\n' +
+      '• Microsoft Teams\n' +
+      '• Google Classroom\n' +
+      '• Moodle\n\n' +
+      'Ahí encontrarás tareas, material de clase, calificaciones y anuncios del profesor.',
+      [{ text: 'Entendido', style: 'default' }]
+    );
   };
 
   const handleSubmit = async () => {
@@ -124,32 +89,17 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
       console.log('🚀 INICIANDO CREACIÓN DE CURSO');
       console.log('📋 Form data:', formData);
       
-      // Debug: Verificar estado de auth antes de enviar
-      const apiClient = ApiClient.getInstance();
-      const isAuth = apiClient.isAuthenticated();
-      const currentUser = apiClient.getCurrentUser();
-      
-      console.log('🔐 Pre-submit auth check:');
-      console.log('- Is authenticated:', isAuth);
-      console.log('- Has user:', !!currentUser);
-      console.log('- Has access_token:', !!currentUser?.access_token);
-      console.log('- Token length:', currentUser?.access_token?.length);
-      
-      if (!isAuth) {
-        throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
-      }
-      
-      // Preparar datos para el API (eliminar campos que no acepta el backend)
-      const courseDataToCreate = {
+      // Preparar datos siguiendo el patrón correcto - solo enviar campos con valor
+      const courseDataToCreate: CreateClassRequest = {
         name: formData.name.trim(),
-        code: formData.code?.trim() || undefined,
-        instructor: formData.instructor?.trim() || undefined,
+        ...(formData.code?.trim() && { code: formData.code.trim() }),
+        ...(formData.instructor?.trim() && { instructor: formData.instructor.trim() }),
         color: formData.color,
-        credits: formData.credits || undefined,
-        semester: formData.semester?.trim() || undefined,
-        description: formData.description?.trim() || undefined,
+        ...(formData.credits && { credits: formData.credits }),
+        ...(formData.semester?.trim() && { semester: formData.semester.trim() }),
+        ...(formData.description?.trim() && { description: formData.description.trim() }),
+        ...(formData.syllabus_url?.trim() && { syllabus_url: formData.syllabus_url.trim() }),
         is_active: formData.is_active
-        // NO incluir is_synced ni needs_sync - estos no están en el schema del API
       };
       
       console.log('📤 Data to send to API:', courseDataToCreate);
@@ -159,10 +109,10 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
       if (newCourse) {
         console.log('✅ Curso creado exitosamente:', newCourse);
         Alert.alert(
-          'Éxito', 
-          'Curso creado correctamente',
+          '🎉 ¡Éxito!', 
+          `El curso "${newCourse.name}" ha sido creado correctamente.`,
           [{
-            text: 'OK',
+            text: 'Continuar',
             onPress: () => {
               if (onSuccess && newCourse.id) {
                 onSuccess(newCourse.id);
@@ -172,29 +122,21 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
             }
           }]
         );
+        
+        // Reset form
+        setFormData(defaultCourse);
+        setErrors({});
       }
     } catch (error) {
       console.error('❌ Error al crear el curso:', error);
       
-      // Mejor manejo de errores
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       
-      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('no autenticado')) {
-        Alert.alert(
-          'Sesión expirada',
-          'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
-          [{ 
-            text: 'Ir a Login', 
-            onPress: () => router.replace('/(auth)/login') 
-          }]
-        );
-      } else {
-        Alert.alert(
-          'Error', 
-          `No se pudo crear el curso: ${errorMessage}`,
-          [{ text: 'OK' }]
-        );
-      }
+      Alert.alert(
+        'Error', 
+        `No se pudo crear el curso: ${errorMessage}`,
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -228,15 +170,13 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
             placeholder="Ej: CS101"
             value={formData.code || ''}
             onChangeText={(value) => handleChange('code', value)}
-            error={errors.code}
           />
 
           <ThemedInput
-            label="Semestre *"
+            label="Semestre"
             placeholder="Ej: 2025-1"
             value={formData.semester || ''}
             onChangeText={(value) => handleChange('semester', value)}
-            error={errors.semester}
           />
 
           <ThemedInput
@@ -252,7 +192,6 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
             value={formData.credits?.toString() || ''}
             onChangeText={(value) => handleChange('credits', value ? parseFloat(value) : undefined)}
             keyboardType="numeric"
-            error={errors.credits}
           />
 
           {/* Color Selector */}
@@ -276,7 +215,8 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
                     height: 40,
                     backgroundColor: color,
                     borderColor: formData.color === color ? theme.colors.primary : color,
-                    borderWidth: 2
+                    borderWidth: 2,
+                    borderRadius: theme.borderRadius.sm
                   }}
                 />
               ))}
@@ -291,6 +231,45 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
             multiline
             numberOfLines={3}
           />
+
+          {/* Syllabus URL with Info Button */}
+          <View>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              marginBottom: theme.spacing.sm 
+            }}>
+              <ThemedText variant="bodySmall" color="secondary" style={{ flex: 1 }}>
+                Enlace del Aula Virtual
+              </ThemedText>
+              <TouchableOpacity
+                onPress={showSyllabusInfo}
+                style={{
+                  backgroundColor: theme.colors.primary,
+                  borderRadius: 12,
+                  width: 24,
+                  height: 24,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+              >
+                <ThemedText 
+                  variant="caption" 
+                  color="primary" 
+                  style={{ fontWeight: 'bold' }}
+                >
+                  ?
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+            <ThemedInput
+              placeholder="eCampus, Teams, Classroom..."
+              value={formData.syllabus_url || ''}
+              onChangeText={(value) => handleChange('syllabus_url', value)}
+              keyboardType="url"
+              autoCapitalize="none"
+            />
+          </View>
         </View>
 
         {/* Action Buttons */}
@@ -305,6 +284,7 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
             variant="outline"
             onPress={() => router.back()}
             style={{ flex: 1 }}
+            disabled={isSubmitting}
           />
           <ThemedButton
             title={isSubmitting ? "Creando..." : "Crear Curso"}

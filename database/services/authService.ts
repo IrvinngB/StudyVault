@@ -12,15 +12,12 @@ export class AuthService {
     }
     return AuthService.instance;
   }
-
   /**
    * Initialize the auth service
    */
   public async initialize(): Promise<void> {
     try {
-      console.log('🔧 Initializing Auth Service...');
       await apiClient.initialize();
-      console.log('✅ Auth Service initialized');
     } catch (error) {
       console.error('❌ Failed to initialize auth service:', error);
       throw error;
@@ -29,17 +26,13 @@ export class AuthService {
 
   /**
    * Sign in with email and password
-   */
-  public async signIn(email: string, password: string): Promise<{ success: boolean; data?: AuthSession; error?: string }> {
+   */  public async signIn(email: string, password: string): Promise<{ success: boolean; data?: AuthSession; error?: string }> {
     try {
-      console.log('🔑 Signing in with API...');
       const result = await apiClient.signIn(email, password);
       
       if (result.success && result.data) {
-        console.log('✅ Sign in successful');
         return { success: true, data: result.data };
       } else {
-        console.log('❌ Sign in failed:', result.error);
         return { success: false, error: result.error };
       }
     } catch (error) {
@@ -53,17 +46,13 @@ export class AuthService {
 
   /**
    * Sign up with email and password
-   */
-  public async signUp(email: string, password: string, userData?: { name?: string }): Promise<{ success: boolean; data?: AuthSession; error?: string }> {
+   */  public async signUp(email: string, password: string, userData?: { name?: string }): Promise<{ success: boolean; data?: AuthSession; error?: string }> {
     try {
-      console.log('📝 Signing up with API...');
       const result = await apiClient.signUp(email, password, userData?.name);
       
       if (result.success && result.data) {
-        console.log('✅ Sign up successful');
         return { success: true, data: result.data };
       } else {
-        console.log('❌ Sign up failed:', result.error);
         return { success: false, error: result.error };
       }
     } catch (error) {
@@ -77,25 +66,20 @@ export class AuthService {
 
   /**
    * Sign out
-   */
-  public async signOut(): Promise<void> {
+   */  public async signOut(): Promise<void> {
     try {
-      console.log('👋 Signing out...');
       await apiClient.signOut();
-      console.log('✅ Sign out successful');
     } catch (error) {
       console.error('❌ Sign out error:', error);
       throw error;
     }
   }
-
   /**
    * Reset password
    */
   public async resetPassword(email: string): Promise<{ success: boolean; error?: string }> {
     try {
       // For now, return a mock response since password reset isn't implemented in API
-      console.log('📧 Password reset requested for:', email);
       return { 
         success: true 
       };
@@ -110,10 +94,8 @@ export class AuthService {
 
   /**
    * Update user profile
-   */
-  public async updateProfile(updates: Partial<UserProfile>): Promise<{ success: boolean; data?: UserProfile; error?: string }> {
+   */  public async updateProfile(updates: Partial<UserProfile>): Promise<{ success: boolean; data?: UserProfile; error?: string }> {
     try {
-      console.log('👤 Updating profile...');
       // For now, return a mock response since profile update isn't implemented in API
       const currentUser = apiClient.getCurrentUser();
       if (currentUser?.user) {
@@ -165,9 +147,8 @@ export class AuthService {
     // In a real implementation, you'd set up listeners for auth state changes
     return {
       data: {
-        subscription: {
-          unsubscribe: () => {
-            console.log('🔇 Auth state listener unsubscribed');
+        subscription: {          unsubscribe: () => {
+            // Auth state listener unsubscribed
           }
         }
       }

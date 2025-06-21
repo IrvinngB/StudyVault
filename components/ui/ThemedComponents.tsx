@@ -3,14 +3,15 @@ import { useTheme } from '@/hooks/useTheme';
 import { createStyles } from '@/utils/createStyles';
 import React from 'react';
 import {
-    Text,
-    TextInput,
-    TextInputProps,
-    TextProps,
-    TouchableOpacity,
-    TouchableOpacityProps,
-    View,
-    ViewProps
+  ActivityIndicator,
+  Text,
+  TextInput,
+  TextInputProps,
+  TextProps,
+  TouchableOpacity,
+  TouchableOpacityProps,
+  View,
+  ViewProps
 } from 'react-native';
 
 // Componente View con tema aplicado
@@ -70,12 +71,15 @@ export function ThemedText({
   );
 }
 
-// Componente Button con tema aplicado
+// Componente Button con tema aplicado - CON SOPORTE DE ICONOS
 interface ThemedButtonProps extends TouchableOpacityProps {
   title: string;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'success' | 'warning' | 'error';
   size?: 'small' | 'medium' | 'large';
   loading?: boolean;
+  icon?: React.ReactNode;
+  iconPosition?: 'left' | 'right';
+  iconOnly?: boolean;
 }
 
 export function ThemedButton({ 
@@ -83,6 +87,9 @@ export function ThemedButton({
   variant = 'primary', 
   size = 'medium',
   loading = false,
+  icon,
+  iconPosition = 'left',
+  iconOnly = false,
   style, 
   disabled,
   ...props 
@@ -91,6 +98,95 @@ export function ThemedButton({
   const styles = getButtonStyles(theme);
   
   const isDisabled = disabled || loading;
+
+  const getTextColor = () => {
+    switch (variant) {
+      case 'primary': return '#FFFFFF';
+      case 'secondary': return '#FFFFFF';
+      case 'outline': return theme.colors.primary;
+      case 'ghost': return theme.colors.primary;
+      case 'success': return '#FFFFFF';
+      case 'warning': return '#FFFFFF';
+      case 'error': return '#FFFFFF';
+      default: return '#FFFFFF';
+    }
+  };
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <View style={styles.contentContainer}>
+          <ActivityIndicator 
+            size="small" 
+            color={getTextColor()} 
+            style={icon && !iconOnly ? { marginRight: theme.spacing.xs } : undefined}
+          />
+          {!iconOnly && (
+            <Text 
+              style={[
+                theme.typography.button,
+                styles[`text_${variant}`],
+                isDisabled && styles.disabledText
+              ]}
+            >
+              {title}
+            </Text>
+          )}
+        </View>
+      );
+    }
+
+    if (iconOnly && icon) {
+      return <View style={styles.iconOnlyContainer}>{icon}</View>;
+    }
+
+    if (icon && iconPosition === 'left') {
+      return (
+        <View style={styles.contentContainer}>
+          <View style={styles.iconContainer}>{icon}</View>
+          <Text 
+            style={[
+              theme.typography.button,
+              styles[`text_${variant}`],
+              isDisabled && styles.disabledText
+            ]}
+          >
+            {title}
+          </Text>
+        </View>
+      );
+    }
+
+    if (icon && iconPosition === 'right') {
+      return (
+        <View style={styles.contentContainer}>
+          <Text 
+            style={[
+              theme.typography.button,
+              styles[`text_${variant}`],
+              isDisabled && styles.disabledText
+            ]}
+          >
+            {title}
+          </Text>
+          <View style={[styles.iconContainer, { marginLeft: theme.spacing.xs, marginRight: 0 }]}>
+            {icon}
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <Text 
+        style={[
+          theme.typography.button,
+          styles[`text_${variant}`],
+          isDisabled && styles.disabledText
+        ]}
+      >
+        {title}
+      </Text>
+    );
+  };
   
   return (
     <TouchableOpacity 
@@ -98,6 +194,7 @@ export function ThemedButton({
         styles.base,
         styles[`variant_${variant}`],
         styles[`size_${size}`],
+        iconOnly && styles.iconOnlyBase,
         isDisabled && styles.disabled,
         style
       ]}
@@ -105,15 +202,7 @@ export function ThemedButton({
       activeOpacity={0.7}
       {...props}
     >
-      <ThemedText 
-        variant="button" 
-        style={[
-          styles[`text_${variant}`],
-          isDisabled && styles.disabledText
-        ]}
-      >
-        {loading ? 'Cargando...' : title}
-      </ThemedText>
+      {renderContent()}
     </TouchableOpacity>
   );
 }
@@ -267,14 +356,37 @@ const getButtonStyles = createStyles((theme) => ({
   size_small: {
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
+    minHeight: 32,
   },
   size_medium: {
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
+    minHeight: 40,
   },
   size_large: {
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
+    minHeight: 48,
+  },
+
+  // Contenido y iconos
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    marginRight: theme.spacing.xs,
+  },
+  iconOnlyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconOnlyBase: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    minWidth: 40,
+    aspectRatio: 1,
   },
   
   // Text colors

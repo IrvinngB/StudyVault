@@ -9,9 +9,8 @@ export interface ClassData {
   credits?: number;
   semester?: string;
   description?: string;
+  syllabus_url?: string;
   is_active: boolean;
-  is_synced?: boolean;
-  needs_sync?: boolean;
   created_at?: string;
   updated_at?: string;
   user_id?: string;
@@ -21,11 +20,12 @@ export interface CreateClassRequest {
   name: string;
   code?: string;
   instructor?: string;
-  color: string;
+  color?: string;
   credits?: number;
   semester?: string;
   description?: string;
-  is_active: boolean;
+  syllabus_url?: string;
+  is_active?: boolean;
 }
 
 export interface UpdateClassRequest extends Partial<CreateClassRequest> {
@@ -40,18 +40,24 @@ class ClassService {
   }
 
   /**
-   * Crear una nueva clase
-   */
-  async createClass(classData: CreateClassRequest): Promise<ClassData> {
+   * Crear una nueva clase - usando endpoint correcto con slash final
+   */  async createClass(classData: CreateClassRequest): Promise<ClassData> {
     try {
-      console.log('📚 ClassService: Creando clase:', classData);
-      
-      const response = await this.apiClient.post<ClassData>('/classes', {
-        ...classData,
+      // Preparar datos exactamente como lo espera el API
+      const dataToSend = {
+        name: classData.name,
+        ...(classData.code && { code: classData.code }),
+        ...(classData.instructor && { instructor: classData.instructor }),
+        ...(classData.color && { color: classData.color }),
+        ...(classData.credits && { credits: classData.credits }),
+        ...(classData.semester && { semester: classData.semester }),
+        ...(classData.description && { description: classData.description }),        ...(classData.syllabus_url && { syllabus_url: classData.syllabus_url }),
         is_active: classData.is_active ?? true
-      });
+      };
 
-      console.log('✅ ClassService: Clase creada exitosamente:', response);
+      // Usar endpoint correcto con slash final
+      const response = await this.apiClient.post<ClassData>('/classes/', dataToSend);
+
       return response;
     } catch (error) {
       console.error('❌ ClassService: Error al crear clase:', error);
@@ -61,14 +67,10 @@ class ClassService {
 
   /**
    * Obtener todas las clases del usuario
-   */
-  async getAllClasses(): Promise<ClassData[]> {
+   */  async getAllClasses(): Promise<ClassData[]> {
     try {
-      console.log('📚 ClassService: Obteniendo todas las clases');
+      const response = await this.apiClient.get<ClassData[]>('/classes/');
       
-      const response = await this.apiClient.get<ClassData[]>('/classes');
-      
-      console.log('✅ ClassService: Clases obtenidas exitosamente:', response.length);
       return response;
     } catch (error) {
       console.error('❌ ClassService: Error al obtener clases:', error);
@@ -79,13 +81,9 @@ class ClassService {
   /**
    * Obtener una clase por ID
    */
-  async getClassById(classId: string): Promise<ClassData> {
-    try {
-      console.log('📚 ClassService: Obteniendo clase por ID:', classId);
-      
+  async getClassById(classId: string): Promise<ClassData> {    try {
       const response = await this.apiClient.get<ClassData>(`/classes/${classId}`);
       
-      console.log('✅ ClassService: Clase obtenida exitosamente:', response);
       return response;
     } catch (error) {
       console.error('❌ ClassService: Error al obtener clase:', error);
@@ -95,15 +93,11 @@ class ClassService {
 
   /**
    * Actualizar una clase
-   */
-  async updateClass(classData: UpdateClassRequest): Promise<ClassData> {
+   */  async updateClass(classData: UpdateClassRequest): Promise<ClassData> {
     try {
-      console.log('📚 ClassService: Actualizando clase:', classData);
-      
       const { id, ...updateData } = classData;
       const response = await this.apiClient.put<ClassData>(`/classes/${id}`, updateData);
       
-      console.log('✅ ClassService: Clase actualizada exitosamente:', response);
       return response;
     } catch (error) {
       console.error('❌ ClassService: Error al actualizar clase:', error);
@@ -113,52 +107,13 @@ class ClassService {
 
   /**
    * Eliminar una clase
-   */
-  async deleteClass(classId: string): Promise<void> {
+   */  async deleteClass(classId: string): Promise<void> {
     try {
-      console.log('📚 ClassService: Eliminando clase:', classId);
-      
       await this.apiClient.delete(`/classes/${classId}`);
       
-      console.log('✅ ClassService: Clase eliminada exitosamente');
     } catch (error) {
       console.error('❌ ClassService: Error al eliminar clase:', error);
       throw new Error(`No se pudo eliminar la clase: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-    }
-  }
-
-  /**
-   * Obtener clases activas del semestre actual
-   */
-  async getActiveClasses(semester?: string): Promise<ClassData[]> {
-    try {
-      console.log('📚 ClassService: Obteniendo clases activas del semestre:', semester);
-      
-      const params = semester ? `?semester=${semester}&is_active=true` : '?is_active=true';
-      const response = await this.apiClient.get<ClassData[]>(`/classes${params}`);
-      
-      console.log('✅ ClassService: Clases activas obtenidas exitosamente:', response.length);
-      return response;
-    } catch (error) {
-      console.error('❌ ClassService: Error al obtener clases activas:', error);
-      throw new Error(`No se pudieron obtener las clases activas: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-    }
-  }
-
-  /**
-   * Buscar clases por nombre o código
-   */
-  async searchClasses(query: string): Promise<ClassData[]> {
-    try {
-      console.log('📚 ClassService: Buscando clases:', query);
-      
-      const response = await this.apiClient.get<ClassData[]>(`/classes/search?q=${encodeURIComponent(query)}`);
-      
-      console.log('✅ ClassService: Búsqueda completada:', response.length);
-      return response;
-    } catch (error) {
-      console.error('❌ ClassService: Error en la búsqueda:', error);
-      throw new Error(`No se pudo realizar la búsqueda: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   }
 }

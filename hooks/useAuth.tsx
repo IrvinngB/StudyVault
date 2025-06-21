@@ -31,12 +31,8 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const initialize = useCallback(async () => {
+  const [isLoading, setIsLoading] = useState(true);  const initialize = useCallback(async () => {
     try {
-      console.log('🔧 Initializing auth provider...');
-      
       // Initialize auth service
       await authService.initialize();
       
@@ -45,9 +41,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (currentSession) {
         setSession(currentSession);
         setUser(currentSession.user);
-        console.log('✅ User session restored:', currentSession.user.email);
-      } else {
-        console.log('ℹ️ No existing session found');
       }
     } catch (error) {
       console.error('❌ Auth initialization error:', error);
@@ -57,17 +50,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
-    initialize();
-
-    // Listen for auth state changes
+    initialize();    // Listen for auth state changes
     const { data: { subscription } } = authService.onAuthStateChange((session) => {
-      console.log('🔄 Auth state changed');
       setSession(session);
       setUser(session?.user || null);
-      
-      if (!session) {
-        console.log('👋 User signed out');
-      }
     });
 
     return () => {
@@ -120,12 +106,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signOut = useCallback(async () => {
-    setIsLoading(true);
-    try {
+    setIsLoading(true);    try {
       await authService.signOut();
       setSession(null);
       setUser(null);
-      console.log('✅ User signed out successfully');
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {

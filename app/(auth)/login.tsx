@@ -1,9 +1,9 @@
 import {
-  ThemedButton,
-  ThemedCard,
-  ThemedInput,
-  ThemedText,
-  ThemedView
+    ThemedButton,
+    ThemedCard,
+    ThemedInput,
+    ThemedText,
+    ThemedView
 } from '@/components/ui/ThemedComponents';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
@@ -19,11 +19,9 @@ export default function LoginScreen() {
     password: ''
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      console.log('🔄 User already authenticated, redirecting to tabs...');
       router.replace('/(tabs)');
     }
   }, [isAuthenticated]);
