@@ -1,8 +1,11 @@
 import {
-    ThemedButton,
-    ThemedText,
-    ThemedView
+  ThemedButton,
+  ThemedCard,
+  ThemedText,
+  ThemedView
 } from '@/components/ui/ThemedComponents';
+
+import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
 import React from 'react';
@@ -10,8 +13,7 @@ import { Alert, ScrollView } from 'react-native';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
-  
-  const handleLogout = () => {
+  const { signOut } = useAuth();  const handleLogout = async () => {
     Alert.alert(
       'Cerrar Sesión',
       '¿Estás seguro de que quieres cerrar sesión?',
@@ -23,14 +25,19 @@ export default function HomeScreen() {
         {
           text: 'Cerrar Sesión',
           style: 'destructive',
-          onPress: () => {
-            router.replace('/(auth)/login');
+          onPress: async () => {
+            try {
+              await signOut();
+              router.replace('/(auth)/login');
+            } catch (error) {
+              console.error('Error al cerrar sesión:', error);
+              router.replace('/(auth)/login');
+            }
           },
         },
       ]
     );
   };
-
   return (
     <ThemedView variant="background" style={{ flex: 1 }}>
       <ScrollView
@@ -40,7 +47,7 @@ export default function HomeScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Encabezado */}
         <ThemedView style={{
           marginBottom: theme.spacing.lg,
           flexDirection: 'row',
@@ -65,8 +72,29 @@ export default function HomeScreen() {
               paddingVertical: theme.spacing.xs,
               marginTop: theme.spacing.xs
             }}
-          />        
+          />
         </ThemedView>
+        
+        {/* Bienvenida */}
+        <ThemedCard 
+          variant="elevated"
+          padding="medium"
+          style={{ 
+            marginBottom: theme.spacing.lg,
+            backgroundColor: theme.colors.primary + '20',
+            borderLeftWidth: 4,
+            borderLeftColor: theme.colors.primary
+          }}
+        >
+          <ThemedView style={{ alignItems: 'center' }}>
+            <ThemedText variant="h3" style={{ marginBottom: theme.spacing.xs }}>
+              🎉 ¡Bienvenido a StudyVault!
+            </ThemedText>
+            <ThemedText variant="body" color="secondary" style={{ textAlign: 'center' }}>
+              Tu plataforma de estudio está lista. Comienza organizando tus cursos, tareas y horarios.
+            </ThemedText>
+          </ThemedView>
+        </ThemedCard>
         
         {/* Sección de acceso rápido */}
         <ThemedView style={{
@@ -80,7 +108,7 @@ export default function HomeScreen() {
           </ThemedText>          
           
           <ThemedButton
-            title="Mis Cursos"
+            title="� Mis Cursos"
             variant="primary"
             onPress={() => {
               try {
@@ -91,6 +119,33 @@ export default function HomeScreen() {
               }
             }}
             style={{ marginBottom: theme.spacing.sm }}
+          />
+          
+          <ThemedButton
+            title="📝 Mis Tareas"
+            variant="secondary"
+            onPress={() => {
+              try {
+                router.push("/tasks" as any);
+              } catch (error) {
+                console.log('Error de navegación:', error);
+                router.navigate("/tasks" as any);
+              }
+            }}
+            style={{ marginBottom: theme.spacing.sm }}
+          />
+          
+          <ThemedButton
+            title="📓 Mis Notas"
+            variant="outline"
+            onPress={() => {
+              try {
+                router.push("/notes" as any);
+              } catch (error) {
+                console.log('Error de navegación:', error);
+                router.navigate("/notes" as any);
+              }
+            }}
           />
         </ThemedView>
       </ScrollView>

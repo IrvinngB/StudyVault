@@ -5,6 +5,7 @@ import {
     ThemedText,
     ThemedView
 } from '@/components/ui/ThemedComponents';
+import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -12,6 +13,7 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-n
 
 export default function RegisterScreen() {
   const { theme } = useTheme();
+  const { signUp, isLoading } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -19,11 +21,11 @@ export default function RegisterScreen() {
     confirmPassword: ''
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
     // Limpiar errores
     setErrors({});
+    console.log('🚀 Starting registration process');
 
     // Validaciones
     const newErrors: { [key: string]: string } = {};
@@ -36,6 +38,8 @@ export default function RegisterScreen() {
     
     if (!formData.email.trim()) {
       newErrors.email = 'El email es requerido';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'El email no es válido';
     }
     
     if (!formData.password) {
@@ -52,17 +56,41 @@ export default function RegisterScreen() {
       setErrors(newErrors);
       return;
     }
-
-    // Simular registro (sin base de datos)
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      Alert.alert(
-        'Registro exitoso', 
-        '¡Bienvenido a StudyVault!',
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
+    
+    try {
+      console.log('📝 Creating user account with Supabase...');
+      const result = await signUp(
+        formData.email.trim(), 
+        formData.password,
+        { name: formData.name.trim() }
       );
-    }, 1000);
+
+      if (result.success) {
+        console.log('✅ Registration successful!');
+        Alert.alert(
+          'Registro exitoso', 
+          `¡Bienvenido ${formData.name}! Tu cuenta ha sido creada exitosamente. Revisa tu email para confirmar tu cuenta.`,
+          [{ 
+            text: 'Continuar', 
+            onPress: () => router.replace('/(tabs)') 
+          }]
+        );
+      } else {
+        console.log('❌ Registration failed:', result.error);
+        Alert.alert(
+          'Error en el registro',
+          result.error || 'No se pudo crear la cuenta. Intenta nuevamente.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('💥 Registration error:', error);
+      Alert.alert(
+        'Error de conexión',
+        'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (
@@ -86,6 +114,9 @@ export default function RegisterScreen() {
               </ThemedText>
               <ThemedText variant="h3" color="secondary">
                 Crear Cuenta
+              </ThemedText>
+              <ThemedText variant="bodySmall" color="muted" style={{ textAlign: 'center', marginTop: theme.spacing.sm }}>
+                Únete a StudyVault y organiza tu vida académica
               </ThemedText>
             </View>
 
@@ -128,7 +159,7 @@ export default function RegisterScreen() {
               />
 
               <ThemedButton
-                title={isLoading ? "Creando cuenta..." : "Crear Cuenta"}
+                title={isLoading ? "Creando cuenta..." : "🚀 Crear Cuenta"}
                 variant="primary"
                 size="large"
                 onPress={handleRegister}

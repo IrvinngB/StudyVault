@@ -1,6 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import type { ApiResponse, AuthSession } from "../models/types"
-// __DEV__ is a global variable in React Native, no need to import it
 
 export class ApiClient {
   private static instance: ApiClient
@@ -8,11 +7,9 @@ export class ApiClient {
   private authSession: AuthSession | null = null
 
   private constructor() {
-    // Configure your API base URL here
-    
     this.baseURL = __DEV__
-      ? "http://localhost:8000" // Development
-      : "https://your-api-domain.com" // Production
+      ? "https://api-study-production.up.railway.app" // Development
+      : "https://api-study-production.up.railway.app" // Production
   }
 
   public static getInstance(): ApiClient {
@@ -23,13 +20,11 @@ export class ApiClient {
   }
 
   public async initialize(): Promise<void> {
-    // Load saved auth session
     try {
       const savedSession = await AsyncStorage.getItem("auth_session")
       if (savedSession) {
         this.authSession = JSON.parse(savedSession)
 
-        // Check if token is expired
         if (this.authSession && this.authSession.expires_at < Date.now()) {
           await this.refreshToken()
         }
@@ -56,6 +51,9 @@ export class ApiClient {
 
     if (this.authSession?.access_token) {
       headers["Authorization"] = `Bearer ${this.authSession.access_token}`
+      console.log('🔑 Adding Authorization header with token:', this.authSession.access_token.substring(0, 10) + '...')
+    } else {
+      console.log('❌ No access token available for Authorization header')
     }
 
     return headers
@@ -64,6 +62,8 @@ export class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     try {
       const url = `${this.baseURL}${endpoint}`
+      console.log('🌐 API Request:', options.method || 'GET', url)
+      
       const response = await fetch(url, {
         ...options,
         headers: {
@@ -75,12 +75,14 @@ export class ApiClient {
       const data = await response.json()
 
       if (!response.ok) {
+        console.error('❌ API Error:', response.status, data)
         return {
           success: false,
           error: data.detail || data.message || "Request failed",
         }
       }
 
+      console.log('✅ API Success:', data)
       return {
         success: true,
         data,
@@ -94,44 +96,154 @@ export class ApiClient {
     }
   }
 
-  // Authentication methods
-  public async signUp(email: string, password: string): Promise<ApiResponse<AuthSession>> {
+  // ==================== HTTP METHODS ====================
+  
+  /**
+   * Realizar petición GET
+   */
+  public async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+    let url = endpoint
+    
+    if (params) {
+      const searchParams = new URLSearchParams()
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value))
+        }
+      })
+      const queryString = searchParams.toString()
+      if (queryString) {
+        url += `?${queryString}`
+      }
+    }
+
+    const response = await this.request<T>(url, { method: 'GET' })
+    
+    if (!response.success) {
+      throw new Error(response.error || 'GET request failed')
+    }
+    
+    return response.data!
+  }
+
+  /**
+   * Realizar petición POST
+   */
+  public async post<T>(endpoint: string, data?: any): Promise<T> {
+    const response = await this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    })
+    
+    if (!response.success) {
+      throw new Error(response.error || 'POST request failed')
+    }
+    
+    return response.data!
+  }
+
+  /**
+   * Realizar petición PUT
+   */
+  public async put<T>(endpoint: string, data?: any): Promise<T> {
+    const response = await this.request<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    })
+    
+    if (!response.success) {
+      throw new Error(response.error || 'PUT request failed')
+    }
+    
+    return response.data!
+  }
+
+  /**
+   * Realizar petición PATCH
+   */
+  public async patch<T>(endpoint: string, data?: any): Promise<T> {
+    const response = await this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    })
+    
+    if (!response.success) {
+      throw new Error(response.error || 'PATCH request failed')
+    }
+    
+    return response.data!
+  }
+
+  /**
+   * Realizar petición DELETE
+   */
+  public async delete<T = void>(endpoint: string): Promise<T> {
+    const response = await this.request<T>(endpoint, { method: 'DELETE' })
+    
+    if (!response.success) {
+      throw new Error(response.error || 'DELETE request failed')
+    }
+    
+    return response.data!
+  }
+
+  // ==================== AUTH METHODS ====================
+
+  public async signUp(email: string, password: string, name?: string): Promise<ApiResponse<AuthSession>> {
+    console.log('🔄 Attempting to create user:', { email, name });
+    
     const response = await this.request<any>("/auth/signup", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ 
+        email, 
+        password,
+        name: name || email.split('@')[0]
+      }),
     })
+
+    console.log('📡 SignUp API Response:', response);
 
     if (response.success && response.data) {
       const session: AuthSession = {
-        access_token: response.data.session.access_token,
-        refresh_token: response.data.session.refresh_token,
-        expires_at: Date.now() + response.data.session.expires_in * 1000,
+        access_token: response.data.session?.access_token || response.data.access_token,
+        refresh_token: response.data.session?.refresh_token || response.data.refresh_token,
+        expires_at: Date.now() + (response.data.session?.expires_in || response.data.expires_in || 3600) * 1000,
         user: response.data.user,
       }
+      
+      console.log('✅ User created successfully, saving session');
       await this.saveAuthSession(session)
       return { success: true, data: session }
     }
 
+    console.log('❌ User creation failed:', response.error);
     return response
   }
 
   public async signIn(email: string, password: string): Promise<ApiResponse<AuthSession>> {
+    console.log('🔄 Attempting to sign in:', { email });
+    
     const response = await this.request<any>("/auth/signin", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     })
 
+    console.log('📡 SignIn API Response:', response);
+
     if (response.success && response.data) {
       const session: AuthSession = {
-        access_token: response.data.session.access_token,
-        refresh_token: response.data.session.refresh_token,
-        expires_at: Date.now() + response.data.session.expires_in * 1000,
+        access_token: response.data.session?.access_token || response.data.access_token,
+        refresh_token: response.data.session?.refresh_token || response.data.refresh_token,
+        expires_at: Date.now() + (response.data.session?.expires_in || response.data.expires_in || 3600) * 1000,
         user: response.data.user,
       }
+      
+      console.log('✅ Sign in successful, saving session');
       await this.saveAuthSession(session)
       return { success: true, data: session }
     }
 
+    console.log('❌ Sign in failed:', response.error);
     return response
   }
 
@@ -148,8 +260,6 @@ export class ApiClient {
     if (!this.authSession?.refresh_token) return false
 
     try {
-      // Implement refresh token logic based on your API
-      // This is a placeholder - adjust according to your API
       const response = await fetch(`${this.baseURL}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -175,162 +285,74 @@ export class ApiClient {
   }
 
   public isAuthenticated(): boolean {
-    return this.authSession !== null && this.authSession.expires_at > Date.now()
+    const hasSession = this.authSession !== null
+    const notExpired = this.authSession?.expires_at ? this.authSession.expires_at > Date.now() : false
+    const result = hasSession && notExpired
+    
+    console.log('🔐 isAuthenticated check:', {
+      hasSession,
+      notExpired,
+      expires_at: this.authSession?.expires_at,
+      current_time: Date.now(),
+      result
+    })
+    
+    return result
   }
 
   public getCurrentUser(): AuthSession | null {
     return this.authSession
   }
 
-  // API methods for different resources
-  public async getClasses(): Promise<ApiResponse<any[]>> {
-    return this.request<any[]>("/classes")
+  public getBaseURL(): string {
+    return this.baseURL
   }
 
-  public async createClass(classData: any): Promise<ApiResponse<any>> {
-    return this.request<any>("/classes", {
-      method: "POST",
-      body: JSON.stringify(classData),
-    })
+  // ==================== UTILITY METHODS ====================
+
+  /**
+   * Verificar estado de conexión con el API
+   */
+  public async healthCheck(): Promise<boolean> {
+    try {
+      await this.get('/health')
+      return true
+    } catch (error) {
+      console.error('Health check failed:', error)
+      return false
+    }
   }
 
-  public async updateClass(id: string, classData: any): Promise<ApiResponse<any>> {
-    return this.request<any>(`/classes/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(classData),
-    })
-  }
+  /**
+   * Upload de archivos
+   */
+  public async upload<T>(endpoint: string, formData: FormData): Promise<T> {
+    try {
+      const url = `${this.baseURL}${endpoint}`
+      console.log('🌐 UPLOAD Request:', url)
 
-  public async deleteClass(id: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/classes/${id}`, {
-      method: "DELETE",
-    })
-  }
+      const headers: Record<string, string> = {}
+      if (this.authSession?.access_token) {
+        headers["Authorization"] = `Bearer ${this.authSession.access_token}`
+      }
 
-  public async getTasks(filters?: any): Promise<ApiResponse<any[]>> {
-    const queryParams = new URLSearchParams(filters).toString()
-    return this.request<any[]>(`/tasks${queryParams ? `?${queryParams}` : ""}`)
-  }
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
 
-  public async createTask(taskData: any): Promise<ApiResponse<any>> {
-    return this.request<any>("/tasks", {
-      method: "POST",
-      body: JSON.stringify(taskData),
-    })
-  }
+      const data = await response.json()
 
-  public async updateTask(id: string, taskData: any): Promise<ApiResponse<any>> {
-    return this.request<any>(`/tasks/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(taskData),
-    })
-  }
+      if (!response.ok) {
+        throw new Error(data.detail || data.message || 'Upload failed')
+      }
 
-  public async deleteTask(id: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/tasks/${id}`, {
-      method: "DELETE",
-    })
-  }
-
-  public async getCalendarEvents(filters?: any): Promise<ApiResponse<any[]>> {
-    const queryParams = new URLSearchParams(filters).toString()
-    return this.request<any[]>(`/calendar${queryParams ? `?${queryParams}` : ""}`)
-  }
-
-  public async createCalendarEvent(eventData: any): Promise<ApiResponse<any>> {
-    return this.request<any>("/calendar", {
-      method: "POST",
-      body: JSON.stringify(eventData),
-    })
-  }
-
-  public async updateCalendarEvent(id: string, eventData: any): Promise<ApiResponse<any>> {
-    return this.request<any>(`/calendar/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(eventData),
-    })
-  }
-
-  public async deleteCalendarEvent(id: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/calendar/${id}`, {
-      method: "DELETE",
-    })
-  }
-
-  public async getHabits(): Promise<ApiResponse<any[]>> {
-    return this.request<any[]>("/habits")
-  }
-
-  public async createHabit(habitData: any): Promise<ApiResponse<any>> {
-    return this.request<any>("/habits", {
-      method: "POST",
-      body: JSON.stringify(habitData),
-    })
-  }
-
-  public async updateHabit(id: string, habitData: any): Promise<ApiResponse<any>> {
-    return this.request<any>(`/habits/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(habitData),
-    })
-  }
-
-  public async deleteHabit(id: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/habits/${id}`, {
-      method: "DELETE",
-    })
-  }
-
-  public async getHabitLogs(habitId: string, filters?: any): Promise<ApiResponse<any[]>> {
-    const queryParams = new URLSearchParams(filters).toString()
-    return this.request<any[]>(`/habits/${habitId}/logs${queryParams ? `?${queryParams}` : ""}`)
-  }
-
-  public async createHabitLog(habitId: string, logData: any): Promise<ApiResponse<any>> {
-    return this.request<any>(`/habits/${habitId}/logs`, {
-      method: "POST",
-      body: JSON.stringify(logData),
-    })
-  }
-
-  // Sync methods
-  public async pullData(syncRequest: any): Promise<ApiResponse<any>> {
-    return this.request<any>("/sync/pull", {
-      method: "POST",
-      body: JSON.stringify(syncRequest),
-    })
-  }
-
-  public async pushData(tableName: string, records: any[], deviceId: string): Promise<ApiResponse<any>> {
-    return this.request<any>("/sync/push", {
-      method: "POST",
-      body: JSON.stringify({
-        table_name: tableName,
-        records,
-        device_id: deviceId,
-      }),
-    })
-  }
-
-  public async getSyncStatus(deviceId: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/sync/status?device_id=${deviceId}`)
-  }
-
-  // Analytics methods
-  public async getDashboardData(): Promise<ApiResponse<any>> {
-    return this.request<any>("/analytics/dashboard")
-  }
-
-  public async getProductivityMetrics(filters?: any): Promise<ApiResponse<any[]>> {
-    const queryParams = new URLSearchParams(filters).toString()
-    return this.request<any[]>(`/analytics/productivity${queryParams ? `?${queryParams}` : ""}`)
-  }
-
-  public async createStudySession(sessionData: any): Promise<ApiResponse<any>> {
-    return this.request<any>("/analytics/study-session", {
-      method: "POST",
-      body: JSON.stringify(sessionData),
-    })
+      return data
+    } catch (error) {
+      console.error('UPLOAD Request failed:', error)
+      throw error
+    }
   }
 }
 

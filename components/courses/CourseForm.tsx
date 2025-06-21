@@ -1,14 +1,27 @@
 import {
-    ThemedButton,
-    ThemedInput,
-    ThemedText,
-    ThemedView
+  ThemedButton,
+  ThemedCard,
+  ThemedInput,
+  ThemedText,
+  ThemedView
 } from '@/components/ui/ThemedComponents';
-import { CourseFormData, useCourses } from '@/hooks/modules/useCourses';
+import { ApiClient } from '@/database/api/client';
+import { classService } from '@/database/services/courseService';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, View } from 'react-native';
+
+interface CourseFormData {
+  name: string;
+  code?: string;
+  instructor?: string;
+  color: string;
+  credits?: number;
+  semester?: string;
+  description?: string;
+  is_active: boolean;
+}
 
 interface CourseFormProps {
   onSuccess?: (courseId: string) => void;
@@ -17,23 +30,62 @@ interface CourseFormProps {
 const defaultCourse: CourseFormData = {
   name: '',
   code: '',
-  description: '',
+  instructor: '',
   color: '#3B82F6', // default color
   credits: undefined,
   semester: '2025-1',
-  professor: '',
-  location: '',
-  is_active: true,
-  grade_scale: 'percentage',
-  target_grade: undefined,
-  current_grade: undefined
+  description: '',
+  is_active: true
 };
+
+// Colores predefinidos para los cursos
+const courseColors = [
+  '#3B82F6', '#EF4444', '#10B981', '#F59E0B',
+  '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
+];
 
 export default function CourseForm({ onSuccess }: CourseFormProps) {
   const { theme } = useTheme();
-  const { createCourse } = useCourses();  const [formData, setFormData] = useState<CourseFormData>(defaultCourse);
+  const [formData, setFormData] = useState<CourseFormData>(defaultCourse);
   const [errors, setErrors] = useState<{[key: string]: string | undefined}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Debug: Verificar estado de autenticación al montar
+  useEffect(() => {
+    const checkAuth = async () => {
+      const apiClient = ApiClient.getInstance();
+      
+      console.log('🔍 DEBUGGING AUTH STATE:');
+      console.log('1. ApiClient instance:', !!apiClient);
+      
+      // Inicializar el cliente si no está inicializado
+      await apiClient.initialize();
+      
+      const isAuth = apiClient.isAuthenticated();
+      const currentUser = apiClient.getCurrentUser();
+      
+      console.log('2. Is authenticated:', isAuth);
+      console.log('3. Current user:', currentUser);
+      console.log('4. Has access_token:', !!currentUser?.access_token);
+      console.log('5. Token preview:', currentUser?.access_token?.substring(0, 20) + '...');
+      console.log('6. Token expires at:', currentUser?.expires_at);
+      console.log('7. Current time:', Date.now());
+      console.log('8. Token is expired:', currentUser?.expires_at ? currentUser.expires_at < Date.now() : 'No expiry');
+      
+      if (!isAuth) {
+        Alert.alert(
+          'Sesión requerida',
+          'Debes iniciar sesión para crear cursos.',
+          [{ 
+            text: 'Ir a Login', 
+            onPress: () => router.replace('/(auth)/login') 
+          }]
+        );
+      }
+    };
+    
+    checkAuth();
+  }, []);
 
   const handleChange = (field: keyof CourseFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -42,6 +94,7 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
   };
+
   const validateForm = (): boolean => {
     const newErrors: {[key: string]: string | undefined} = {};
 
@@ -50,7 +103,7 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
       newErrors.name = 'El nombre del curso es requerido';
     }
 
-    if (!formData.semester.trim()) {
+    if (!formData.semester?.trim()) {
       newErrors.semester = 'El semestre es requerido';
     }
 
@@ -68,15 +121,80 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
     
     setIsSubmitting(true);
     try {
-      const newCourse = await createCourse(formData);
-      if (newCourse) {        if (onSuccess) {
-          onSuccess(newCourse.id);
-        } else {
-          router.back();
-        }
+      console.log('🚀 INICIANDO CREACIÓN DE CURSO');
+      console.log('📋 Form data:', formData);
+      
+      // Debug: Verificar estado de auth antes de enviar
+      const apiClient = ApiClient.getInstance();
+      const isAuth = apiClient.isAuthenticated();
+      const currentUser = apiClient.getCurrentUser();
+      
+      console.log('🔐 Pre-submit auth check:');
+      console.log('- Is authenticated:', isAuth);
+      console.log('- Has user:', !!currentUser);
+      console.log('- Has access_token:', !!currentUser?.access_token);
+      console.log('- Token length:', currentUser?.access_token?.length);
+      
+      if (!isAuth) {
+        throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+      }
+      
+      // Preparar datos para el API (eliminar campos que no acepta el backend)
+      const courseDataToCreate = {
+        name: formData.name.trim(),
+        code: formData.code?.trim() || undefined,
+        instructor: formData.instructor?.trim() || undefined,
+        color: formData.color,
+        credits: formData.credits || undefined,
+        semester: formData.semester?.trim() || undefined,
+        description: formData.description?.trim() || undefined,
+        is_active: formData.is_active
+        // NO incluir is_synced ni needs_sync - estos no están en el schema del API
+      };
+      
+      console.log('📤 Data to send to API:', courseDataToCreate);
+      
+      const newCourse = await classService.createClass(courseDataToCreate);
+      
+      if (newCourse) {
+        console.log('✅ Curso creado exitosamente:', newCourse);
+        Alert.alert(
+          'Éxito', 
+          'Curso creado correctamente',
+          [{
+            text: 'OK',
+            onPress: () => {
+              if (onSuccess && newCourse.id) {
+                onSuccess(newCourse.id);
+              } else {
+                router.back();
+              }
+            }
+          }]
+        );
       }
     } catch (error) {
-      console.error('Error al crear el curso:', error);
+      console.error('❌ Error al crear el curso:', error);
+      
+      // Mejor manejo de errores
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('no autenticado')) {
+        Alert.alert(
+          'Sesión expirada',
+          'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+          [{ 
+            text: 'Ir a Login', 
+            onPress: () => router.replace('/(auth)/login') 
+          }]
+        );
+      } else {
+        Alert.alert(
+          'Error', 
+          `No se pudo crear el curso: ${errorMessage}`,
+          [{ text: 'OK' }]
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -84,92 +202,120 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
 
   return (
     <ThemedView>
-      <ThemedText variant="h2" style={{ marginBottom: theme.spacing.md }}>
-        Nuevo Curso
-      </ThemedText>
+      <ThemedCard variant="elevated" padding="large">
+        {/* Header */}
+        <View style={{ marginBottom: theme.spacing.xl }}>
+          <ThemedText variant="h1" color="primary" style={{ marginBottom: theme.spacing.xs }}>
+            📚 Nuevo Curso
+          </ThemedText>
+          <ThemedText variant="body" color="secondary">
+            Completa la información de tu nueva materia
+          </ThemedText>
+        </View>
 
-      <ThemedInput
-        label="Nombre del curso *"
-        placeholder="Introducción a la Programación"
-        value={formData.name}
-        onChangeText={(value) => handleChange('name', value)}
-        error={errors.name}
-        containerStyle={{ marginBottom: theme.spacing.md }}
-      />
+        {/* Form Fields */}
+        <View style={{ gap: theme.spacing.md }}>
+          <ThemedInput
+            label="Nombre del curso *"
+            placeholder="Ej: Introducción a la Programación"
+            value={formData.name}
+            onChangeText={(value) => handleChange('name', value)}
+            error={errors.name}
+          />
 
-      <ThemedInput
-        label="Código"
-        placeholder="CS101"
-        value={formData.code}
-        onChangeText={(value) => handleChange('code', value)}
-        error={errors.code}
-        containerStyle={{ marginBottom: theme.spacing.md }}
-      />
+          <ThemedInput
+            label="Código del curso"
+            placeholder="Ej: CS101"
+            value={formData.code || ''}
+            onChangeText={(value) => handleChange('code', value)}
+            error={errors.code}
+          />
 
-      <ThemedInput
-        label="Semestre *"
-        placeholder="2025-1"
-        value={formData.semester}
-        onChangeText={(value) => handleChange('semester', value)}
-        error={errors.semester}
-        containerStyle={{ marginBottom: theme.spacing.md }}
-      />
+          <ThemedInput
+            label="Semestre *"
+            placeholder="Ej: 2025-1"
+            value={formData.semester || ''}
+            onChangeText={(value) => handleChange('semester', value)}
+            error={errors.semester}
+          />
 
-      <ThemedInput
-        label="Profesor"
-        placeholder="Nombre del profesor"
-        value={formData.professor || ''}
-        onChangeText={(value) => handleChange('professor', value)}
-        containerStyle={{ marginBottom: theme.spacing.md }}
-      />
+          <ThemedInput
+            label="Profesor"
+            placeholder="Nombre del profesor"
+            value={formData.instructor || ''}
+            onChangeText={(value) => handleChange('instructor', value)}
+          />
 
-      <ThemedInput
-        label="Ubicación"
-        placeholder="Aula/Edificio"
-        value={formData.location || ''}
-        onChangeText={(value) => handleChange('location', value)}
-        containerStyle={{ marginBottom: theme.spacing.md }}
-      />
+          <ThemedInput
+            label="Créditos"
+            placeholder="3"
+            value={formData.credits?.toString() || ''}
+            onChangeText={(value) => handleChange('credits', value ? parseFloat(value) : undefined)}
+            keyboardType="numeric"
+            error={errors.credits}
+          />
 
-      <ThemedInput
-        label="Créditos"
-        placeholder="3"
-        value={formData.credits?.toString() || ''}
-        onChangeText={(value) => handleChange('credits', value ? parseFloat(value) : undefined)}
-        keyboardType="numeric"
-        error={errors.credits}
-        containerStyle={{ marginBottom: theme.spacing.md }}
-      />
+          {/* Color Selector */}
+          <View>
+            <ThemedText variant="bodySmall" color="secondary" style={{ marginBottom: theme.spacing.sm }}>
+              Color del curso
+            </ThemedText>
+            <View style={{ 
+              flexDirection: 'row', 
+              flexWrap: 'wrap', 
+              gap: theme.spacing.sm 
+            }}>
+              {courseColors.map((color) => (
+                <ThemedButton
+                  key={color}
+                  title=""
+                  variant={formData.color === color ? "primary" : "outline"}
+                  onPress={() => handleChange('color', color)}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    backgroundColor: color,
+                    borderColor: formData.color === color ? theme.colors.primary : color,
+                    borderWidth: 2
+                  }}
+                />
+              ))}
+            </View>
+          </View>
 
-      <ThemedInput
-        label="Descripción"
-        placeholder="Detalles sobre el curso..."
-        value={formData.description || ''}
-        onChangeText={(value) => handleChange('description', value)}
-        multiline
-        numberOfLines={3}
-        containerStyle={{ marginBottom: theme.spacing.lg }}
-      />
+          <ThemedInput
+            label="Descripción"
+            placeholder="Detalles sobre el curso..."
+            value={formData.description || ''}
+            onChangeText={(value) => handleChange('description', value)}
+            multiline
+            numberOfLines={3}
+          />
+        </View>
 
-      <View style={{ 
-        flexDirection: 'row', 
-        justifyContent: 'space-between',
-        marginTop: theme.spacing.md
-      }}>
-        <ThemedButton
-          title="Cancelar"
-          variant="outline"
-          onPress={() => router.back()}
-          style={{ flex: 1, marginRight: theme.spacing.sm }}
-        />
-        <ThemedButton
-          title="Guardar Curso"
-          variant="primary"
-          onPress={handleSubmit}
-          loading={isSubmitting}
-          style={{ flex: 1, marginLeft: theme.spacing.sm }}
-        />
-      </View>
+        {/* Action Buttons */}
+        <View style={{ 
+          flexDirection: 'row', 
+          justifyContent: 'space-between',
+          marginTop: theme.spacing.xl,
+          gap: theme.spacing.md
+        }}>
+          <ThemedButton
+            title="Cancelar"
+            variant="outline"
+            onPress={() => router.back()}
+            style={{ flex: 1 }}
+          />
+          <ThemedButton
+            title={isSubmitting ? "Creando..." : "Crear Curso"}
+            variant="primary"
+            onPress={handleSubmit}
+            loading={isSubmitting}
+            disabled={isSubmitting}
+            style={{ flex: 1 }}
+          />
+        </View>
+      </ThemedCard>
     </ThemedView>
   );
 }

@@ -1,72 +1,55 @@
-import {
-    ThemedButton,
-    ThemedText,
-    ThemedView
-} from '@/components/ui/ThemedComponents';
+import { ThemedButton, ThemedText, ThemedView } from '@/components/ui/ThemedComponents';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
 import React from 'react';
-import { ScrollView } from 'react-native';
+import { View } from 'react-native';
 
 export default function CoursesScreen() {
   const { theme } = useTheme();
 
-  const handleAddCourse = () => {
-    router.push('/courses/create' as any);
+  const handleCreateCourse = () => {
+    router.push('/courses/create');
   };
 
   return (
-    <ThemedView variant="background" style={{ flex: 1 }}>
-      <ScrollView
-        contentContainerStyle={{
-          padding: theme.spacing.md,
-          paddingBottom: theme.spacing.xxl
+    <ThemedView variant="background" style={{ flex: 1, padding: theme.spacing.lg }}>
+      {/* Header */}
+      <View style={{ marginBottom: theme.spacing.xl }}>
+        <ThemedText variant="h1" style={{ marginBottom: theme.spacing.sm }}>
+          📚 Mis Cursos
+        </ThemedText>
+        <ThemedText variant="body" color="secondary">
+          Gestiona tus materias y organiza tu semestre académico
+        </ThemedText>
+      </View>
+
+      {/* Action Button */}
+      <ThemedButton
+        title="➕ Crear Nuevo Curso"
+        variant="primary"
+        size="large"
+        onPress={handleCreateCourse}
+        style={{ marginBottom: theme.spacing.lg }}
+      />
+
+      {/* Placeholder for courses list */}
+      <ThemedView 
+        variant="surface" 
+        style={{
+          flex: 1,
+          padding: theme.spacing.lg,
+          borderRadius: theme.borderRadius.lg,
+          justifyContent: 'center',
+          alignItems: 'center'
         }}
-        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <ThemedView style={{
-          marginBottom: theme.spacing.lg,
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start'
-        }}>
-          <ThemedView style={{ flex: 1 }}>
-            <ThemedText variant="h1" style={{ marginBottom: theme.spacing.xs }}>
-              📚 Mis Cursos
-            </ThemedText>
-            <ThemedText variant="body" color="secondary">
-              Aquí podrás ver tus cursos y organizarlos de manera eficiente.
-            </ThemedText>
-          </ThemedView>
-
-          <ThemedButton
-            title="+ Nuevo"
-            variant="primary"
-            size="small"
-            onPress={handleAddCourse}
-          />
-        </ThemedView>
-
-        {/* Empty State */}
-        <ThemedView style={{
-          padding: theme.spacing.xl,
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <ThemedText variant="h3" style={{ marginBottom: theme.spacing.md }}>
-            No hay cursos
-          </ThemedText>    
-          <ThemedText color="secondary" style={{ textAlign: 'center', marginBottom: theme.spacing.lg }}>
-            Aún no has agregado ningún curso. ¡Pulsa el botón &quot;Nuevo&quot; para empezar!
-          </ThemedText>
-          <ThemedButton
-            title="Agregar mi primer curso"
-            variant="primary"
-            onPress={handleAddCourse}
-          />
-        </ThemedView>
-      </ScrollView>
+        <ThemedText variant="h3" color="secondary" style={{ marginBottom: theme.spacing.sm }}>
+          🎯 ¡Comienza tu organización!
+        </ThemedText>
+        <ThemedText variant="body" color="muted" style={{ textAlign: 'center' }}>
+          Crea tu primer curso para empezar a gestionar tus tareas, notas y horarios de estudio.
+        </ThemedText>
+      </ThemedView>
     </ThemedView>
   );
 }

@@ -1,33 +1,44 @@
 import {
-    ThemedButton,
-    ThemedCard,
-    ThemedInput,
-    ThemedText,
-    ThemedView
+  ThemedButton,
+  ThemedCard,
+  ThemedInput,
+  ThemedText,
+  ThemedView
 } from '@/components/ui/ThemedComponents';
+import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
 export default function LoginScreen() {
   const { theme } = useTheme();
+  const { signIn, resetPassword, isLoading, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [isLoading, setIsLoading] = useState(false);
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('🔄 User already authenticated, redirecting to tabs...');
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated]);
   const handleLogin = async () => {
     // Limpiar errores
     setErrors({});
+    console.log('🚀 Starting login process');
 
     // Validaciones básicas
     const newErrors: { [key: string]: string } = {};
     
     if (!formData.email.trim()) {
       newErrors.email = 'El email es requerido';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'El email no es válido';
     }
     
     if (!formData.password) {
@@ -37,18 +48,72 @@ export default function LoginScreen() {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
-    }
-
-    // Simular login (sin base de datos)
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      Alert.alert(
-        'Login exitoso', 
-        '¡Bienvenido a StudyVault!',
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
+    }    try {
+      console.log('🔑 Signing in with Supabase...');
+      const result = await signIn(
+        formData.email.trim(),
+        formData.password
       );
-    }, 1000);
+
+      if (result.success) {
+        console.log('✅ Login successful!');
+        Alert.alert(
+          'Inicio de sesión exitoso', 
+          '¡Bienvenido de vuelta a StudyVault!',
+          [{ 
+            text: 'Continuar', 
+            onPress: () => router.replace('/(tabs)') 
+          }]
+        );
+      } else {
+        console.log('❌ Login failed:', result.error);
+        Alert.alert(
+          'Error al iniciar sesión',
+          result.error || 'Credenciales incorrectas. Verifica tu email y contraseña.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('💥 Login error:', error);
+      Alert.alert(
+        'Error de conexión',
+        'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!formData.email.trim()) {
+      Alert.alert(
+        'Email requerido',
+        'Por favor ingresa tu email para recuperar tu contraseña.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }    try {
+      const result = await resetPassword(formData.email.trim());
+      
+      if (result.success) {
+        Alert.alert(
+          'Email enviado',
+          'Te hemos enviado un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          result.error || 'No se pudo enviar el email de recuperación.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch {
+      Alert.alert(
+        'Error',
+        'Ocurrió un error al intentar enviar el email de recuperación.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (
@@ -94,16 +159,25 @@ export default function LoginScreen() {
                 onChangeText={(text) => setFormData(prev => ({ ...prev, password: text }))}
                 secureTextEntry
                 error={errors.password}
-              />
-
+              />            
               <ThemedButton
-                title={isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                title={isLoading ? "Iniciando sesión..." : "🔑 Iniciar Sesión"}
                 variant="primary"
                 size="large"
                 onPress={handleLogin}
                 disabled={isLoading}
                 style={{ marginTop: theme.spacing.md }}
               />
+
+              {/* Forgot Password Link */}
+              <View style={{ alignItems: 'center', marginTop: theme.spacing.sm }}>
+                <ThemedButton
+                  title="¿Olvidaste tu contraseña?"
+                  variant="ghost"
+                  size="small"
+                  onPress={handleForgotPassword}
+                />
+              </View>
 
               {/* Register Link */}
               <View style={{ 

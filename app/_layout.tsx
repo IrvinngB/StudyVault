@@ -5,6 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AuthNavigator } from '@/components/AuthNavigator';
+import { AuthProvider } from '@/hooks/useAuth';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemeProvider as CustomThemeProvider } from '@/hooks/useTheme';
 
@@ -20,16 +22,20 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <CustomThemeProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </CustomThemeProvider>
+      <AuthProvider>
+        <CustomThemeProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <AuthNavigator>
+              <Stack>
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+            </AuthNavigator>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </CustomThemeProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

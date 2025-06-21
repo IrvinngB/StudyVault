@@ -270,9 +270,7 @@ export default function ThemesDemo() {
                 </ThemedText>
               </ThemedView>
             </ThemedView>
-          </ThemedCard>
-
-          <ThemedView style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+          </ThemedCard>          <ThemedView style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
             <ThemedButton title="Agregar Tarea" variant="primary" style={{ flex: 1 }} />
             <ThemedButton title="Ver Calendario" variant="outline" style={{ flex: 1 }} />
           </ThemedView>
