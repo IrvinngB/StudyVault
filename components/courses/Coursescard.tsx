@@ -5,6 +5,7 @@ import {
 import { ClassData } from '@/database/services/courseService';
 import { useTheme } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React from 'react';
 import { Alert, TouchableOpacity, View } from 'react-native';
 
@@ -16,12 +17,15 @@ export default function CourseCard({ course }: CourseCardProps) {
   const { theme } = useTheme();
 
   const handlePress = () => {
-    // TODO: Implementar navegación a detalles del curso
-    Alert.alert(
-      'Próximamente',
-      `Vista de detalles para "${course.name}" estará disponible pronto.`,
-      [{ text: 'OK' }]
-    );
+    if (course.id) {
+      router.push(`/courses/${course.id}` as any);
+    } else {
+      Alert.alert(
+        'Error',
+        'No se puede acceder a los detalles de este curso.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const formatDate = (dateString?: string) => {

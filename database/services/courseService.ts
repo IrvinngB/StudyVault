@@ -41,7 +41,8 @@ class ClassService {
 
   /**
    * Crear una nueva clase - usando endpoint correcto con slash final
-   */  async createClass(classData: CreateClassRequest): Promise<ClassData> {
+   */
+  async createClass(classData: CreateClassRequest): Promise<ClassData> {
     try {
       // Preparar datos exactamente como lo espera el API
       const dataToSend = {
@@ -51,7 +52,8 @@ class ClassService {
         ...(classData.color && { color: classData.color }),
         ...(classData.credits && { credits: classData.credits }),
         ...(classData.semester && { semester: classData.semester }),
-        ...(classData.description && { description: classData.description }),        ...(classData.syllabus_url && { syllabus_url: classData.syllabus_url }),
+        ...(classData.description && { description: classData.description }),
+        ...(classData.syllabus_url && { syllabus_url: classData.syllabus_url }),
         is_active: classData.is_active ?? true
       };
 
@@ -67,7 +69,8 @@ class ClassService {
 
   /**
    * Obtener todas las clases del usuario
-   */  async getAllClasses(): Promise<ClassData[]> {
+   */
+  async getAllClasses(): Promise<ClassData[]> {
     try {
       const response = await this.apiClient.get<ClassData[]>('/classes/');
       
@@ -81,7 +84,8 @@ class ClassService {
   /**
    * Obtener una clase por ID
    */
-  async getClassById(classId: string): Promise<ClassData> {    try {
+  async getClassById(classId: string): Promise<ClassData> {
+    try {
       const response = await this.apiClient.get<ClassData>(`/classes/${classId}`);
       
       return response;
@@ -92,22 +96,43 @@ class ClassService {
   }
 
   /**
-   * Actualizar una clase
-   */  async updateClass(classData: UpdateClassRequest): Promise<ClassData> {
-    try {
-      const { id, ...updateData } = classData;
-      const response = await this.apiClient.put<ClassData>(`/classes/${id}`, updateData);
-      
-      return response;
-    } catch (error) {
-      console.error('❌ ClassService: Error al actualizar clase:', error);
-      throw new Error(`No se pudo actualizar la clase: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-    }
+   * Actualizar una clase - NOMBRE CORREGIDO
+   */
+  async updateClass(classId: string, classData: Partial<ClassData>): Promise<ClassData> {
+  try {
+    console.log('🔄 Actualizando clase:', classId, classData);
+    
+    // Preparar datos exactamente como lo espera el backend
+    const updatePayload: any = {};
+    
+    // Solo incluir campos que tienen valor y son esperados por el backend
+    if (classData.name !== undefined) updatePayload.name = classData.name;
+    if (classData.code !== undefined) updatePayload.code = classData.code;
+    if (classData.instructor !== undefined) updatePayload.instructor = classData.instructor;
+    if (classData.color !== undefined) updatePayload.color = classData.color;
+    if (classData.credits !== undefined) updatePayload.credits = classData.credits;
+    if (classData.semester !== undefined) updatePayload.semester = classData.semester;
+    if (classData.description !== undefined) updatePayload.description = classData.description;
+    if (classData.syllabus_url !== undefined) updatePayload.syllabus_url = classData.syllabus_url;
+    if (classData.is_active !== undefined) updatePayload.is_active = classData.is_active;
+    
+    console.log('📤 Payload enviado al backend:', updatePayload);
+    
+    // Usar PUT como muestra la documentación del API
+    const response = await this.apiClient.put<ClassData>(`/classes/${classId}`, updatePayload);
+    
+    console.log('✅ Clase actualizada exitosamente:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ ClassService: Error al actualizar clase:', error);
+    throw new Error(`No se pudo actualizar la clase: ${error instanceof Error ? error.message : 'Error desconocido'}`);
   }
+}
 
   /**
    * Eliminar una clase
-   */  async deleteClass(classId: string): Promise<void> {
+   */
+  async deleteClass(classId: string): Promise<void> {
     try {
       await this.apiClient.delete(`/classes/${classId}`);
       
