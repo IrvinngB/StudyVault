@@ -6,11 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, TextInput, View } from 'react-native';
 
 export default function CoursesScreen() {
   const { theme } = useTheme();
   const [courses, setCourses] = useState<ClassData[]>([]);
+  const [filteredCourses, setFilteredCourses] = useState<ClassData[]>([]);
+  const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +32,7 @@ export default function CoursesScreen() {
       const coursesData = await classService.getAllClasses();
       
       setCourses(coursesData);
+      setFilteredCourses(coursesData); // Inicialmente mostrar todos los cursos
     } catch (error) {
       console.error('❌ Error al cargar cursos:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
@@ -37,6 +40,7 @@ export default function CoursesScreen() {
       
       // Mostrar lista vacía en caso de error
       setCourses([]);
+      setFilteredCourses([]);
     } finally {
       setLoading(false);
     }
@@ -54,6 +58,14 @@ export default function CoursesScreen() {
 
   const handleRetry = () => {
     loadCourses();
+  };
+
+  const handleSearch = (text: string) => {
+    setSearchText(text);
+    const filtered = courses.filter(course =>
+      course.name.toLowerCase().includes(text.toLowerCase())
+    );
+    setFilteredCourses(filtered);
   };
 
   const renderCourseItem = ({ item }: { item: ClassData }) => (
@@ -178,6 +190,28 @@ export default function CoursesScreen() {
         </ThemedText>
       </View>
 
+      {/* Search Input */}
+      <TextInput
+        placeholder="Buscar cursos..."
+        value={searchText}
+        onChangeText={handleSearch}
+        style={{
+          backgroundColor: theme.colors.surfaceLight,
+          borderRadius: theme.borderRadius.md,
+          padding: theme.spacing.sm,
+          marginBottom: theme.spacing.md,
+          color: theme.colors.text,
+        }}
+      />
+
+      {/* Total Courses */}
+      <ThemedText 
+        variant="body" 
+        style={{ color: theme.colors.secondary, marginBottom: theme.spacing.md }}
+      >
+        Total de cursos: {courses.length}
+      </ThemedText>
+
       {/* Action Button */}
       <ThemedButton
         title="Crear Nuevo Curso"
@@ -203,7 +237,7 @@ export default function CoursesScreen() {
         </View>
       ) : (
         <FlatList
-          data={courses}
+          data={searchText ? filteredCourses : courses}
           renderItem={renderCourseItem}
           keyExtractor={(item) => item.id || `${item.name}-${item.created_at}`}
           refreshControl={
