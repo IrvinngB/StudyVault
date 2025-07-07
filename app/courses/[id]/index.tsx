@@ -1,8 +1,8 @@
 import {
-  ThemedButton,
-  ThemedCard,
-  ThemedText,
-  ThemedView
+    ThemedButton,
+    ThemedCard,
+    ThemedText,
+    ThemedView
 } from '@/components/ui/ThemedComponents';
 import { ClassData, classService } from '@/database/services/courseService';
 import { useTheme } from '@/hooks/useTheme';
@@ -10,12 +10,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  ScrollView,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Linking,
+    ScrollView,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 export default function CourseDetailScreen() {
