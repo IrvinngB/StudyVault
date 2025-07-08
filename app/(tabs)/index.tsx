@@ -147,6 +147,20 @@ export default function HomeScreen() {
               }
             }}
           />
+          
+          <ThemedButton
+            title="Calificaciones"
+            variant="primary"
+            onPress={() => {
+              try {
+                router.push("/grades" as any);
+              } catch (error) {
+                console.log('Error de navegación:', error);
+                router.navigate("/grades" as any);
+              }
+            }}
+            style={{ marginBottom: theme.spacing.sm }}
+          />
         </ThemedView>
       </ScrollView>
     </ThemedView>
