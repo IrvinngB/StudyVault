@@ -146,6 +146,7 @@ export default function HomeScreen() {
                 router.navigate("/notes" as any);
               }
             }}
+            style={{ marginBottom: theme.spacing.sm }}
           />
           
           <ThemedButton
@@ -161,6 +162,19 @@ export default function HomeScreen() {
             }}
             style={{ marginBottom: theme.spacing.sm }}
           />
+          <ThemedButton
+              title="📅 Calendario"
+              variant="secondary"
+              onPress={() => {
+                try {
+                router.push("/calendar" as any);
+                } catch (error) {
+                console.log('Error de navegación:', error);
+                router.navigate("/calendar" as any);
+                }
+              }}
+              style={{ marginBottom: theme.spacing.sm }}
+              />
         </ThemedView>
       </ScrollView>
     </ThemedView>
