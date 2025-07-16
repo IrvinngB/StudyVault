@@ -80,6 +80,7 @@ interface ThemedButtonProps extends TouchableOpacityProps {
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
   iconOnly?: boolean;
+  textStyle?: React.CSSProperties | any; // agrega esta línea
 }
 
 export function ThemedButton({ 

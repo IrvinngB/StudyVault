@@ -1,247 +1,259 @@
-import CourseCard from '@/components/courses/Coursescard';
-import { ThemedButton, ThemedText, ThemedView } from '@/components/ui/ThemedComponents';
-import { ClassData, classService } from '@/database/services/courseService';
+import React, { useState } from 'react';
+import {
+  Modal,
+  ScrollView,
+  TextInput,
+  View,
+  Button,
+} from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
-import { router } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, TextInput, View } from 'react-native';
-import { ScrollView } from 'react-native-reanimated/lib/typescript/Animated';
+import { ThemedText, ThemedButton, ThemedCard, ThemedView } from '@/components/ui/ThemedComponents';
+
+type Evaluacion = {
+  nombre: string;
+  nota: number;
+  notaMaxima: number;
+  fecha: string;
+};
+
+type Categoria = {
+  id: string;
+  nombre: string;
+  porcentaje: number;
+  evaluaciones: Evaluacion[];
+};
+
+type EvaluacionForm = {
+  nombre: string;
+  nota: string;
+  notaMaxima: string;
+  fecha: string;
+  categoriaId: string;
+};
+
+const materia = {
+  nombre: 'Matemáticas Aplicadas',
+  codigo: 'MAT101',
+  escala: 100,
+  notaActual: 78,
+};
+
+const categoriasIniciales: Categoria[] = [
+  {
+    id: '1',
+    nombre: 'Parcial',
+    porcentaje: 33,
+    evaluaciones: [],
+  },
+  {
+    id: '2',
+    nombre: 'Laboratorio',
+    porcentaje: 33,
+    evaluaciones: [],
+  },
+  {
+    id: '3',
+    nombre: 'Semestral',
+    porcentaje: 34,
+    evaluaciones: [],
+  },
+];
 
 export default function GradesScreen() {
   const { theme } = useTheme();
-  const [courses, setCourses] = useState<ClassData[]>([]);
-  const [filteredCourses, setFilteredCourses] = useState<ClassData[]>([]);
-  const [searchText, setSearchText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [categorias, setCategorias] = useState<Categoria[]>(categoriasIniciales);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [evaluacionData, setEvaluacionData] = useState<EvaluacionForm>({
+    nombre: '',
+    nota: '',
+    notaMaxima: '',
+    fecha: '',
+    categoriaId: '',
+  });
 
-  // Recargar cursos cuando la pantalla recibe foco
-  useFocusEffect(
-    useCallback(() => {
-      loadGrades();
-    }, [])
-  );
-
-  const loadGrades = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const coursesData = await classService.getAllClasses();
-      
-      setCourses(coursesData);
-      setFilteredCourses(coursesData); // Inicialmente mostrar todos los cursos
-    } catch (error) {
-      console.error('❌ Error al cargar cursos:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      setError(errorMessage);
-      
-      // Mostrar lista vacía en caso de error
-      setCourses([]);
-      setFilteredCourses([]);
-    } finally {
-      setLoading(false);
-    }
+  const abrirModal = (categoriaId: string) => {
+    setEvaluacionData({
+      nombre: '',
+      nota: '',
+      notaMaxima: '',
+      fecha: '',
+      categoriaId,
+    });
+    setModalVisible(true);
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadGrades();
-    setRefreshing(false);
-  };
-
-  const handleCreateGrades = () => {
-    router.push('/grades/create');
-  };
-
-  const handleRetry = () => {
-    loadGrades();
-  };
-
-  const handleSearch = (text: string) => {
-    setSearchText(text);
-    const filtered = courses.filter(course =>
-      course.name.toLowerCase().includes(text.toLowerCase())
-    );
-    setFilteredCourses(filtered);
-  };
-
-  const renderCourseItem = ({ item }: { item: ClassData }) => (
-    <CourseCard course={item} />
-  );
-
-  const renderEmptyState = () => {
-    if (error) {
-      return (
-        <ThemedView 
-          variant="surface" 
-          style={{
-            flex: 1,
-            padding: theme.spacing.lg,
-            borderRadius: theme.borderRadius.lg,
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginTop: theme.spacing.lg
-          }}
-        >
-          <Ionicons 
-            name="warning" 
-            size={48} 
-            color={theme.colors.error} 
-            style={{ marginBottom: theme.spacing.md }}
-          />
-          <ThemedText 
-            variant="h3" 
-            style={{ 
-              color: theme.colors.error,
-              marginBottom: theme.spacing.sm,
-              textAlign: 'center'
-            }}
-          >
-            Error al cargar cursos
-          </ThemedText>
-          <ThemedText 
-            variant="body" 
-            style={{ 
-              color: theme.colors.secondary,
-              textAlign: 'center',
-              marginBottom: theme.spacing.md 
-            }}
-          >
-            {error}
-          </ThemedText>
-          <ThemedButton
-            title="Reintentar"
-            variant="outline"
-            onPress={handleRetry}
-          />
-        </ThemedView>
-      );
+  const agregarEvaluacion = () => {
+    const { nombre, nota, notaMaxima, fecha } = evaluacionData;
+    if (
+      !nombre.trim() ||
+      isNaN(Number(nota)) ||
+      isNaN(Number(notaMaxima)) ||
+      Number(notaMaxima) <= 0
+    ) {
+      alert('Por favor, completa todos los campos correctamente');
+      return;
     }
 
-    // Estado vacío sin error
-    return (
-      <ThemedView 
-        variant="surface" 
-        style={{
-          flex: 1,
-          padding: theme.spacing.lg,
-          borderRadius: theme.borderRadius.lg,
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginTop: theme.spacing.lg
-        }}
-      >
-        <Ionicons 
-          name="flag" 
-          size={48} 
-          color={theme.colors.secondary} 
-          style={{ marginBottom: theme.spacing.md }}
-        />
-        <ThemedText 
-          variant="h3" 
-          style={{ 
-            color: theme.colors.secondary,
-            marginBottom: theme.spacing.sm,
-            textAlign: 'center'
-          }}
-        >
-          ¡Comienza tu organización!
-        </ThemedText>
-        <ThemedText 
-          variant="body" 
-          style={{ 
-            color: theme.colors.secondary,
-            textAlign: 'center'
-          }}
-        >
-          Crea tu primer curso para empezar a gestionar tus tareas, notas y horarios de estudio.
-        </ThemedText>
-      </ThemedView>
+    const nuevaEvaluacion: Evaluacion = {
+      nombre,
+      nota: parseFloat(nota),
+      notaMaxima: parseFloat(notaMaxima),
+      fecha,
+    };
+
+    const nuevasCategorias = categorias.map((cat) =>
+      cat.id === evaluacionData.categoriaId
+        ? { ...cat, evaluaciones: [...cat.evaluaciones, nuevaEvaluacion] }
+        : cat
     );
+
+    setCategorias(nuevasCategorias);
+    setModalVisible(false);
+  };
+
+  const calcularResumen = (): string => {
+    let total = 0;
+
+    categorias.forEach((cat) => {
+      const sumaNotas = cat.evaluaciones.reduce((acc, ev) => {
+        const notaEscalada = (ev.nota / ev.notaMaxima) * materia.escala;
+        return acc + notaEscalada;
+      }, 0);
+
+      const promedio =
+        cat.evaluaciones.length > 0 ? sumaNotas / cat.evaluaciones.length : 0;
+
+      total += (promedio / materia.escala) * cat.porcentaje;
+    });
+
+    return ((total * materia.escala) / 100).toFixed(2);
   };
 
   return (
-    <ThemedView variant="background" style={{ flex: 1, padding: theme.spacing.lg }}>
-      {/* Header */}
-      <View style={{ marginBottom: theme.spacing.xl }}>
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          marginBottom: theme.spacing.sm 
-        }}>
-          <Ionicons 
-            name="book" 
-            size={32} 
-            color={theme.colors.primary} 
-            style={{ marginRight: theme.spacing.sm }}
+    <ScrollView style={{ flex: 1, padding: theme.spacing.md, backgroundColor: theme.colors.background }}>
+      <ThemedCard variant="elevated" padding="medium">
+        <ThemedText variant="h1">{materia.nombre}</ThemedText>
+        <ThemedText>Código: {materia.codigo}</ThemedText>
+        <ThemedText>Escala: {materia.escala}</ThemedText>
+        <ThemedText>Nota actual: {materia.notaActual}</ThemedText>
+      </ThemedCard>
+
+      <ThemedText variant="h2" style={{ marginTop: theme.spacing.lg }}>Categorías:</ThemedText>
+
+      {categorias.map((cat) => (
+        <ThemedCard key={cat.id} variant="outlined" padding="medium" style={{marginTop: 20}}>
+          <ThemedText variant="h3">{cat.nombre}</ThemedText>
+          <ThemedText>Porcentaje: {cat.porcentaje}%</ThemedText>
+          <ThemedText>Evaluaciones: {cat.evaluaciones.length}</ThemedText>
+
+          <ThemedButton
+            variant="outline"
+            style={{ marginTop: theme.spacing.md }}
+            title="Agregar evaluación"
+            onPress={() => abrirModal(cat.id)}
+            textStyle={{ color: theme.colors.primary }}
           />
-          <ThemedText variant="h1">
-            Mis Cursos
-          </ThemedText>
-        </View>
-        <ThemedText 
-          variant="body" 
-          style={{ color: theme.colors.secondary }}
-        >
-          Gestiona tus materias y organiza tu semestre académico
-        </ThemedText>
-      </View>
 
-      <View style={{marginBottom: theme.spacing.xl}}> 
-        
-      </View>
-
-
+          {cat.evaluaciones.map((ev, index) => (
+            <View
+              key={index}
+              style={{
+                backgroundColor: '#e6f0ff',
+                padding: 10,
+                borderRadius: 8,
+                marginTop: 10,
+              }}
+            >
+              <ThemedText variant="body" style={{ fontWeight: 'bold' }}>{ev.nombre}</ThemedText>
+              <ThemedText>Nota: {ev.nota} / {ev.notaMaxima}</ThemedText>
+              <ThemedText>Fecha: {ev.fecha}</ThemedText>
+            </View>
+          ))}
+        </ThemedCard>
+      ))}
+      
+      <ThemedCard variant="outlined" padding="medium" style={{marginTop: 20}}>
+        <ThemedText variant="h2" style={{ marginTop: theme.spacing.lg }}>Resumen de Calificaciones</ThemedText>
+        <ThemedText>Nota ponderada: {calcularResumen()} / {materia.escala}</ThemedText>
+      </ThemedCard>
       
 
-      {/* Action Button */}
-      <ThemedButton
-        title="Agregar nueva categoría"
-        variant="primary"
-        size="large"
-        onPress={handleCreateGrades}
-        style={{ marginBottom: theme.spacing.lg }}
-      />
-
-      {/* Courses List */}
-      {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <ThemedText 
-            variant="body" 
-            style={{ 
-              color: theme.colors.secondary,
-              marginTop: theme.spacing.md 
-            }}
-          >
-            Cargando cursos...
-          </ThemedText>
-        </View>
-      ) : (
-        <FlatList
-          data={searchText ? filteredCourses : courses}
-          renderItem={renderCourseItem}
-          keyExtractor={(item) => item.id || `${item.name}-${item.created_at}`}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+      {/* Modal */}
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={{
+          flex: 1,
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          padding: 20
+        }}>
+          <View style={{
+            backgroundColor: theme.colors.surface,
+            padding: 20,
+            borderRadius: 10
+          }}>
+            <ThemedText>Nombre:</ThemedText>
+            <TextInput
+              style={{
+                borderBottomWidth: 1,
+                marginBottom: 10,
+                padding: 5,
+                color: theme.colors.text
+              }}
+              value={evaluacionData.nombre}
+              onChangeText={(text) =>
+                setEvaluacionData({ ...evaluacionData, nombre: text })
+              }
             />
-          }
-          ListEmptyComponent={renderEmptyState}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingBottom: theme.spacing.xl
-          }}
-        />
-      )}
-    </ThemedView>
+
+            <ThemedText>Nota:</ThemedText>
+            <TextInput
+              keyboardType="numeric"
+              style={{
+                borderBottomWidth: 1,
+                marginBottom: 10,
+                padding: 5,
+                color: theme.colors.text
+              }}
+              value={evaluacionData.nota}
+              onChangeText={(text) =>
+                setEvaluacionData({ ...evaluacionData, nota: text })
+              }
+            />
+
+            <ThemedText>Nota Máxima:</ThemedText>
+            <TextInput
+              keyboardType="numeric"
+              style={{
+                borderBottomWidth: 1,
+                marginBottom: 10,
+                padding: 5,
+                color: theme.colors.text
+              }}
+              value={evaluacionData.notaMaxima}
+              onChangeText={(text) =>
+                setEvaluacionData({ ...evaluacionData, notaMaxima: text })
+              }
+            />
+
+            <ThemedText>Fecha:</ThemedText>
+            <TextInput
+              style={{
+                borderBottomWidth: 1,
+                marginBottom: 10,
+                padding: 5,
+                color: theme.colors.text
+              }}
+              value={evaluacionData.fecha}
+              onChangeText={(text) =>
+                setEvaluacionData({ ...evaluacionData, fecha: text })
+              }
+            />
+
+            <Button title="Guardar" onPress={agregarEvaluacion} />
+            <Button title="Cancelar" onPress={() => setModalVisible(false)} color="red" />
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
   );
 }
