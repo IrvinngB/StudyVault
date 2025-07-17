@@ -8,8 +8,8 @@ export class ApiClient {
 
   private constructor() {
     this.baseURL = __DEV__
-      ? "https://api-study-production.up.railway.app" // Development
-      : "https://api-study-production.up.railway.app" // Production
+      ? "https://squid-app-fr38f.ondigitalocean.app" // Development
+      : "https://squid-app-fr38f.ondigitalocean.app" // Production
   }
 
   public static getInstance(): ApiClient {
