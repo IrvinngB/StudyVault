@@ -367,6 +367,23 @@ export default function CourseDetailScreen() {
                 Alert.alert('Próximamente', 'La gestión de tareas estará disponible pronto.');
               }}
             />
+
+            <ThemedButton
+              title="📈 Ver Calificaciones"
+              variant="outline"
+              onPress={() => {
+                if (course?.id) {
+                  router.push({
+                    pathname: '/grades/[classId]',
+                    params: { classId: course.id }
+                  });
+                } else {
+                  Alert.alert('Error', 'No se puede navegar: el curso no tiene un ID válido.');
+                }
+              }}
+            />
+
+
             
             <ThemedButton
               title="📚 Notas del Curso"
