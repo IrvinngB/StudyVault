@@ -93,9 +93,10 @@ export class ApiClient {
         if (response.status === 401) {
           console.log("🔄 Token inválido, limpiando sesión...")
           await this.clearAuthSession()
+          // Si el backend manda un mensaje específico, propágalo
           return {
             success: false,
-            error: "Sesión expirada. Por favor, inicia sesión nuevamente.",
+            error: data.detail || data.message || "Sesión expirada. Por favor, inicia sesión nuevamente.",
           }
         }
 

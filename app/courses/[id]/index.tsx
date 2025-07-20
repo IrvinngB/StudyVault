@@ -1,25 +1,27 @@
+import { AppModal } from '@/components/ui/AppModal';
 import {
-    ThemedButton,
-    ThemedCard,
-    ThemedText,
-    ThemedView
+  ThemedButton,
+  ThemedCard,
+  ThemedText,
+  ThemedView
 } from '@/components/ui/ThemedComponents';
 import { ClassData, classService } from '@/database/services/courseService';
+import { useModal } from '@/hooks/modals';
 import { useTheme } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Linking,
-    ScrollView,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Linking,
+  ScrollView,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 export default function CourseDetailScreen() {
   const { theme } = useTheme();
+  const { modalProps, showError, showSuccess, showConfirm, showInfo } = useModal();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [course, setCourse] = useState<ClassData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,32 +50,21 @@ export default function CourseDetailScreen() {
     }
   };
 
-    const handleEditCourse = () => {
+  const handleEditCourse = () => {
     if (course?.id) {
       router.push(`/courses/edit/${course.id}` as any);
     } else {
-      Alert.alert(
-        'Error',
-        'No se puede editar este curso.',
-        [{ text: 'OK' }]
-      );
+      showError('No se puede editar este curso.', 'Error');
     }
   };
 
   const handleDeleteCourse = () => {
     if (!course) return;
-
-    Alert.alert(
-      '⚠️ Eliminar Curso',
+    showConfirm(
       `¿Estás seguro de que quieres eliminar "${course.name}"?\n\nEsta acción no se puede deshacer.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: confirmDeleteCourse
-        }
-      ]
+      confirmDeleteCourse,
+      undefined,
+      '⚠️ Eliminar Curso'
     );
   };
 
@@ -82,22 +73,13 @@ export default function CourseDetailScreen() {
 
     try {
       await classService.deleteClass(course.id);
-      
-      Alert.alert(
-        '✅ Curso Eliminado',
+      showSuccess(
         `"${course.name}" ha sido eliminado correctamente.`,
-        [{
-          text: 'OK',
-          onPress: () => router.back()
-        }]
+        '✅ Curso Eliminado',
+        () => router.back()
       );
     } catch (error) {
-      console.error('❌ Error al eliminar curso:', error);
-      Alert.alert(
-        'Error',
-        'No se pudo eliminar el curso. Intenta de nuevo.',
-        [{ text: 'OK' }]
-      );
+      showError('No se pudo eliminar el curso. Intenta de nuevo.', 'Error');
     }
   };
 
@@ -110,11 +92,7 @@ export default function CourseDetailScreen() {
     }
 
     Linking.openURL(url).catch(() => {
-      Alert.alert(
-        'Error',
-        'No se pudo abrir el enlace. Verifica que sea válido.',
-        [{ text: 'OK' }]
-      );
+      showError('No se pudo abrir el enlace. Verifica que sea válido.', 'Error');
     });
   };
 
@@ -364,7 +342,7 @@ export default function CourseDetailScreen() {
               title="📝 Ver Tareas"
               variant="outline"
               onPress={() => {
-                Alert.alert('Próximamente', 'La gestión de tareas estará disponible pronto.');
+                showInfo('La gestión de tareas estará disponible pronto.', 'Próximamente');
               }}
             />
 
@@ -378,7 +356,7 @@ export default function CourseDetailScreen() {
                     params: { classId: course.id }
                   });
                 } else {
-                  Alert.alert('Error', 'No se puede navegar: el curso no tiene un ID válido.');
+                  showError('No se puede navegar: el curso no tiene un ID válido.', 'Error');
                 }
               }}
             />
@@ -389,7 +367,7 @@ export default function CourseDetailScreen() {
               title="📚 Notas del Curso"
               variant="outline"
               onPress={() => {
-                Alert.alert('Próximamente', 'La gestión de notas estará disponible pronto.');
+                showInfo('La gestión de notas estará disponible pronto.', 'Próximamente');
               }}
             />
             
@@ -397,7 +375,7 @@ export default function CourseDetailScreen() {
               title="📊 Estadísticas"
               variant="outline"
               onPress={() => {
-                Alert.alert('Próximamente', 'Las estadísticas del curso estarán disponibles pronto.');
+                showInfo('Las estadísticas del curso estarán disponibles pronto.', 'Próximamente');
               }}
             />
           </View>
@@ -424,6 +402,7 @@ export default function CourseDetailScreen() {
           </View>
         </ThemedCard>
       </ScrollView>
+      <AppModal {...modalProps} />
     </ThemedView>
   );
 }
