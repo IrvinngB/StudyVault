@@ -1,19 +1,22 @@
+import { AppModal } from '@/components/ui/AppModal';
 import {
-    ThemedButton,
-    ThemedCard,
-    ThemedInput,
-    ThemedText,
-    ThemedView
+  ThemedButton,
+  ThemedCard,
+  ThemedInput,
+  ThemedText,
+  ThemedView
 } from '@/components/ui/ThemedComponents';
+import { useModal } from '@/hooks/modals';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
 export default function RegisterScreen() {
   const { theme } = useTheme();
   const { signUp, isLoading } = useAuth();
+  const { modalProps, showSuccess, showError } = useModal();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -67,28 +70,23 @@ export default function RegisterScreen() {
 
       if (result.success) {
         console.log('✅ Registration successful!');
-        Alert.alert(
-          'Registro exitoso', 
+        showSuccess(
           `¡Bienvenido ${formData.name}! Tu cuenta ha sido creada exitosamente. Revisa tu email para confirmar tu cuenta.`,
-          [{ 
-            text: 'Continuar', 
-            onPress: () => router.replace('/(tabs)') 
-          }]
+          'Registro exitoso',
+          () => router.replace('/(tabs)')
         );
       } else {
         console.log('❌ Registration failed:', result.error);
-        Alert.alert(
-          'Error en el registro',
+        showError(
           result.error || 'No se pudo crear la cuenta. Intenta nuevamente.',
-          [{ text: 'OK' }]
+          'Error en el registro'
         );
       }
     } catch (error) {
       console.error('💥 Registration error:', error);
-      Alert.alert(
-        'Error de conexión',
+      showError(
         'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
-        [{ text: 'OK' }]
+        'Error de conexión'
       );
     }
   };
@@ -188,6 +186,8 @@ export default function RegisterScreen() {
             </View>
           </ThemedCard>
         </ScrollView>
+        
+        <AppModal {...modalProps} />
       </ThemedView>
     </KeyboardAvoidingView>
   );

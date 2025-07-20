@@ -5,37 +5,33 @@ import {
   ThemedView
 } from '@/components/ui/ThemedComponents';
 
+import { AppModal } from '@/components/ui/AppModal';
+import { useModal } from '@/hooks/modals';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
 import React from 'react';
-import { Alert, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
-  const { signOut } = useAuth();  const handleLogout = async () => {
-    Alert.alert(
-      'Cerrar Sesión',
+  const { signOut } = useAuth();
+  const { modalProps, showConfirm } = useModal();
+
+  const handleLogout = async () => {
+    showConfirm(
       '¿Estás seguro de que quieres cerrar sesión?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Cerrar Sesión',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut();
-              router.replace('/(auth)/login');
-            } catch (error) {
-              console.error('Error al cerrar sesión:', error);
-              router.replace('/(auth)/login');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await signOut();
+          router.replace('/(auth)/login');
+        } catch (error) {
+          console.error('Error al cerrar sesión:', error);
+          router.replace('/(auth)/login');
+        }
+      },
+      undefined,
+      'Cerrar Sesión'
     );
   };
   return (
@@ -177,6 +173,8 @@ export default function HomeScreen() {
               />
         </ThemedView>
       </ScrollView>
+      
+      <AppModal {...modalProps} />
     </ThemedView>
   );
 }

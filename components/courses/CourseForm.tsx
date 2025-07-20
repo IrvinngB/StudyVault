@@ -1,3 +1,4 @@
+import { AppModal } from '@/components/ui/AppModal';
 import {
   ThemedButton,
   ThemedCard,
@@ -6,10 +7,11 @@ import {
   ThemedView
 } from '@/components/ui/ThemedComponents';
 import { classService, CreateClassRequest } from '@/database/services/courseService';
+import { useModal } from '@/hooks/modals';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 
 interface CourseFormData {
   name: string;
@@ -46,6 +48,7 @@ const courseColors = [
 
 export default function CourseForm({ onSuccess }: CourseFormProps) {
   const { theme } = useTheme();
+  const { modalProps, showInfo, showSuccess, showError } = useModal();
   const [formData, setFormData] = useState<CourseFormData>(defaultCourse);
   const [errors, setErrors] = useState<{[key: string]: string | undefined}>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,15 +72,14 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
   };
 
   const showSyllabusInfo = () => {
-    Alert.alert(
-      '📚 ¿Qué es el Aula Virtual?',
+    showInfo(
       'Es el enlace donde tu universidad publica la información del curso:\n\n' +
       '• eCampus (UTP)\n' +
       '• Microsoft Teams\n' +
       '• Google Classroom\n' +
       '• Moodle\n\n' +
       'Ahí encontrarás tareas, material de clase, calificaciones y anuncios del profesor.',
-      [{ text: 'Entendido', style: 'default' }]
+      '📚 ¿Qué es el Aula Virtual?'
     );
   };
 
@@ -108,19 +110,16 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
       
       if (newCourse) {
         console.log('✅ Curso creado exitosamente:', newCourse);
-        Alert.alert(
-          '🎉 ¡Éxito!', 
+        showSuccess(
           `El curso "${newCourse.name}" ha sido creado correctamente.`,
-          [{
-            text: 'Continuar',
-            onPress: () => {
-              if (onSuccess && newCourse.id) {
-                onSuccess(newCourse.id);
-              } else {
-                router.back();
-              }
+          '🎉 ¡Éxito!',
+          () => {
+            if (onSuccess && newCourse.id) {
+              onSuccess(newCourse.id);
+            } else {
+              router.back();
             }
-          }]
+          }
         );
         
         // Reset form
@@ -132,11 +131,7 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
       
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       
-      Alert.alert(
-        'Error', 
-        `No se pudo crear el curso: ${errorMessage}`,
-        [{ text: 'OK' }]
-      );
+      showError(`No se pudo crear el curso: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -296,6 +291,8 @@ export default function CourseForm({ onSuccess }: CourseFormProps) {
           />
         </View>
       </ThemedCard>
+
+      <AppModal {...modalProps} />
     </ThemedView>
   );
 }

@@ -1,3 +1,4 @@
+import { AppModal } from '@/components/ui/AppModal';
 import {
   ThemedButton,
   ThemedCard,
@@ -6,13 +7,13 @@ import {
   ThemedView
 } from '@/components/ui/ThemedComponents';
 import { ClassData, classService } from '@/database/services/courseService';
+import { useModal } from '@/hooks/modals';
 import { useTheme } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -23,6 +24,7 @@ import {
 
 export default function EditCourseScreen() {
   const { theme } = useTheme();
+  const { modalProps, showError, showSuccess, showConfirm } = useModal();
   const params = useLocalSearchParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   
@@ -86,7 +88,6 @@ export default function EditCourseScreen() {
       setSelectedColor(course.color || theme.colors.primary);
       
     } catch (error) {
-      console.error('❌ Error al cargar curso:', error);
       setError('Error al cargar los datos del curso');
     } finally {
       setLoading(false);
@@ -96,12 +97,12 @@ export default function EditCourseScreen() {
   const validateForm = (): boolean => {
     try {
       if (!courseName.trim()) {
-        Alert.alert('Error de validación', 'El nombre del curso es obligatorio.');
+        showError('El nombre del curso es obligatorio.', 'Error de validación');
         return false;
       }
 
       if (credits && credits.trim() && isNaN(Number(credits))) {
-        Alert.alert('Error de validación', 'Los créditos deben ser un número válido.');
+        showError('Los créditos deben ser un número válido.', 'Error de validación');
         return false;
       }
 
@@ -114,25 +115,25 @@ export default function EditCourseScreen() {
                            urlToValidate.includes('.');
           
           if (!isValidUrl) {
-            Alert.alert('Error de validación', 'La URL del aula virtual no es válida.');
+            showError('La URL del aula virtual no es válida.', 'Error de validación');
             return false;
           }
         } catch (urlError) {
-          Alert.alert('Error de validación', 'Error al validar la URL del aula virtual.');
+          showError('Error al validar la URL del aula virtual.', 'Error de validación');
           return false;
         }
       }
 
       return true;
     } catch (error) {
-      Alert.alert('Error de validación', 'Error inesperado durante la validación.');
+      showError('Error inesperado durante la validación.', 'Error de validación');
       return false;
     }
   };
 
   const handleSave = async () => {
     if (!id) {
-      Alert.alert('Error', 'No se puede guardar el curso sin ID válido');
+      showError('No se puede guardar el curso sin ID válido', 'Error');
       return;
     }
 
@@ -161,29 +162,19 @@ export default function EditCourseScreen() {
 
       const result = await classService.updateClass(id as string, updatedCourse);
 
-      Alert.alert(
-        '✅ Curso Actualizado',
+      showSuccess(
         `"${courseName}" ha sido actualizado correctamente.`,
-        [{
-          text: 'OK',
-          onPress: () => router.back()
-        }]
+        '✅ Curso Actualizado',
+        () => router.back()
       );
 
     } catch (error) {
-      console.error('❌ Error completo al actualizar curso:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      
-      Alert.alert(
-        'Error al actualizar',
+      showConfirm(
         `No se pudo actualizar el curso:\n${errorMessage}`,
-        [
-          { 
-            text: 'Reintentar', 
-            onPress: () => handleSave()
-          },
-          { text: 'Cancelar', style: 'cancel' }
-        ]
+        () => handleSave(),
+        undefined,
+        'Error al actualizar'
       );
     } finally {
       setSaving(false);
@@ -191,17 +182,11 @@ export default function EditCourseScreen() {
   };
 
   const handleCancel = () => {
-    Alert.alert(
-      '⚠️ Descartar Cambios',
+    showConfirm(
       '¿Estás seguro de que quieres descartar los cambios realizados?',
-      [
-        { text: 'Continuar Editando', style: 'cancel' },
-        { 
-          text: 'Descartar', 
-          style: 'destructive', 
-          onPress: () => router.back()
-        }
-      ]
+      () => router.back(),
+      undefined,
+      '⚠️ Descartar Cambios'
     );
   };
 
@@ -438,6 +423,7 @@ export default function EditCourseScreen() {
             />
           </View>
         </ScrollView>
+        <AppModal {...modalProps} />
       </KeyboardAvoidingView>
     </ThemedView>
   );

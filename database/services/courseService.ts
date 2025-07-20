@@ -100,8 +100,6 @@ class ClassService {
    */
   async updateClass(classId: string, classData: Partial<ClassData>): Promise<ClassData> {
   try {
-    console.log('🔄 Actualizando clase:', classId, classData);
-    
     // Preparar datos exactamente como lo espera el backend
     const updatePayload: any = {};
     
@@ -115,13 +113,8 @@ class ClassService {
     if (classData.description !== undefined) updatePayload.description = classData.description;
     if (classData.syllabus_url !== undefined) updatePayload.syllabus_url = classData.syllabus_url;
     if (classData.is_active !== undefined) updatePayload.is_active = classData.is_active;
-    
-    console.log('📤 Payload enviado al backend:', updatePayload);
-    
     // Usar PUT como muestra la documentación del API
     const response = await this.apiClient.put<ClassData>(`/classes/${classId}`, updatePayload);
-    
-    console.log('✅ Clase actualizada exitosamente:', response);
     return response;
   } catch (error) {
     console.error('❌ ClassService: Error al actualizar clase:', error);
