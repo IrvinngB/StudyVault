@@ -1,5 +1,6 @@
 // Export all services
 export { AuthService } from './authService';
+export { calendarService } from './calendarService';
 export { classService } from './courseService';
 export { notesService } from './notesService';
 
@@ -11,17 +12,19 @@ export type {
 } from './courseService';
 
 export type {
-  NoteData,
   AttachmentData,
-  CreateNoteRequest,
-  UpdateNoteRequest,
-  NoteVersionData,
-  CreateNoteVersionRequest,
-  NotesSearchParams,
-  NotesDateRangeParams
+  CreateNoteRequest, CreateNoteVersionRequest, NoteData, NotesDateRangeParams, NotesSearchParams, NoteVersionData, UpdateNoteRequest
 } from './notesService';
 
 export type {
   AuthSession,
   UserProfile
 } from '../models/types';
+
+// Calendar types
+export type {
+  CalendarEvent,
+  CalendarEventFilters,
+  CreateCalendarEventRequest, EventCategory, EventType, UpdateCalendarEventRequest
+} from '../models/calendarTypes';
+
