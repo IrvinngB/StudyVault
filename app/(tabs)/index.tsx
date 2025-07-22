@@ -12,8 +12,17 @@ const { width } = Dimensions.get("window")
 
 export default function HomeScreen() {
   const { theme } = useTheme()
-  const { signOut } = useAuth()
+  const { signOut, user } = useAuth() // Asumiendo que useAuth proporciona un objeto 'user'
   const { showConfirm } = useGlobalModal()
+
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return "Buenos días"
+    if (hour < 18) return "Buenas tardes"
+    return "Buenas noches"
+  }
+
+  const userName = user?.full_name || user?.email?.split("@")[0] || "Estudiante";// Intenta obtener el nombre o parte del email
 
   const handleLogout = async () => {
     showConfirm(
@@ -115,6 +124,16 @@ export default function HomeScreen() {
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "flex-start",
+            backgroundColor: theme.colors.surface, // Fondo sutil para el header
+            padding: theme.spacing.md,
+            borderRadius: theme.borderRadius.lg,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            shadowColor: theme.colors.text,
+            shadowOpacity: 0.05,
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 4,
+            elevation: 2,
           }}
         >
           <ThemedView style={{ flex: 1 }}>
@@ -132,7 +151,7 @@ export default function HomeScreen() {
               </ThemedText>
             </ThemedView>
             <ThemedText variant="body" color="secondary" style={{ fontSize: 16 }}>
-              ¡Hola! Que tengas un excelente día de estudio
+              {getGreeting()}, {userName}! Que tengas un excelente día de estudio
             </ThemedText>
           </ThemedView>
           <TouchableOpacity

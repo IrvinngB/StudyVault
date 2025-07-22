@@ -77,6 +77,35 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
       if (response.success && response.data) {
         // Add new event to the current list
         setEvents(prevEvents => [...prevEvents, response.data!]);
+        
+        // Schedule notification for the event using reminder_minutes
+        if (eventData.reminder_minutes && eventData.reminder_minutes > 0) {
+          try {
+            // Import at the top of the file
+            const { requestNotificationPermission, scheduleCalendarNotification, setupAndroidChannel } = await import('@/utils/notifications');
+            
+            // Setup Android notification channel
+            await setupAndroidChannel();
+            
+            // Request permission if not already granted
+            const hasPermission = await requestNotificationPermission();
+            if (hasPermission) {
+              await scheduleCalendarNotification({
+                title: `Recordatorio: ${eventData.title}`,
+                body: eventData.description || 'Evento próximo a comenzar',
+                date: eventData.start_datetime,
+                minutosAntes: eventData.reminder_minutes
+              });
+              console.log(`📱 Notification scheduled for event ${eventData.title}, ${eventData.reminder_minutes} minutes before`);
+            } else {
+              console.warn('No permission granted for notifications');
+            }
+          } catch (notifError) {
+            console.error('Error scheduling notification:', notifError);
+            // Don't throw error, just log it. Event creation was successful
+          }
+        }
+        
         return response.data;
       } else {
         setError(response.error || 'Error al crear evento');
@@ -104,6 +133,35 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
             event.id === eventId ? response.data! : event
           )
         );
+        
+        // Update notification for the event if reminder_minutes is set
+        if (eventData.reminder_minutes !== undefined && eventData.reminder_minutes > 0 && eventData.start_datetime) {
+          try {
+            // Import at the top of the file
+            const { requestNotificationPermission, scheduleCalendarNotification, setupAndroidChannel } = await import('@/utils/notifications');
+            
+            // Setup Android notification channel
+            await setupAndroidChannel();
+            
+            // Request permission if not already granted
+            const hasPermission = await requestNotificationPermission();
+            if (hasPermission) {
+              await scheduleCalendarNotification({
+                title: `Recordatorio: ${response.data.title}`,
+                body: response.data.description || 'Evento próximo a comenzar',
+                date: response.data.start_datetime,
+                minutosAntes: eventData.reminder_minutes
+              });
+              console.log(`📱 Notification updated for event ${response.data.title}, ${eventData.reminder_minutes} minutes before`);
+            } else {
+              console.warn('No permission granted for notifications');
+            }
+          } catch (notifError) {
+            console.error('Error updating notification:', notifError);
+            // Don't throw error, just log it. Event update was successful
+          }
+        }
+        
         return response.data;
       } else {
         setError(response.error || 'Error al actualizar evento');

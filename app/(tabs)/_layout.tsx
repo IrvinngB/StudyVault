@@ -46,10 +46,10 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="explore"
+          name="settings"
           options={{
-            title: 'Explorar',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="magnifyingglass" color={color} />,
+            title: 'Configuracion',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="gear" color={color} />,
           }}
         />
         <Tabs.Screen

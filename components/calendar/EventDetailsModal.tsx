@@ -1,26 +1,22 @@
-import { ThemedText, ThemedView } from '@/components/ui/ThemedComponents';
-import { EVENT_TYPES_CONFIG } from '@/constants/Calendar';
-import type { CalendarEvent, EventType, UpdateCalendarEventRequest } from '@/database/models/calendarTypes';
-import type { ClassData } from '@/database/services';
-import { useTheme } from '@/hooks/useTheme';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View
-} from 'react-native';
+"use client"
+
+import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
+import { EVENT_TYPES_CONFIG } from "@/constants/Calendar"
+import type { CalendarEvent, EventType, UpdateCalendarEventRequest } from "@/database/models/calendarTypes"
+import type { ClassData } from "@/database/services"
+import { useTheme } from "@/hooks/useTheme"
+import { formatDateForDisplay, formatTimeForDisplay, isValidDate, safeParseDate } from "@/utils/dateHelpers"; // Usar funciones más seguras
+import { Ionicons } from "@expo/vector-icons"
+import type React from "react"
+import { useEffect, useState } from "react"
+import { Alert, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native"
 
 interface EventDetailsModalProps {
-  visible: boolean;
-  onClose: () => void;
-  event: CalendarEvent | null;
-  onUpdateEvent: (eventId: string, eventData: UpdateCalendarEventRequest) => Promise<void>;
-  onDeleteEvent: (eventId: string) => Promise<void>;
+  visible: boolean
+  onClose: () => void
+  event: CalendarEvent | null
+  onUpdateEvent: (eventId: string, eventData: UpdateCalendarEventRequest) => Promise<void>
+  onDeleteEvent: (eventId: string) => Promise<void>
 }
 
 export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
@@ -30,198 +26,217 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   onUpdateEvent,
   onDeleteEvent,
 }) => {
-  const { theme } = useTheme();
-  const [loading, setLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  
+  const { theme } = useTheme()
+  const [loading, setLoading] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+
   // Form state
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('10:00');
-  const [eventType, setEventType] = useState<EventType>('class');
-  const [location, setLocation] = useState('');
-  const [classroom, setClassroom] = useState('');
-  const [reminderMinutes, setReminderMinutes] = useState(15);
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [selectedClass, setSelectedClass] = useState<ClassData | null>(null);
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [startTime, setStartTime] = useState("09:00")
+  const [endTime, setEndTime] = useState("10:00")
+  const [eventType, setEventType] = useState<EventType>("class")
+  const [location, setLocation] = useState("")
+  const [classroom, setClassroom] = useState("")
+  const [reminderMinutes, setReminderMinutes] = useState(15)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [selectedClass, setSelectedClass] = useState<ClassData | null>(null)
 
   // Get current event type config
-  const currentEventConfig = EVENT_TYPES_CONFIG.find(config => config.value === eventType);
+  const currentEventConfig = EVENT_TYPES_CONFIG.find((config) => config.value === eventType)
 
   // Check if this is a recurring instance
-  const isRecurringInstance = event?.id.includes('_recurring_') || false;
-  const originalEventId = isRecurringInstance ? event?.id.split('_recurring_')[0] : event?.id;
+  const isRecurringInstance = event?.id.includes("_recurring_") || false
+  const originalEventId = isRecurringInstance ? event?.id.split("_recurring_")[0] : event?.id
 
   // Initialize form with event data
   useEffect(() => {
     if (event) {
-      setTitle(event.title);
-      setDescription(event.description || '');
-      setEventType(event.event_type);
-      setLocation(event.location || '');
-      setClassroom(event.classroom || '');
-      setReminderMinutes(event.reminder_minutes);
-      setIsRecurring(event.is_recurring);
-      
-      // Extract time from datetime strings
-      const startDate = new Date(event.start_datetime);
-      const endDate = new Date(event.end_datetime);
-      
+      setTitle(event.title)
+      setDescription(event.description || "")
+      setEventType(event.event_type)
+      setLocation(event.location || "")
+      setClassroom(event.classroom || "")
+      setReminderMinutes(event.reminder_minutes)
+      setIsRecurring(event.is_recurring)
+
+      // USAR LAS FUNCIONES SEGURAS PARA PARSEAR LAS FECHAS
+      const startDate = safeParseDate(event.start_datetime)
+      const endDate = safeParseDate(event.end_datetime)
+
       const formatTime = (date: Date) => {
-        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-      };
-      
-      setStartTime(formatTime(startDate));
-      setEndTime(formatTime(endDate));
-      
+        if (!isValidDate(date)) {
+          console.error("❌ Invalid date in formatTime:", date)
+          return "09:00"
+        }
+        return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`
+      }
+
+      setStartTime(formatTime(startDate))
+      setEndTime(formatTime(endDate))
+
       // Note: We'd need to fetch class data if class_id exists
       // For now, we'll set selectedClass to null and handle it later
-      setSelectedClass(null);
+      setSelectedClass(null)
     }
-  }, [event]);
+  }, [event])
 
   // Función para formatear y validar la hora
   const formatTimeToHHMM = (timeString: string): string => {
     // Remover cualquier texto extra como "Ej: "
-    let cleanTime = timeString.replace(/^(Ej:\s*|ej:\s*)/i, '').trim();
-    
+    const cleanTime = timeString.replace(/^(Ej:\s*|ej:\s*)/i, "").trim()
+
     // Detectar formato 12 horas (con AM/PM)
-    const time12Regex = /^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)$/i;
-    const time24Regex = /^(\d{1,2}):(\d{2})$/;
-    
-    let hours: number;
-    let minutes: number;
-    
-    const match12 = cleanTime.match(time12Regex);
-    const match24 = cleanTime.match(time24Regex);
-    
+    const time12Regex = /^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)$/i
+    const time24Regex = /^(\d{1,2}):(\d{2})$/
+
+    let hours: number
+    let minutes: number
+
+    const match12 = cleanTime.match(time12Regex)
+    const match24 = cleanTime.match(time24Regex)
+
     if (match12) {
       // Formato 12 horas
-      hours = parseInt(match12[1], 10);
-      minutes = parseInt(match12[2], 10);
-      const period = match12[3].toUpperCase();
-      
+      hours = Number.parseInt(match12[1], 10)
+      minutes = Number.parseInt(match12[2], 10)
+      const period = match12[3].toUpperCase()
+
       // Validar rangos para formato 12 horas
       if (hours < 1 || hours > 12) {
-        throw new Error('En formato 12 horas, las horas deben estar entre 1 y 12');
+        throw new Error("En formato 12 horas, las horas deben estar entre 1 y 12")
       }
-      
+
       // Convertir a formato 24 horas
-      if (period === 'AM') {
-        if (hours === 12) hours = 0; // 12:00 AM = 00:00
-      } else { // PM
-        if (hours !== 12) hours += 12; // 1:00 PM = 13:00, pero 12:00 PM = 12:00
+      if (period === "AM") {
+        if (hours === 12) hours = 0 // 12:00 AM = 00:00
+      } else {
+        // PM
+        if (hours !== 12) hours += 12 // 1:00 PM = 13:00, pero 12:00 PM = 12:00
       }
     } else if (match24) {
       // Formato 24 horas
-      hours = parseInt(match24[1], 10);
-      minutes = parseInt(match24[2], 10);
-      
+      hours = Number.parseInt(match24[1], 10)
+      minutes = Number.parseInt(match24[2], 10)
+
       // Validar rangos para formato 24 horas
       if (hours < 0 || hours > 23) {
-        throw new Error('En formato 24 horas, las horas deben estar entre 00 y 23');
+        throw new Error("En formato 24 horas, las horas deben estar entre 00 y 23")
       }
     } else {
-      throw new Error('Formato de hora inválido. Use HH:MM (24h) o HH:MM AM/PM (12h)');
+      throw new Error("Formato de hora inválido. Use HH:MM (24h) o HH:MM AM/PM (12h)")
     }
-    
+
     // Validar minutos
     if (minutes < 0 || minutes > 59) {
-      throw new Error('Los minutos deben estar entre 00 y 59');
+      throw new Error("Los minutos deben estar entre 00 y 59")
     }
-    
+
     // Formatear a HH:MM en formato 24 horas
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-  };
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+  }
 
   const handleClose = () => {
-    setIsEditing(false);
-    onClose();
-  };
+    setIsEditing(false)
+    onClose()
+  }
 
   const handleEdit = () => {
-    setIsEditing(true);
-  };
+    setIsEditing(true)
+  }
 
   const handleCancelEdit = () => {
     // Reset form to original event data
     if (event) {
-      setTitle(event.title);
-      setDescription(event.description || '');
-      setEventType(event.event_type);
-      setLocation(event.location || '');
-      setClassroom(event.classroom || '');
-      setReminderMinutes(event.reminder_minutes);
-      setIsRecurring(event.is_recurring);
-      
-      const startDate = new Date(event.start_datetime);
-      const endDate = new Date(event.end_datetime);
-      
+      setTitle(event.title)
+      setDescription(event.description || "")
+      setEventType(event.event_type)
+      setLocation(event.location || "")
+      setClassroom(event.classroom || "")
+      setReminderMinutes(event.reminder_minutes)
+      setIsRecurring(event.is_recurring)
+
+      // USAR LAS FUNCIONES SEGURAS PARA PARSEAR LAS FECHAS
+      const startDate = safeParseDate(event.start_datetime)
+      const endDate = safeParseDate(event.end_datetime)
+
       const formatTime = (date: Date) => {
-        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-      };
-      
-      setStartTime(formatTime(startDate));
-      setEndTime(formatTime(endDate));
+        if (!isValidDate(date)) {
+          console.error("❌ Invalid date in formatTime:", date)
+          return "09:00"
+        }
+        return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`
+      }
+
+      setStartTime(formatTime(startDate))
+      setEndTime(formatTime(endDate))
     }
-    setIsEditing(false);
-  };
+    setIsEditing(false)
+  }
 
   const handleSaveEdit = async () => {
-    if (!event) return;
+    if (!event) return
 
     if (!title.trim()) {
-      Alert.alert('Error', 'El título es requerido');
-      return;
+      Alert.alert("Error", "El título es requerido")
+      return
     }
 
     // Validar y formatear las horas
-    let formattedStartTime: string;
-    let formattedEndTime: string;
-    
+    let formattedStartTime: string
+    let formattedEndTime: string
+
     try {
-      formattedStartTime = formatTimeToHHMM(startTime);
-      formattedEndTime = formatTimeToHHMM(endTime);
+      formattedStartTime = formatTimeToHHMM(startTime)
+      formattedEndTime = formatTimeToHHMM(endTime)
     } catch (error: any) {
-      Alert.alert('Error', error.message);
-      return;
+      Alert.alert("Error", error.message)
+      return
     }
 
     if (formattedStartTime >= formattedEndTime) {
-      Alert.alert('Error', 'La hora de inicio debe ser anterior a la hora de fin');
-      return;
+      Alert.alert("Error", "La hora de inicio debe ser anterior a la hora de fin")
+      return
     }
 
     if (currentEventConfig?.requiresClass && !selectedClass) {
-      Alert.alert('Error', 'Por favor selecciona una clase para este tipo de evento');
-      return;
+      Alert.alert("Error", "Por favor selecciona una clase para este tipo de evento")
+      return
     }
 
     // Función interna para realizar la actualización
     const performUpdate = async (eventIdToUpdate: string) => {
-      setLoading(true);
-
+      setLoading(true)
       try {
-        // Get original date from event
-        const originalDate = new Date(event.start_datetime).toISOString().split('T')[0];
-        
-        // Create new datetime strings
-        const startDateTime = new Date(`${originalDate}T${formattedStartTime}:00`);
-        const endDateTime = new Date(`${originalDate}T${formattedEndTime}:00`);
-        
-        const formatLocalDateTime = (date: Date): string => {
-          const year = date.getFullYear();
-          const month = (date.getMonth() + 1).toString().padStart(2, '0');
-          const day = date.getDate().toString().padStart(2, '0');
-          const hours = date.getHours().toString().padStart(2, '0');
-          const minutes = date.getMinutes().toString().padStart(2, '0');
-          const seconds = date.getSeconds().toString().padStart(2, '0');
-          return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-        };
+        // Get original date from event (usar función segura)
+        const originalDateTime = safeParseDate(event.start_datetime)
 
-        const startDateTimeString = formatLocalDateTime(startDateTime);
-        const endDateTimeString = formatLocalDateTime(endDateTime);
+        if (!isValidDate(originalDateTime)) {
+          throw new Error("Fecha del evento inválida")
+        }
+
+        const originalDate = originalDateTime.toISOString().split("T")[0]
+
+        // Create new datetime strings
+        const startDateTime = new Date(`${originalDate}T${formattedStartTime}:00`)
+        const endDateTime = new Date(`${originalDate}T${formattedEndTime}:00`)
+
+        if (!isValidDate(startDateTime) || !isValidDate(endDateTime)) {
+          throw new Error("Fechas calculadas inválidas")
+        }
+
+        const formatLocalDateTime = (date: Date): string => {
+          const year = date.getFullYear()
+          const month = (date.getMonth() + 1).toString().padStart(2, "0")
+          const day = date.getDate().toString().padStart(2, "0")
+          const hours = date.getHours().toString().padStart(2, "0")
+          const minutes = date.getMinutes().toString().padStart(2, "0")
+          const seconds = date.getSeconds().toString().padStart(2, "0")
+          return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+        }
+
+        const startDateTimeString = formatLocalDateTime(startDateTime)
+        const endDateTimeString = formatLocalDateTime(endDateTime)
 
         const updateData: UpdateCalendarEventRequest = {
           title: title.trim(),
@@ -229,224 +244,195 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           start_datetime: startDateTimeString,
           end_datetime: endDateTimeString,
           event_type: eventType,
-          event_category: currentEventConfig?.category || 'general_event',
+          event_category: currentEventConfig?.category || "general_event",
           class_id: selectedClass?.id || undefined,
-          location: currentEventConfig?.supportsClassroom ? undefined : (location.trim() || undefined),
-          classroom: currentEventConfig?.supportsClassroom ? (classroom.trim() || undefined) : undefined,
+          location: currentEventConfig?.supportsClassroom ? undefined : location.trim() || undefined,
+          classroom: currentEventConfig?.supportsClassroom ? classroom.trim() || undefined : undefined,
           reminder_minutes: reminderMinutes,
           is_recurring: currentEventConfig?.supportsRecurrence ? isRecurring : false,
-          recurrence_pattern: isRecurring ? {
-            type: 'weekly',
-            interval: 1,
-            days_of_week: [new Date(originalDate).getDay()],
-          } : undefined,
-        };
-
-        await onUpdateEvent(eventIdToUpdate, updateData);
-        setIsEditing(false);
-        Alert.alert('Éxito', 'Evento actualizado correctamente');
-      } catch (error: any) {
-        console.error('Error updating calendar event:', error);
-        
-        let errorMessage = 'Error al actualizar el evento';
-        
-        if (error.message) {
-          errorMessage = error.message;
-        } else if (error.detail) {
-          errorMessage = Array.isArray(error.detail) 
-            ? error.detail.map((d: any) => d.msg).join(', ')
-            : error.detail;
+          recurrence_pattern: isRecurring
+            ? {
+                type: "weekly",
+                interval: 1,
+                days_of_week: [originalDateTime.getDay()], // Usar la fecha parseada correctamente
+              }
+            : undefined,
         }
-        
-        Alert.alert('Error', errorMessage);
+
+        await onUpdateEvent(eventIdToUpdate, updateData)
+        setIsEditing(false)
+        Alert.alert("Éxito", "Evento actualizado correctamente")
+      } catch (error: any) {
+        console.error("Error updating calendar event:", error)
+
+        let errorMessage = "Error al actualizar el evento"
+
+        if (error.message) {
+          errorMessage = error.message
+        } else if (error.detail) {
+          errorMessage = Array.isArray(error.detail) ? error.detail.map((d: any) => d.msg).join(", ") : error.detail
+        }
+
+        Alert.alert("Error", errorMessage)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
     // Decidir cómo manejar la edición basado en si es una instancia recurrente
     if (isRecurringInstance) {
       // Para instancias recurrentes, preguntar qué hacer
-      Alert.alert(
-        'Editar Evento Recurrente',
-        'Este es un evento recurrente. ¿Qué deseas hacer?',
-        [
-          {
-            text: 'Cancelar',
-            style: 'cancel',
+      Alert.alert("Editar Evento Recurrente", "Este es un evento recurrente. ¿Qué deseas hacer?", [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Solo esta instancia",
+          onPress: () => {
+            Alert.alert(
+              "Información",
+              "Las instancias recurrentes no se pueden editar individualmente. Los cambios se aplicarán a toda la serie.",
+              [
+                {
+                  text: "Cancelar",
+                  style: "cancel",
+                },
+                {
+                  text: "Continuar",
+                  onPress: () => performUpdate(originalEventId!),
+                },
+              ],
+            )
           },
-          {
-            text: 'Solo esta instancia',
-            onPress: () => {
-              Alert.alert(
-                'Información',
-                'Las instancias recurrentes no se pueden editar individualmente. Los cambios se aplicarán a toda la serie.',
-                [
-                  {
-                    text: 'Cancelar',
-                    style: 'cancel',
-                  },
-                  {
-                    text: 'Continuar',
-                    onPress: () => performUpdate(originalEventId!),
-                  },
-                ]
-              );
-            },
-          },
-          {
-            text: 'Toda la serie',
-            onPress: () => performUpdate(originalEventId!),
-          },
-        ]
-      );
+        },
+        {
+          text: "Toda la serie",
+          onPress: () => performUpdate(originalEventId!),
+        },
+      ])
     } else {
       // Para eventos regulares o el evento base de una serie
       if (event.is_recurring) {
         Alert.alert(
-          'Editar Evento Recurrente',
-          'Este cambio se aplicará a todas las instancias del evento recurrente.',
+          "Editar Evento Recurrente",
+          "Este cambio se aplicará a todas las instancias del evento recurrente.",
           [
             {
-              text: 'Cancelar',
-              style: 'cancel',
+              text: "Cancelar",
+              style: "cancel",
             },
             {
-              text: 'Continuar',
+              text: "Continuar",
               onPress: () => performUpdate(event.id),
             },
-          ]
-        );
+          ],
+        )
       } else {
-        performUpdate(event.id);
+        performUpdate(event.id)
       }
     }
-  };
+  }
 
   const handleDelete = () => {
-    if (!event) return;
+    if (!event) return
 
     if (isRecurringInstance) {
       // Para instancias recurrentes, mostrar opciones
-      Alert.alert(
-        'Eliminar Evento Recurrente',
-        'Este es un evento recurrente. ¿Qué deseas hacer?',
-        [
-          {
-            text: 'Cancelar',
-            style: 'cancel',
+      Alert.alert("Eliminar Evento Recurrente", "Este es un evento recurrente. ¿Qué deseas hacer?", [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Solo esta instancia",
+          onPress: () => {
+            Alert.alert(
+              "Información",
+              "Las instancias recurrentes no se pueden eliminar individualmente. Puedes eliminar todo el evento recurrente si lo deseas.",
+              [{ text: "OK" }],
+            )
           },
-          {
-            text: 'Solo esta instancia',
-            onPress: () => {
-              Alert.alert(
-                'Información',
-                'Las instancias recurrentes no se pueden eliminar individualmente. Puedes eliminar todo el evento recurrente si lo deseas.',
-                [{ text: 'OK' }]
-              );
-            },
+        },
+        {
+          text: "Toda la serie",
+          style: "destructive",
+          onPress: async () => {
+            setLoading(true)
+            try {
+              await onDeleteEvent(originalEventId!)
+              Alert.alert("Éxito", "Serie de eventos eliminada correctamente")
+              handleClose()
+            } catch (error: any) {
+              console.error("Error deleting calendar event:", error)
+              Alert.alert("Error", "No se pudo eliminar el evento")
+            } finally {
+              setLoading(false)
+            }
           },
-          {
-            text: 'Toda la serie',
-            style: 'destructive',
-            onPress: async () => {
-              setLoading(true);
-              try {
-                await onDeleteEvent(originalEventId!);
-                Alert.alert('Éxito', 'Serie de eventos eliminada correctamente');
-                handleClose();
-              } catch (error: any) {
-                console.error('Error deleting calendar event:', error);
-                Alert.alert('Error', 'No se pudo eliminar el evento');
-              } finally {
-                setLoading(false);
-              }
-            },
-          },
-        ]
-      );
+        },
+      ])
     } else {
       // Para eventos regulares
-      const deleteMessage = event.is_recurring 
-        ? '¿Estás seguro de que quieres eliminar este evento recurrente? Se eliminarán todas las instancias.'
-        : '¿Estás seguro de que quieres eliminar este evento?';
+      const deleteMessage = event.is_recurring
+        ? "¿Estás seguro de que quieres eliminar este evento recurrente? Se eliminarán todas las instancias."
+        : "¿Estás seguro de que quieres eliminar este evento?"
 
-      Alert.alert(
-        'Eliminar Evento',
-        deleteMessage,
-        [
-          {
-            text: 'Cancelar',
-            style: 'cancel',
+      Alert.alert("Eliminar Evento", deleteMessage, [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            setLoading(true)
+            try {
+              await onDeleteEvent(event.id)
+              Alert.alert("Éxito", "Evento eliminado correctamente")
+              handleClose()
+            } catch (error: any) {
+              console.error("Error deleting calendar event:", error)
+              Alert.alert("Error", "No se pudo eliminar el evento")
+            } finally {
+              setLoading(false)
+            }
           },
-          {
-            text: 'Eliminar',
-            style: 'destructive',
-            onPress: async () => {
-              setLoading(true);
-              try {
-                await onDeleteEvent(event.id);
-                Alert.alert('Éxito', 'Evento eliminado correctamente');
-                handleClose();
-              } catch (error: any) {
-                console.error('Error deleting calendar event:', error);
-                Alert.alert('Error', 'No se pudo eliminar el evento');
-              } finally {
-                setLoading(false);
-              }
-            },
-          },
-        ]
-      );
+        },
+      ])
     }
-  };
+  }
 
-  if (!event) return null;
+  if (!event) return null
 
-  const eventConfig = EVENT_TYPES_CONFIG.find(config => config.value === event.event_type);
-  
-  const formatDisplayTime = (dateTime: string) => {
-    return new Date(dateTime).toLocaleTimeString('es-ES', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
+  const eventConfig = EVENT_TYPES_CONFIG.find((config) => config.value === event.event_type)
 
-  const formatDisplayDate = (dateTime: string) => {
-    return new Date(dateTime).toLocaleDateString('es-ES', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  // USAR LAS FUNCIONES SEGURAS PARA MOSTRAR LAS FECHAS CORRECTAMENTE
+  const startDateTime = safeParseDate(event.start_datetime)
+  const endDateTime = safeParseDate(event.end_datetime)
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={handleClose}>
       <ThemedView variant="background" style={styles.container}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <Ionicons name="close" size={24} color={theme.colors.text} />
           </TouchableOpacity>
-          
+
           <ThemedText variant="h2" style={{ color: theme.colors.text }}>
-            {isEditing ? 'Editar Evento' : 'Detalles del Evento'}
+            {isEditing ? "Editar Evento" : "Detalles del Evento"}
           </ThemedText>
-          
+
           {isEditing ? (
-            <TouchableOpacity 
-              onPress={handleSaveEdit} 
+            <TouchableOpacity
+              onPress={handleSaveEdit}
               style={[styles.headerButton, { opacity: loading ? 0.5 : 1 }]}
               disabled={loading}
             >
               <ThemedText variant="h3" style={{ color: theme.colors.primary }}>
-                {loading ? 'Guardando...' : 'Guardar'}
+                {loading ? "Guardando..." : "Guardar"}
               </ThemedText>
             </TouchableOpacity>
           ) : (
@@ -461,9 +447,17 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Recurring Instance Banner */}
           {isRecurringInstance && (
-            <View style={[styles.recurringBanner, { backgroundColor: theme.colors.primaryLight || theme.colors.primary + '20', borderColor: theme.colors.primary }]}>
+            <View
+              style={[
+                styles.recurringBanner,
+                { backgroundColor: theme.colors.primary + "20", borderColor: theme.colors.primary },
+              ]}
+            >
               <Ionicons name="repeat-outline" size={16} color={theme.colors.primary} />
-              <ThemedText variant="body" style={{ color: theme.colors.primary, marginLeft: 8, fontSize: 12, fontWeight: '600' }}>
+              <ThemedText
+                variant="body"
+                style={{ color: theme.colors.primary, marginLeft: 8, fontSize: 12, fontWeight: "600" }}
+              >
                 Esta es una instancia de un evento recurrente
               </ThemedText>
             </View>
@@ -472,25 +466,25 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           {/* Event Type and Icon */}
           <View style={styles.eventHeader}>
             <View style={styles.eventIconContainer}>
-              <Ionicons 
-                name={eventConfig?.icon as any || 'calendar-outline'} 
-                size={32} 
-                color={theme.colors.primary} 
+              <Ionicons
+                name={(eventConfig?.icon as any) || "calendar-outline"}
+                size={32}
+                color={theme.colors.primary}
               />
             </View>
             <View style={{ flex: 1, marginLeft: 16 }}>
               <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 14 }}>
-                {eventConfig?.label || 'Evento'}
+                {eventConfig?.label || "Evento"}
               </ThemedText>
               {isEditing ? (
                 <TextInput
                   style={[
                     styles.titleInput,
                     {
-                      backgroundColor: theme.colors.surfaceLight,
+                      backgroundColor: theme.colors.surface,
                       color: theme.colors.text,
                       borderColor: theme.colors.border,
-                    }
+                    },
                   ]}
                   value={title}
                   onChangeText={setTitle}
@@ -511,10 +505,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             <View style={styles.infoRow}>
               <Ionicons name="calendar-outline" size={20} color={theme.colors.textMuted} />
               <ThemedText variant="body" style={{ color: theme.colors.text, marginLeft: 12 }}>
-                {formatDisplayDate(event.start_datetime)}
+                {formatDateForDisplay(startDateTime)}
               </ThemedText>
             </View>
-            
+
             {isEditing ? (
               <View style={styles.timeContainer}>
                 <View style={{ flex: 1 }}>
@@ -525,10 +519,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     style={[
                       styles.textInput,
                       {
-                        backgroundColor: theme.colors.surfaceLight,
+                        backgroundColor: theme.colors.surface,
                         color: theme.colors.text,
                         borderColor: theme.colors.border,
-                      }
+                      },
                     ]}
                     value={startTime}
                     onChangeText={setStartTime}
@@ -536,9 +530,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     placeholderTextColor={theme.colors.textMuted}
                   />
                 </View>
-                
+
                 <View style={{ width: 16 }} />
-                
+
                 <View style={{ flex: 1 }}>
                   <ThemedText variant="body" style={{ color: theme.colors.textMuted, marginBottom: 8 }}>
                     Fin
@@ -547,10 +541,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     style={[
                       styles.textInput,
                       {
-                        backgroundColor: theme.colors.surfaceLight,
+                        backgroundColor: theme.colors.surface,
                         color: theme.colors.text,
                         borderColor: theme.colors.border,
-                      }
+                      },
                     ]}
                     value={endTime}
                     onChangeText={setEndTime}
@@ -563,7 +557,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               <View style={styles.infoRow}>
                 <Ionicons name="time-outline" size={20} color={theme.colors.textMuted} />
                 <ThemedText variant="body" style={{ color: theme.colors.text, marginLeft: 12 }}>
-                  {formatDisplayTime(event.start_datetime)} - {formatDisplayTime(event.end_datetime)}
+                  {formatTimeForDisplay(startDateTime)} - {formatTimeForDisplay(endDateTime)}
                 </ThemedText>
               </View>
             )}
@@ -582,10 +576,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       style={[
                         styles.textInput,
                         {
-                          backgroundColor: theme.colors.surfaceLight,
+                          backgroundColor: theme.colors.surface,
                           color: theme.colors.text,
                           borderColor: theme.colors.border,
-                        }
+                        },
                       ]}
                       value={classroom}
                       onChangeText={setClassroom}
@@ -603,10 +597,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                       style={[
                         styles.textInput,
                         {
-                          backgroundColor: theme.colors.surfaceLight,
+                          backgroundColor: theme.colors.surface,
                           color: theme.colors.text,
                           borderColor: theme.colors.border,
-                        }
+                        },
                       ]}
                       value={location}
                       onChangeText={setLocation}
@@ -620,7 +614,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 <View style={styles.infoRow}>
                   <Ionicons name="location-outline" size={20} color={theme.colors.textMuted} />
                   <ThemedText variant="body" style={{ color: theme.colors.text, marginLeft: 12 }}>
-                    {event.classroom || event.location || 'Sin ubicación especificada'}
+                    {event.classroom || event.location || "Sin ubicación especificada"}
                   </ThemedText>
                 </View>
               )}
@@ -639,10 +633,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     styles.textInput,
                     styles.textArea,
                     {
-                      backgroundColor: theme.colors.surfaceLight,
+                      backgroundColor: theme.colors.surface,
                       color: theme.colors.text,
                       borderColor: theme.colors.border,
-                    }
+                    },
                   ]}
                   value={description}
                   onChangeText={setDescription}
@@ -682,7 +676,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           {/* Action Buttons */}
           {isEditing ? (
             <View style={styles.actionButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.cancelButton, { borderColor: theme.colors.border }]}
                 onPress={handleCancelEdit}
               >
@@ -693,7 +687,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             </View>
           ) : (
             <View style={styles.actionButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.deleteButton, { backgroundColor: theme.colors.error }]}
                 onPress={handleDelete}
                 disabled={loading}
@@ -708,17 +702,17 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         </ScrollView>
       </ThemedView>
     </Modal>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -732,8 +726,8 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   recurringBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
@@ -741,17 +735,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   eventHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 24,
   },
   eventIconContainer: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(99, 102, 241, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   titleInput: {
     borderWidth: 1,
@@ -759,7 +753,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 4,
   },
   section: {
@@ -768,11 +762,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: 8,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   textInput: {
@@ -784,37 +778,37 @@ const styles = StyleSheet.create({
   },
   textArea: {
     height: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   timeContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    flexDirection: "row",
+    alignItems: "flex-end",
     marginTop: 12,
   },
   actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     gap: 12,
     marginTop: 24,
     marginBottom: 32,
   },
   deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     minWidth: 120,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
     minWidth: 120,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
-});
+})
