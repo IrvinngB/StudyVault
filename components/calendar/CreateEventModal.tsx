@@ -8,11 +8,11 @@ import type { CreateCalendarEventRequest, EventType } from "@/database/models/ca
 import type { ClassData } from "@/database/services"
 import { useTheme } from "@/hooks/useTheme"
 import { convertLocalToUTC, formatTimeWithPreferences, getTimezoneInfo } from "@/utils/timezoneHelpers"
+import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import React, { useState } from "react"
 import { Alert, Modal, ScrollView, StyleSheet, Switch, TextInput, TouchableOpacity, View } from "react-native"
 import DateTimePickerModal from "react-native-modal-datetime-picker"
-import Ionicons from "react-native-vector-icons/Ionicons"
 
 interface CreateEventModalProps {
   visible: boolean

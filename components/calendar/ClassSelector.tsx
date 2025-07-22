@@ -4,7 +4,7 @@ import { useClasses } from '@/hooks/useClasses';
 import { useTheme } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface ClassSelectorProps {
   selectedClassId?: string;
@@ -35,6 +35,14 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({
     });
   }, [classes, loading, error]);
 
+  // Siempre mostrar un nombre visible aunque esté vacío
+  const getDisplayName = (cls: ClassData | null | undefined) => {
+    if (!cls) return 'Sin nombre';
+    if (typeof cls.name === 'string' && cls.name.trim().length > 0) return cls.name;
+    if (cls.code && cls.code.trim().length > 0) return `Clase (${cls.code})`;
+    return 'Sin nombre';
+  };
+
   const selectedClass = selectedClassId ? classes.find(cls => cls.id === selectedClassId) : null;
 
   const handleSelectClass = (classData: ClassData) => {
@@ -49,80 +57,34 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({
 
   const renderClassItem = ({ item }: { item: ClassData }) => {
     return (
-    <TouchableOpacity
-      style={[
-        styles.classItem,
-        {
-          backgroundColor: theme.colors.surface,
-          borderBottomColor: theme.colors.border,
-        }
-      ]}
-      onPress={() => handleSelectClass(item)}
-    >
-      <View style={styles.classItemContent}>
-        <View style={styles.classInfo}>
-          <View style={styles.classHeader}>
-            <View 
-              style={[
-                styles.colorDot,
-                { backgroundColor: item.color || theme.colors.primary }
-              ]} 
-            />
-            <ThemedText variant="h3" style={{ 
-              color: theme.colors.text, 
-              flex: 1,
-              fontWeight: '600',
-              fontSize: 14
-            }}>
-              {item.name || 'Sin nombre'}
-            </ThemedText>
-          </View>
-          
-          {item.code && (
-            <ThemedText variant="body" style={{ 
-              color: theme.colors.textMuted, 
-              fontSize: 12,
-              fontWeight: '500',
-              marginTop: 2
-            }}>
-              📚 {item.code}
-            </ThemedText>
-          )}
-          
-          {(item.description && item.description.trim()) ? (
-            <ThemedText variant="body" style={{ 
-              color: theme.colors.text, 
-              fontSize: 11, 
-              marginTop: 3,
-              lineHeight: 16,
-              opacity: 0.7
-            }}>
-              {item.description.trim()}
-            </ThemedText>
-          ) : (
-            <ThemedText variant="body" style={{ 
-              color: theme.colors.textMuted, 
-              fontSize: 10, 
-              marginTop: 3,
-              fontStyle: 'italic'
-            }}>
-              Sin descripción
-            </ThemedText>
-          )}
-          
-          {item.instructor && (
-            <ThemedText variant="body" style={{ 
-              color: theme.colors.secondary, 
-              fontSize: 12, 
-              marginTop: 3,
-              fontWeight: '500'
-            }}>
-              👨‍🏫 {item.instructor}
-            </ThemedText>
-          )}
+      <TouchableOpacity
+        style={[
+          styles.classItem,
+          {
+            backgroundColor: theme.colors.surface,
+            borderBottomColor: theme.colors.border,
+          }
+        ]}
+        onPress={() => handleSelectClass(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.classItemContent}>
+          <View 
+            style={[
+              styles.colorDot,
+              { backgroundColor: item.color || theme.colors.primary }
+            ]} 
+          />
+          <ThemedText variant="body" style={{ 
+            color: theme.colors.text, 
+            fontWeight: '500',
+            fontSize: 16,
+            flex: 1
+          }}>
+            {getDisplayName(item)}
+          </ThemedText>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
     );
   };
 
@@ -177,39 +139,19 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({
       >
         {selectedClass ? (
           <View style={styles.selectedClassContent}>
-            <View style={styles.selectedClassInfo}>
-              <View 
-                style={[
-                  styles.colorDot,
-                  { backgroundColor: selectedClass.color || theme.colors.primary }
-                ]} 
-              />
-              <View style={{ flex: 1 }}>
-                <ThemedText variant="body" style={{ color: theme.colors.text }}>
-                  {selectedClass.name}
-                </ThemedText>
-                {selectedClass.code && (
-                  <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
-                    📚 {selectedClass.code}
-                  </ThemedText>
-                )}
-                {selectedClass.description && selectedClass.description.trim() && (
-                  <ThemedText 
-                    variant="body" 
-                    style={{ 
-                      color: theme.colors.text, 
-                      fontSize: 10, 
-                      marginTop: 1,
-                      opacity: 0.6
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    {selectedClass.description.trim()}
-                  </ThemedText>
-                )}
-              </View>
-            </View>
+            <View 
+              style={[
+                styles.colorDot,
+                { backgroundColor: selectedClass.color || theme.colors.primary }
+              ]} 
+            />
+            <ThemedText variant="body" style={{ 
+              color: theme.colors.text,
+              flex: 1,
+              fontWeight: '500'
+            }}>
+              {getDisplayName(selectedClass)}
+            </ThemedText>
             
             {!required && (
               <TouchableOpacity 
@@ -246,7 +188,7 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({
           {classes.length === 0 ? (
             <View style={styles.emptyContainer}>
               <ThemedText variant="body" style={{ color: theme.colors.textMuted, textAlign: 'center' }}>
-                {loading ? 'Cargando clases...' : 'No hay clases disponibles'}
+                {loading ? 'Cargando clases...' : 'No hay clases disponibles. Agrega una materia primero.'}
               </ThemedText>
               {error && (
                 <ThemedText variant="body" style={{ color: theme.colors.error, textAlign: 'center', marginTop: 8, fontSize: 12 }}>
@@ -255,13 +197,16 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({
               )}
             </View>
           ) : (
-            <View style={styles.classList}>
-              {classes.map((item) => (
-                <View key={item.id || item.name}>
-                  {renderClassItem({ item })}
-                </View>
-              ))}
-            </View>
+            <FlatList
+              data={classes}
+              keyExtractor={(item) => item.id || item.name}
+              renderItem={renderClassItem}
+              style={styles.classList}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled={true}
+              maxToRenderPerBatch={10}
+              initialNumToRender={5}
+            />
           )}
         </View>
       )}
@@ -289,11 +234,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  selectedClassInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
   clearButton: {
     marginLeft: 8,
     padding: 4,
@@ -302,8 +242,8 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    marginRight: 12,
-    borderWidth: 2,
+    marginRight: 10,
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
   },
   dropdown: {
@@ -329,19 +269,13 @@ const styles = StyleSheet.create({
   },
   classItem: {
     borderBottomWidth: 1,
-    minHeight: 60,
+    minHeight: 48,
   },
   classItemContent: {
-    padding: 16,
-    paddingVertical: 12,
-  },
-  classInfo: {
-    flex: 1,
-  },
-  classHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    padding: 16,
+    paddingVertical: 12,
   },
   emptyContainer: {
     padding: 20,
