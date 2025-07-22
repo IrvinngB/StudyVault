@@ -7,15 +7,16 @@ import { useTheme } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
 interface CreateEventModalProps {
   visible: boolean;
@@ -36,8 +37,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('10:00');
+  const [startTime, setStartTime] = useState(new Date());
+  const [endTime, setEndTime] = useState(new Date());
   const [eventType, setEventType] = useState<EventType>('class');
   const [location, setLocation] = useState('');
   const [classroom, setClassroom] = useState('');
@@ -45,68 +46,52 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [isRecurring, setIsRecurring] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassData | null>(null);
 
+  // Time picker state
+  const [isStartTimePickerVisible, setStartTimePickerVisibility] = useState(false);
+  const [isEndTimePickerVisible, setEndTimePickerVisibility] = useState(false);
+
+  // Initialize times on mount
+  React.useEffect(() => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(9, 0, 0, 0); // 9:00 AM
+    const end = new Date(now);
+    end.setHours(10, 0, 0, 0); // 10:00 AM
+    
+    setStartTime(start);
+    setEndTime(end);
+  }, []);
+
   // Get current event type config
   const currentEventConfig = EVENT_TYPES_CONFIG.find(config => config.value === eventType);
 
-  // Función para formatear y validar la hora
-  const formatTimeToHHMM = (timeString: string): string => {
-    // Remover cualquier texto extra como "Ej: "
-    let cleanTime = timeString.replace(/^(Ej:\s*|ej:\s*)/i, '').trim();
-    
-    // Detectar formato 12 horas (con AM/PM)
-    const time12Regex = /^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)$/i;
-    const time24Regex = /^(\d{1,2}):(\d{2})$/;
-    
-    let hours: number;
-    let minutes: number;
-    
-    const match12 = cleanTime.match(time12Regex);
-    const match24 = cleanTime.match(time24Regex);
-    
-    if (match12) {
-      // Formato 12 horas
-      hours = parseInt(match12[1], 10);
-      minutes = parseInt(match12[2], 10);
-      const period = match12[3].toUpperCase();
-      
-      // Validar rangos para formato 12 horas
-      if (hours < 1 || hours > 12) {
-        throw new Error('En formato 12 horas, las horas deben estar entre 1 y 12');
-      }
-      
-      // Convertir a formato 24 horas
-      if (period === 'AM') {
-        if (hours === 12) hours = 0; // 12:00 AM = 00:00
-      } else { // PM
-        if (hours !== 12) hours += 12; // 1:00 PM = 13:00, pero 12:00 PM = 12:00
-      }
-    } else if (match24) {
-      // Formato 24 horas
-      hours = parseInt(match24[1], 10);
-      minutes = parseInt(match24[2], 10);
-      
-      // Validar rangos para formato 24 horas
-      if (hours < 0 || hours > 23) {
-        throw new Error('En formato 24 horas, las horas deben estar entre 00 y 23');
-      }
-    } else {
-      throw new Error('Formato de hora inválido. Use HH:MM (24h) o HH:MM AM/PM (12h)');
-    }
-    
-    // Validar minutos
-    if (minutes < 0 || minutes > 59) {
-      throw new Error('Los minutos deben estar entre 00 y 59');
-    }
-    
-    // Formatear a HH:MM en formato 24 horas
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  // Función para formatear Date a HH:MM
+  const formatTimeToHHMM = (date: Date): string => {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  // Función para formatear Date a string legible
+  const formatTimeForDisplay = (date: Date): string => {
+    return date.toLocaleTimeString('es-ES', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
   };
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
-    setStartTime('09:00');
-    setEndTime('10:00');
+    // Reset times to default values
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(9, 0, 0, 0); // 9:00 AM
+    const end = new Date(now);
+    end.setHours(10, 0, 0, 0); // 10:00 AM
+    setStartTime(start);
+    setEndTime(end);
     setEventType('class');
     setLocation('');
     setClassroom('');
@@ -246,35 +231,33 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
-      <ThemedView variant="background" style={styles.container}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
-            <Ionicons name="close" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          
-          <ThemedText variant="h2" style={{ color: theme.colors.text }}>
-            Crear Evento
-          </ThemedText>
-          
-          <TouchableOpacity 
-            onPress={handleSubmit} 
-            style={[styles.headerButton, { opacity: loading ? 0.5 : 1 }]}
-            disabled={loading}
-          >
-            <ThemedText variant="h3" style={{ color: theme.colors.primary }}>
-              {loading ? 'Guardando...' : 'Guardar'}
+    <>
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={handleClose}
+      >
+        <ThemedView style={styles.container}>
+          <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+            <TouchableOpacity onPress={handleClose}>
+              <Ionicons name="close" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+            <ThemedText variant="h2" style={{ color: theme.colors.text }}>
+              Nuevo Evento
             </ThemedText>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity 
+              onPress={handleSubmit}
+              disabled={loading}
+              style={{ opacity: loading ? 0.6 : 1 }}
+            >
+              <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: '600' }}>
+                {loading ? 'Creando...' : 'Crear'}
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* Event Type Selection */}
           <View style={styles.section}>
             <ThemedText variant="h3" style={[styles.sectionTitle, { color: theme.colors.text }]}>
@@ -375,20 +358,21 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 <ThemedText variant="body" style={{ color: theme.colors.textMuted, marginBottom: 8 }}>
                   Inicio
                 </ThemedText>
-                <TextInput
+                <TouchableOpacity
                   style={[
-                    styles.textInput,
+                    styles.timeSelector,
                     {
                       backgroundColor: theme.colors.surfaceLight,
-                      color: theme.colors.text,
                       borderColor: theme.colors.border,
                     }
                   ]}
-                  value={startTime}
-                  onChangeText={setStartTime}
-                  placeholder="09:00 o 9:00 AM"
-                  placeholderTextColor={theme.colors.textMuted}
-                />
+                  onPress={() => setStartTimePickerVisibility(true)}
+                >
+                  <ThemedText variant="body" style={{ color: theme.colors.text }}>
+                    {formatTimeForDisplay(startTime)}
+                  </ThemedText>
+                  <Ionicons name="time-outline" size={20} color={theme.colors.textMuted} />
+                </TouchableOpacity>
               </View>
               
               <View style={{ width: 16 }} />
@@ -397,20 +381,21 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                 <ThemedText variant="body" style={{ color: theme.colors.textMuted, marginBottom: 8 }}>
                   Fin
                 </ThemedText>
-                <TextInput
+                <TouchableOpacity
                   style={[
-                    styles.textInput,
+                    styles.timeSelector,
                     {
                       backgroundColor: theme.colors.surfaceLight,
-                      color: theme.colors.text,
                       borderColor: theme.colors.border,
                     }
                   ]}
-                  value={endTime}
-                  onChangeText={setEndTime}
-                  placeholder="10:00 o 10:00 AM"
-                  placeholderTextColor={theme.colors.textMuted}
-                />
+                  onPress={() => setEndTimePickerVisibility(true)}
+                >
+                  <ThemedText variant="body" style={{ color: theme.colors.text }}>
+                    {formatTimeForDisplay(endTime)}
+                  </ThemedText>
+                  <Ionicons name="time-outline" size={20} color={theme.colors.textMuted} />
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -548,7 +533,39 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         </ScrollView>
       </ThemedView>
     </Modal>
-  );
+
+    {/* Time Pickers */}
+    <DateTimePickerModal
+      isVisible={isStartTimePickerVisible}
+      mode="time"
+      onConfirm={(date) => {
+        setStartTime(date);
+        setStartTimePickerVisibility(false);
+        
+        // Auto-adjust end time to be 1 hour after start time
+        const newEndTime = new Date(date);
+        newEndTime.setHours(newEndTime.getHours() + 1);
+        setEndTime(newEndTime);
+      }}
+      onCancel={() => setStartTimePickerVisibility(false)}
+      confirmTextIOS="Confirmar"
+      cancelTextIOS="Cancelar"
+      is24Hour={true}
+    />
+
+    <DateTimePickerModal
+      isVisible={isEndTimePickerVisible}
+      mode="time"
+      onConfirm={(date) => {
+        setEndTime(date);
+        setEndTimePickerVisibility(false);
+      }}
+      onCancel={() => setEndTimePickerVisibility(false)}
+      confirmTextIOS="Confirmar"
+      cancelTextIOS="Cancelar"
+      is24Hour={true}
+    />
+  </>);
 };
 
 const styles = StyleSheet.create({
@@ -583,6 +600,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
+  },
+  timeSelector: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 48,
   },
   textArea: {
     height: 80,

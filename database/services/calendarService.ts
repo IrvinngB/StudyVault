@@ -4,14 +4,11 @@ import type {
     CalendarEventFilters,
     CreateCalendarEventRequest,
     EventType,
-    UpdateCalendarEventRequest,
-    ExternalCalendarSync,
-    GoogleCalendarSync
+    UpdateCalendarEventRequest
 } from '../models/calendarTypes'
 import type {
     ApiResponse
 } from '../models/types'
-import { googleCalendarService } from './googleCalendarService'
 
 export class CalendarService {
   private apiClient = ApiClient.getInstance()
