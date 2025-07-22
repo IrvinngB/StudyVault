@@ -34,7 +34,8 @@ const MAPPING = {
   // Action icons
   "rectangle.portrait.and.arrow.right": "logout",
   lightbulb: "lightbulb",
-  star: "star",
+  star: "star-border", // Keeping this and removing the other 'star'
+  "star.fill": "star", // Keeping this and removing the other 'star.fill'
 
   // Additional common icons
   plus: "add",
@@ -92,7 +93,7 @@ const MAPPING = {
   // New icons for course detail
   bolt: "flash-on",
   "arrow.clockwise": "refresh",
-} as IconMapping
+} as IconMapping;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.

@@ -1,9 +1,9 @@
 import { ApiClient } from '../api/client';
 
 export interface NoteData {
-  id?: string;
+  id: string;
   user_id?: string;
-  class_id: string;
+  class_id?: string;
   title: string;
   content: string;
   ai_summary?: string;
@@ -27,7 +27,7 @@ export interface AttachmentData {
 }
 
 export interface CreateNoteRequest {
-  class_id: string;
+  class_id?: string;
   title: string;
   content: string;
   ai_summary?: string;
@@ -335,9 +335,12 @@ class NotesService {
   /**
    * Agrupar notas por clase
    */
-  groupNotesByClass(notes: NoteData[]): Record<string, NoteData[]> {
+ groupNotesByClass(notes: NoteData[]): Record<string, NoteData[]> {
     return notes.reduce((groups, note) => {
-      const classId = note.class_id;
+      // Si class_id es undefined, usa una cadena por defecto para agruparlas.
+      // Puedes elegir cualquier string que no choque con IDs reales.
+      const classId = note.class_id || 'no-class'; // <--- CAMBIO CLAVE AQUÍ
+
       if (!groups[classId]) {
         groups[classId] = [];
       }

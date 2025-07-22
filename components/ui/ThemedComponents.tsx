@@ -1,7 +1,7 @@
 // components/ui/ThemedComponents.tsx
 import { useTheme } from '@/hooks/useTheme';
 import { createStyles } from '@/utils/createStyles';
-import React from 'react';
+import React from 'react'; // ¡Asegúrate de que React esté importado!
 import {
   ActivityIndicator,
   Text,
@@ -14,64 +14,17 @@ import {
   ViewProps
 } from 'react-native';
 
-// Componente View con tema aplicado
+// --- INTERFACES: TODAS LAS INTERFACES DEBEN IR AQUÍ, UNA SOLA VEZ ---
+
 interface ThemedViewProps extends ViewProps {
   variant?: 'background' | 'surface' | 'card' | 'transparent';
 }
 
-export function ThemedView({ 
-  children, 
-  variant = 'transparent', 
-  style, 
-  ...props 
-}: ThemedViewProps) {
-  const { theme } = useTheme();
-  const styles = getViewStyles(theme);
-  
-  return (
-    <View 
-      style={[
-        variant !== 'transparent' && styles[variant],
-        style
-      ]} 
-      {...props}
-    >
-      {children}
-    </View>
-  );
-}
-
-// Componente Text con tema aplicado
 interface ThemedTextProps extends TextProps {
   variant?: 'h1' | 'h2' | 'h3' | 'body' | 'bodySmall' | 'caption' | 'button';
-  color?: 'primary' | 'secondary' | 'muted' | 'success' | 'warning' | 'error' | 'default';
+  color?: 'primary' | 'secondary' | 'muted' | 'success' | 'warning' | 'error' | 'default' | 'text';
 }
 
-export function ThemedText({ 
-  children, 
-  variant = 'body', 
-  color = 'default',
-  style, 
-  ...props 
-}: ThemedTextProps) {
-  const { theme } = useTheme();
-  const styles = getTextStyles(theme);
-  
-  return (
-    <Text 
-      style={[
-        styles[variant],
-        styles[`color_${color}`],
-        style
-      ]} 
-      {...props}
-    >
-      {children}
-    </Text>
-  );
-}
-
-// Componente Button con tema aplicado - CON SOPORTE DE ICONOS
 interface ThemedButtonProps extends TouchableOpacityProps {
   title: string;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'success' | 'warning' | 'error';
@@ -79,25 +32,86 @@ interface ThemedButtonProps extends TouchableOpacityProps {
   loading?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
+  iconName?: string;
   iconOnly?: boolean;
-  textStyle?: React.CSSProperties | any; // agrega esta línea
+  textStyle?: React.CSSProperties | any;
 }
 
-export function ThemedButton({ 
-  title, 
-  variant = 'primary', 
+interface ThemedInputProps extends TextInputProps {
+  label?: string;
+  error?: string;
+  containerStyle?: ViewProps['style'];
+}
+
+interface ThemedCardProps extends ViewProps {
+  variant?: 'elevated' | 'outlined' | 'flat';
+  padding?: 'none' | 'small' | 'medium' | 'large';
+}
+
+
+// --- COMPONENTES: TODOS LOS COMPONENTES DEBEN IR AQUÍ, UNA SOLA VEZ ---
+
+export function ThemedView({
+  children,
+  variant = 'transparent',
+  style,
+  ...props
+}: ThemedViewProps) {
+  const { theme } = useTheme();
+  const styles = getViewStyles(theme);
+
+  return (
+    <View
+      style={[
+        variant !== 'transparent' && styles[variant],
+        style
+      ]}
+      {...props}
+    >
+      {children}
+    </View>
+  );
+}
+
+export function ThemedText({
+  children,
+  variant = 'body',
+  color = 'default',
+  style,
+  ...props
+}: ThemedTextProps) {
+  const { theme } = useTheme();
+  const styles = getTextStyles(theme);
+
+  return (
+    <Text
+      style={[
+        styles[variant],
+        styles[`color_${color}`],
+        style
+      ]}
+      {...props}
+    >
+      {children}
+    </Text>
+  );
+}
+
+export function ThemedButton({
+  title,
+  variant = 'primary',
   size = 'medium',
   loading = false,
   icon,
   iconPosition = 'left',
   iconOnly = false,
-  style, 
+  style,
   disabled,
-  ...props 
+  ...props
 }: ThemedButtonProps) {
   const { theme } = useTheme();
   const styles = getButtonStyles(theme);
-  
+
   const isDisabled = disabled || loading;
 
   const getTextColor = () => {
@@ -116,13 +130,13 @@ export function ThemedButton({
     if (loading) {
       return (
         <View style={styles.contentContainer}>
-          <ActivityIndicator 
-            size="small" 
-            color={getTextColor()} 
+          <ActivityIndicator
+            size="small"
+            color={getTextColor()}
             style={icon && !iconOnly ? { marginRight: theme.spacing.xs } : undefined}
           />
           {!iconOnly && (
-            <Text 
+            <Text
               style={[
                 theme.typography.button,
                 styles[`text_${variant}`],
@@ -144,7 +158,7 @@ export function ThemedButton({
       return (
         <View style={styles.contentContainer}>
           <View style={styles.iconContainer}>{icon}</View>
-          <Text 
+          <Text
             style={[
               theme.typography.button,
               styles[`text_${variant}`],
@@ -160,7 +174,7 @@ export function ThemedButton({
     if (icon && iconPosition === 'right') {
       return (
         <View style={styles.contentContainer}>
-          <Text 
+          <Text
             style={[
               theme.typography.button,
               styles[`text_${variant}`],
@@ -177,7 +191,7 @@ export function ThemedButton({
     }
 
     return (
-      <Text 
+      <Text
         style={[
           theme.typography.button,
           styles[`text_${variant}`],
@@ -188,9 +202,9 @@ export function ThemedButton({
       </Text>
     );
   };
-  
+
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
         styles.base,
         styles[`variant_${variant}`],
@@ -208,72 +222,58 @@ export function ThemedButton({
   );
 }
 
-// Componente Input con tema aplicado
-interface ThemedInputProps extends TextInputProps {
-  label?: string;
-  error?: string;
-  containerStyle?: ViewProps['style'];
-}
+// *** ThemedInput con forwardRef (¡solo una vez!) ***
+export const ThemedInput = React.forwardRef<TextInput, ThemedInputProps>(
+  ({ label, error, containerStyle, style, ...props }, ref) => {
+    const { theme } = useTheme();
+    const styles = getInputStyles(theme);
 
-export function ThemedInput({ 
-  label, 
-  error, 
-  containerStyle,
-  style, 
-  ...props 
-}: ThemedInputProps) {
-  const { theme } = useTheme();
-  const styles = getInputStyles(theme);
-  
-  return (
-    <View style={[styles.container, containerStyle]}>
-      {label && (
-        <ThemedText variant="bodySmall" style={styles.label}>
-          {label}
-        </ThemedText>
-      )}
-      <TextInput
-        style={[
-          styles.input,
-          error && styles.inputError,
-          style
-        ]}
-        placeholderTextColor={theme.colors.textMuted}
-        {...props}
-      />
-      {error && (
-        <ThemedText variant="caption" color="error" style={styles.errorText}>
-          {error}
-        </ThemedText>
-      )}
-    </View>
-  );
-}
+    return (
+      <View style={[styles.container, containerStyle]}>
+        {label && (
+          <ThemedText variant="bodySmall" style={styles.label}>
+            {label}
+          </ThemedText>
+        )}
+        <TextInput
+          ref={ref}
+          style={[
+            styles.input,
+            error && styles.inputError,
+            style
+          ]}
+          placeholderTextColor={theme.colors.textMuted}
+          {...props}
+        />
+        {error && (
+          <ThemedText variant="caption" color="error" style={styles.errorText}>
+            {error}
+          </ThemedText>
+        )}
+      </View>
+    );
+  }
+);
 
-// Componente Card con tema aplicado
-interface ThemedCardProps extends ViewProps {
-  variant?: 'elevated' | 'outlined' | 'flat';
-  padding?: 'none' | 'small' | 'medium' | 'large';
-}
-
-export function ThemedCard({ 
-  children, 
-  variant = 'elevated', 
+// *** ThemedCard (¡solo una vez!) ***
+export function ThemedCard({
+  children,
+  variant = 'elevated',
   padding = 'medium',
-  style, 
-  ...props 
+  style,
+  ...props
 }: ThemedCardProps) {
   const { theme } = useTheme();
   const styles = getCardStyles(theme);
-  
+
   return (
-    <View 
+    <View
       style={[
         styles.base,
         styles[`variant_${variant}`],
         styles[`padding_${padding}`],
         style
-      ]} 
+      ]}
       {...props}
     >
       {children}
@@ -281,7 +281,9 @@ export function ThemedCard({
   );
 }
 
-// Estilos para cada componente
+
+// --- ESTILOS: TODOS LOS ESTILOS DEBEN IR AQUÍ, UNA SOLA VEZ, DESPUÉS DE LOS COMPONENTES ---
+
 const getViewStyles = createStyles((theme) => ({
   background: {
     backgroundColor: theme.colors.background,
@@ -305,7 +307,7 @@ const getTextStyles = createStyles((theme) => ({
   bodySmall: theme.typography.bodySmall,
   caption: theme.typography.caption,
   button: theme.typography.button,
-  
+
   color_default: { color: theme.colors.text },
   color_primary: { color: theme.colors.primary },
   color_secondary: { color: theme.colors.textSecondary },
@@ -313,6 +315,7 @@ const getTextStyles = createStyles((theme) => ({
   color_success: { color: theme.colors.success },
   color_warning: { color: theme.colors.warning },
   color_error: { color: theme.colors.error },
+  color_text: { color: theme.colors.text },
 }));
 
 const getButtonStyles = createStyles((theme) => ({
@@ -322,7 +325,7 @@ const getButtonStyles = createStyles((theme) => ({
     justifyContent: 'center',
     flexDirection: 'row',
   },
-  
+
   // Variants
   variant_primary: {
     backgroundColor: theme.colors.primary,
@@ -352,7 +355,7 @@ const getButtonStyles = createStyles((theme) => ({
     backgroundColor: theme.colors.error,
     ...theme.shadows.small,
   },
-  
+
   // Sizes
   size_small: {
     paddingVertical: theme.spacing.xs,
@@ -389,7 +392,7 @@ const getButtonStyles = createStyles((theme) => ({
     minWidth: 40,
     aspectRatio: 1,
   },
-  
+
   // Text colors
   text_primary: { color: '#FFFFFF' },
   text_secondary: { color: '#FFFFFF' },
@@ -398,7 +401,7 @@ const getButtonStyles = createStyles((theme) => ({
   text_success: { color: '#FFFFFF' },
   text_warning: { color: '#FFFFFF' },
   text_error: { color: '#FFFFFF' },
-  
+
   // States
   disabled: {
     opacity: 0.5,
@@ -439,7 +442,7 @@ const getCardStyles = createStyles((theme) => ({
     backgroundColor: theme.colors.surface,
     borderRadius: theme.borderRadius.md,
   },
-  
+
   variant_elevated: {
     ...theme.shadows.medium,
   },
@@ -450,7 +453,7 @@ const getCardStyles = createStyles((theme) => ({
   variant_flat: {
     // Sin sombra ni borde
   },
-  
+
   padding_none: {},
   padding_small: {
     padding: theme.spacing.sm,
