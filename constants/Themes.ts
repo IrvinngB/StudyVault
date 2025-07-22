@@ -1,5 +1,5 @@
-// constants/Themes.ts
-export const colorPalettes = {  // Paleta Azul Profundo
+export const colorPalettes = {
+  // Paleta Azul Profundo
   deepBlue: {
     primary: '#2563EB',      // Blue-600 (más vibrante)
     primaryLight: '#60A5FA',  // Blue-400 (más luminoso)
@@ -18,45 +18,44 @@ export const colorPalettes = {  // Paleta Azul Profundo
     error: '#F87171',         // Red-400 (más brillante)
     info: '#38BDF8',          // Sky-400 (más brillante)
   },
-  // Paleta Púrpura
+  // Paleta Púrpura - Mejorada
   purple: {
-    primary: '#8B5CF6',       // Violet-500 (más brillante)
-    primaryLight: '#C4B5FD',  // Violet-300 (más luminoso) 
-    primaryDark: '#7C3AED',   // Violet-600
-    secondary: '#EC4899',     // Pink-500
-    accent: '#F59E0B',        // Amber-500
-    background: '#18181B',    // Zinc-900 (mejor contraste)
-    surface: '#27272A',       // Zinc-800 (mejor contraste)
-    surfaceLight: '#3F3F46',  // Zinc-700 (mejor contraste)
-    text: '#FAFAFA',          // Zinc-50 (mejor contraste)
-    textSecondary: '#E4E4E7', // Zinc-200 (mejor contraste)
-    textMuted: '#A1A1AA',     // Zinc-400 (más legible)
-    border: '#52525B',        // Zinc-600
-    success: '#34D399',       // Emerald-400 (más brillante)
-    warning: '#FBBF24',       // Amber-400 (más brillante) 
-    error: '#FB7185',         // Rose-400 (más vibrante)
-    info: '#A78BFA',          // Violet-400 (más brillante)
+    primary: '#A855F7',       // Purple-500 (más equilibrado)
+    primaryLight: '#C084FC',  // Purple-400 (más suave)
+    primaryDark: '#9333EA',   // Purple-600 (más profundo)
+    secondary: '#06B6D4',     // Cyan-500 (complementario perfecto)
+    accent: '#F59E0B',        // Amber-500 (acento cálido)
+    background: '#0C0A09',    // Stone-950 (más cálido que zinc)
+    surface: '#1C1917',       // Stone-900 (superficie cálida)
+    surfaceLight: '#292524',  // Stone-800 (superficie elevada)
+    text: '#FAFAF9',          // Stone-50 (texto principal)
+    textSecondary: '#E7E5E4', // Stone-200 (texto secundario)
+    textMuted: '#A8A29E',     // Stone-400 (texto atenuado)
+    border: '#44403C',        // Stone-700 (bordes sutiles)
+    success: '#22C55E',       // Green-500 (éxito vibrante)
+    warning: '#F59E0B',       // Amber-500 (advertencia)
+    error: '#EF4444',         // Red-500 (error claro)
+    info: '#8B5CF6',          // Violet-500 (información)
   },
-  // Paleta Roja - Mejorada para mejor contraste
+  // Paleta Roja Carmesí - Mejorada para mejor armonía
   crimsonRed: {
-    primary: '#F43F5E',       // Rose-500 (más vibrante)
-    primaryLight: '#FB7185',  // Rose-400 (más luminoso)
-    primaryDark: '#E11D48',   // Rose-600 (más saturado)
-    secondary: '#FB923C',     // Orange-400 (complementario)
-    accent: '#FBBF24',        // Amber-400 (acento más brillante)
-    background: '#18181B',    // Zinc-900 (mejor contraste)
-    surface: '#27272A',       // Zinc-800 (mejor para legibilidad)
-    surfaceLight: '#3F3F46',  // Zinc-700 (mejor para componentes)
-    text: '#FAFAFA',          // Zinc-50 (mejor contraste)
-    textSecondary: '#E4E4E7', // Zinc-200 (mejor contraste)
-    textMuted: '#A1A1AA',     // Zinc-400 (más legible)
-    border: '#F43F5E',        // Rose-500 (borde elegante)
-    success: '#34D399',       // Emerald-400 (más brillante)
-    warning: '#FBBF24',       // Amber-400 (más brillante)
-    error: '#FCA5A5',         // Red-300 (más suave pero visible)
-    info: '#60A5FA',          // Blue-400 (mejor contraste)
+    primary: '#DC2626',       // Red-600 (más profesional)
+    primaryLight: '#EF4444',  // Red-500 (más equilibrado)
+    primaryDark: '#B91C1C',   // Red-700 (más profundo)
+    secondary: '#0891B2',     // Cyan-600 (complementario perfecto)
+    accent: '#F59E0B',        // Amber-500 (acento dorado)
+    background: '#0F0F0F',    // Neutral-950 (negro puro suavizado)
+    surface: '#1A1A1A',       // Neutral-900 (superficie principal)
+    surfaceLight: '#262626',  // Neutral-800 (superficie elevada)
+    text: '#FAFAFA',          // Neutral-50 (texto principal)
+    textSecondary: '#E5E5E5', // Neutral-200 (texto secundario)
+    textMuted: '#A3A3A3',     // Neutral-400 (texto atenuado)
+    border: '#404040',        // Neutral-700 (bordes)
+    success: '#16A34A',       // Green-600 (éxito)
+    warning: '#D97706',       // Amber-600 (advertencia)
+    error: '#DC2626',         // Red-600 (error)
+    info: '#0284C7',          // Sky-600 (información)
   },
-
   // Paleta Clara (para comparación)
   light: {
     primary: '#4F46E5',       // Indigo-600
@@ -76,7 +75,6 @@ export const colorPalettes = {  // Paleta Azul Profundo
     error: '#DC2626',         // Red-600
     info: '#0284C7',          // Sky-600
   },
-
   // Paleta Azul Profundo - Versión Clara
   deepBlueLight: {
     primary: '#1E40AF',       // Blue-700
@@ -96,47 +94,45 @@ export const colorPalettes = {  // Paleta Azul Profundo
     error: '#DC2626',         // Red-600
     info: '#1E40AF',          // Blue-700
   },
-
-  // Paleta Púrpura - Versión Clara
+  // Paleta Púrpura - Versión Clara Mejorada
   purpleLight: {
-    primary: '#7C3AED',       // Violet-600
-    primaryLight: '#A855F7',  // Purple-500
-    primaryDark: '#6D28D9',   // Violet-700
-    secondary: '#EC4899',     // Pink-500
-    accent: '#F59E0B',        // Amber-500
-    background: '#FAF5FF',    // Violet-50
-    surface: '#FFFFFF',       // White
-    surfaceLight: '#F3E8FF',  // Violet-100
-    text: '#581C87',          // Violet-900
-    textSecondary: '#7C3AED', // Violet-600
-    textMuted: '#8B5CF6',     // Violet-500
-    border: '#C4B5FD',        // Violet-300
-    success: '#059669',       // Emerald-600
-    warning: '#D97706',       // Amber-600
-    error: '#DC2626',         // Red-600
-    info: '#7C3AED',          // Violet-600
+    primary: '#9333EA',       // Purple-600 (más vibrante)
+    primaryLight: '#A855F7',  // Purple-500 (equilibrado)
+    primaryDark: '#7C2D12',   // Purple-700 (más profundo)
+    secondary: '#0891B2',     // Cyan-600 (complementario)
+    accent: '#D97706',        // Amber-600 (acento cálido)
+    background: '#FEFCFB',    // Stone-25 (fondo cálido)
+    surface: '#FFFFFF',       // White (superficies)
+    surfaceLight: '#F5F5F4',  // Stone-100 (superficies alternativas)
+    text: '#1C1917',          // Stone-900 (texto principal)
+    textSecondary: '#44403C', // Stone-700 (texto secundario)
+    textMuted: '#78716C',     // Stone-500 (texto atenuado)
+    border: '#D6D3D1',        // Stone-300 (bordes)
+    success: '#16A34A',       // Green-600 (éxito)
+    warning: '#D97706',       // Amber-600 (advertencia)
+    error: '#DC2626',         // Red-600 (error)
+    info: '#9333EA',          // Purple-600 (información)
   },
-  // Paleta Roja Carmesí - Versión Clara
+  // Paleta Roja Carmesí - Versión Clara Mejorada
   crimsonRedLight: {
-    primary: '#DC2626',       // Red-600
-    primaryLight: '#EF4444',  // Red-500
-    primaryDark: '#B91C1C',   // Red-700
-    secondary: '#F97316',     // Orange-500
-    accent: '#F59E0B',        // Amber-500
-    background: '#FEF2F2',    // Red-50
-    surface: '#FFFFFF',       // White
-    surfaceLight: '#FEE2E2',  // Red-100
-    text: '#7F1D1D',          // Red-900
-    textSecondary: '#B91C1C', // Red-700
-    textMuted: '#DC2626',     // Red-600
-    border: '#FCA5A5',        // Red-300
-    success: '#059669',       // Emerald-600
-    warning: '#D97706',       // Amber-600
-    error: '#DC2626',         // Red-600
-    info: '#DC2626',          // Red-600
+    primary: '#B91C1C',       // Red-700 (más profesional)
+    primaryLight: '#DC2626',  // Red-600 (equilibrado)
+    primaryDark: '#991B1B',   // Red-800 (más profundo)
+    secondary: '#0284C7',     // Sky-600 (complementario frío)
+    accent: '#D97706',        // Amber-600 (acento dorado)
+    background: '#FFFBFB',    // Red-25 (fondo muy sutil)
+    surface: '#FFFFFF',       // White (superficies)
+    surfaceLight: '#FEF2F2',  // Red-50 (superficies alternativas)
+    text: '#1F2937',          // Gray-800 (texto principal neutro)
+    textSecondary: '#4B5563', // Gray-600 (texto secundario)
+    textMuted: '#6B7280',     // Gray-500 (texto atenuado)
+    border: '#E5E7EB',        // Gray-200 (bordes neutros)
+    success: '#059669',       // Emerald-600 (éxito)
+    warning: '#D97706',       // Amber-600 (advertencia)
+    error: '#B91C1C',         // Red-700 (error)
+    info: '#0284C7',          // Sky-600 (información)
   },
-  
-  // Paleta Verde Esmeralda - Versión Oscura
+    // Paleta Verde Esmeralda - Versión Oscura
   emeraldGreen: {
     primary: '#10B981',       // Emerald-500 (vibrante)
     primaryLight: '#34D399',  // Emerald-400 (más brillante)
@@ -155,8 +151,7 @@ export const colorPalettes = {  // Paleta Azul Profundo
     error: '#F87171',         // Red-400 (error)
     info: '#22D3EE',          // Cyan-400 (información)
   },
-  
-  // Paleta Verde Esmeralda - Versión Clara
+    // Paleta Verde Esmeralda - Versión Clara
   emeraldGreenLight: {
     primary: '#059669',       // Emerald-600 (principal)
     primaryLight: '#10B981',  // Emerald-500 (más claro)
@@ -196,41 +191,41 @@ export const commonThemeConfig = {
     full: 9999,
   },
   typography: {
-    h1: { 
-      fontSize: 32, 
-      fontWeight: 'bold' as const,
-      lineHeight: 40 
-    },
-    h2: { 
-      fontSize: 24, 
-      fontWeight: '600' as const,
-      lineHeight: 32 
-    },
-    h3: { 
-      fontSize: 20, 
-      fontWeight: '600' as const,
-      lineHeight: 28 
-    },
-    body: { 
-      fontSize: 16, 
-      fontWeight: '400' as const,
-      lineHeight: 24 
-    },
-    bodySmall: { 
-      fontSize: 14, 
-      fontWeight: '400' as const,
-      lineHeight: 20 
-    },
-    caption: { 
-      fontSize: 12, 
-      fontWeight: '400' as const,
-      lineHeight: 16 
-    },
-    button: { 
-      fontSize: 16, 
-      fontWeight: '600' as const,
-      lineHeight: 24 
-    },
+    h1: {
+       fontSize: 32,
+       fontWeight: 'bold' as const,
+      lineHeight: 40
+     },
+    h2: {
+       fontSize: 24,
+       fontWeight: '600' as const,
+      lineHeight: 32
+     },
+    h3: {
+       fontSize: 20,
+       fontWeight: '600' as const,
+      lineHeight: 28
+     },
+    body: {
+       fontSize: 16,
+       fontWeight: '400' as const,
+      lineHeight: 24
+     },
+    bodySmall: {
+       fontSize: 14,
+       fontWeight: '400' as const,
+      lineHeight: 20
+     },
+    caption: {
+       fontSize: 12,
+       fontWeight: '400' as const,
+      lineHeight: 16
+     },
+    button: {
+       fontSize: 16,
+       fontWeight: '600' as const,
+      lineHeight: 24
+     },
   },
   shadows: {
     small: {
@@ -294,7 +289,8 @@ export const themes = {
     colors: colorPalettes.crimsonRed,
     name: 'Rojo Carmesí',
     isDark: true,
-  },  crimsonRedLight: {
+  },
+  crimsonRedLight: {
     ...commonThemeConfig,
     colors: colorPalettes.crimsonRedLight,
     name: 'Rojo Carmesí Claro',
@@ -353,7 +349,8 @@ export const colorUtils = {
     }
     return color;
   },
-    // Función para obtener color de contraste
+  
+  // Función para obtener color de contraste
   getContrastColor: (backgroundColor: string, lightColor: string = '#FFFFFF', darkColor: string = '#000000') => {
     // Lógica simple para determinar si usar texto claro u oscuro
     // En un caso real, podrías usar una librería como chroma-js

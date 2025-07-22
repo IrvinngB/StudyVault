@@ -15,7 +15,7 @@ interface ModalState {
   onClose?: () => void;
 }
 
-interface UseModalReturn {
+export interface UseModalReturn {
   modalProps: ModalState & { onClose: () => void };
   showModal: (config: Omit<ModalState, 'visible' | 'onClose'>) => void;
   hideModal: () => void;
