@@ -1,77 +1,60 @@
 "use client"
 
-import TestDataCreator from "@/components/debug/TestDataCreator"
 import NoteCard from "@/components/notes/NotesPreviewCard"
 import { IconSymbol } from "@/components/ui/IconSymbol"
-import { ThemedButton, ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
-import { classService, type ClassData } from "@/database/services/courseService"
+import { ThemedButton, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import type { NoteData, UpdateNoteRequest } from "@/database/services/notesService"
 import { useModal } from "@/hooks/modals"
 import { useNotes } from "@/hooks/useNotes"
-import { useTheme } from "@/hooks/useTheme"
+import { useCommonStyles, useTheme } from "@/hooks/useTheme"
 import { useFocusEffect, useRouter } from "expo-router"
 import { useCallback, useState } from "react"
-import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  SafeAreaView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native"
+import { ActivityIndicator, FlatList, RefreshControl, TextInput, TouchableOpacity, View } from "react-native"
+import { SafeAreaView } from "react-native-safe-area-context"
 
-export default function NotesScreen() {
+export default function NotesIndexScreen() {
   const { theme } = useTheme()
+  const commonStyles = useCommonStyles()
   const router = useRouter()
   const { showError, showSuccess } = useModal()
 
-  const { notes, loading, error, refreshNotes, updateNote, notesStats } = useNotes()
+  const { notes, loading, error, refreshNotes, updateNote } = useNotes()
 
-  const [filterType, setFilterType] = useState<"all" | "favorites" | "subject">("all")
-  const [selectedSubject, setSelectedSubject] = useState<string | null>(null)
-  const [allClasses, setAllClasses] = useState<ClassData[]>([])
+  const [searchText, setSearchText] = useState("")
+  const [showSearch, setShowSearch] = useState(false)
+  const [filterFavorites, setFilterFavorites] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
-      const loadInitialData = async () => {
-        await refreshNotes()
-
-        try {
-          const loadedClasses = await classService.getAllClasses()
-          setAllClasses(loadedClasses)
-        } catch (err: any) {
-          console.error("Error al cargar las materias en NotesScreen:", err)
-          showError(`No se pudieron cargar las materias: ${err.message || "Error desconocido"}`, "Error")
-        }
-      }
-
-      loadInitialData()
-    }, [refreshNotes, showError]),
+      refreshNotes()
+    }, [refreshNotes]),
   )
 
-  const onRefresh = refreshNotes
+  // Aplicar filtros
+  let filteredNotes = notes
 
-  const totalNotes = notesStats.total
-  const favoriteNotesCount = notesStats.favorites
-  const subjectCount = Object.keys(notesStats.byClass).length
-
-  const getFilteredNotes = (): NoteData[] => {
-    switch (filterType) {
-      case "all":
-        return notes
-      case "favorites":
-        return notes.filter((note) => note.is_favorite)
-      case "subject":
-        return selectedSubject ? notes.filter((note) => note.class_id === selectedSubject) : []
-      default:
-        return notes
-    }
+  if (filterFavorites) {
+    filteredNotes = filteredNotes.filter((note) => note.is_favorite)
   }
 
-  const displayedNotes = getFilteredNotes()
+  if (searchText.trim()) {
+    filteredNotes = filteredNotes.filter(
+      (note) =>
+        note.title.toLowerCase().includes(searchText.toLowerCase()) ||
+        note.content.toLowerCase().includes(searchText.toLowerCase()) ||
+        (note.ai_summary && note.ai_summary.toLowerCase().includes(searchText.toLowerCase())) ||
+        note.tags.some((tag) => tag.toLowerCase().includes(searchText.toLowerCase())),
+    )
+  }
 
   const handleNotePress = useCallback(
+    (note: NoteData) => {
+      router.push(`/notes/view/${note.id}`)
+    },
+    [router],
+  )
+
+  const handleEditNote = useCallback(
     (note: NoteData) => {
       router.push(`/notes/${note.id}`)
     },
@@ -108,218 +91,207 @@ export default function NotesScreen() {
   )
 
   const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      {/* Enhanced Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <View style={[styles.headerIcon, { backgroundColor: theme.colors.primary + "20" }]}> 
-              <IconSymbol name="note.text" size={28} color={theme.colors.primary} />
-            </View>
-            <View>
-              <ThemedText variant="h1" style={styles.headerTitle}>
-                Mis Apuntes
-              </ThemedText>
-              <ThemedText variant="body" color="secondary">
-                {totalNotes} nota{totalNotes !== 1 ? "s" : ""} en total
-              </ThemedText>
-            </View>
-          </View>
-          <ThemedButton
-            title="Nuevo"
-            variant="primary"
-            icon={<IconSymbol name="plus" size={18} color="white" />}
-            onPress={() => {
-              router.push("/notes/create")
-            }}
-          />
+    <View style={{ paddingHorizontal: theme.spacing.md, paddingTop: 80, paddingBottom: theme.spacing.xs }}>
+      {/* Title */}
+      <ThemedText variant="h1" style={{ fontWeight: "700", marginBottom: theme.spacing.lg }}>
+        Mis Notas
+      </ThemedText>
+
+      {/* Stats */}
+      <View style={{ flexDirection: "row", gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
+        <View
+          style={{
+            flex: 1,
+            padding: theme.spacing.md,
+            borderRadius: theme.borderRadius.md,
+            backgroundColor: theme.colors.surface,
+          }}
+        >
+          <ThemedText variant="h2" style={{ fontWeight: "700", color: theme.colors.primary }}>
+            {notes.length}
+          </ThemedText>
+          <ThemedText variant="caption" color="secondary">
+            Total de notas
+          </ThemedText>
+        </View>
+        <View
+          style={{
+            flex: 1,
+            padding: theme.spacing.md,
+            borderRadius: theme.borderRadius.md,
+            backgroundColor: theme.colors.surface,
+          }}
+        >
+          <ThemedText variant="h2" style={{ fontWeight: "700", color: theme.colors.error }}>
+            {notes.filter((n) => n.is_favorite).length}
+          </ThemedText>
+          <ThemedText variant="caption" color="secondary">
+            Favoritas
+          </ThemedText>
         </View>
       </View>
 
-      {/* Enhanced Stats Cards */}
-      <View style={styles.statsContainer}>
-        <TouchableOpacity
-          onPress={() => {
-            setFilterType("all")
-            setSelectedSubject(null)
-          }}
-          style={styles.statCard}
-          activeOpacity={0.7}
-        >
-          <ThemedCard
-            variant="elevated"
-            padding="medium"
-            style={[
-              styles.statCardContent,
-              filterType === "all" && {
-                backgroundColor: theme.colors.primary,
-                borderWidth: 2,
-                borderColor: theme.colors.primary,
-              },
-            ]}
+      {/* Actions */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: theme.spacing.md,
+        }}
+      >
+        <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
+          <TouchableOpacity
+            onPress={() => setShowSearch(!showSearch)}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: showSearch ? theme.colors.primary : theme.colors.surface,
+            }}
           >
-            <View style={styles.statCardHeader}>
-              <IconSymbol name="doc.text" size={24} color={filterType === "all" ? "white" : theme.colors.primary} />
-              <ThemedText
-                variant="h1"
-                style={[styles.statNumber, { color: filterType === "all" ? "white" : theme.colors.primary }]}
-              >
-                {totalNotes}
-              </ThemedText>
-            </View>
-            <ThemedText
-              variant="body"
-              style={[styles.statLabel, { color: filterType === "all" ? "white" : theme.colors.text }]}
-            >
-              Total
-            </ThemedText>
-          </ThemedCard>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            setFilterType("favorites")
-            setSelectedSubject(null)
-          }}
-          style={styles.statCard}
-          activeOpacity={0.7}
-        >
-          <ThemedCard
-            variant="elevated"
-            padding="medium"
-            style={[
-              styles.statCardContent,
-              filterType === "favorites" && {
-                backgroundColor: theme.colors.error,
-                borderWidth: 2,
-                borderColor: theme.colors.error,
-              },
-            ]}
+            <IconSymbol name="magnifyingglass" size={20} color={showSearch ? "white" : theme.colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setFilterFavorites(!filterFavorites)}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: filterFavorites ? theme.colors.error : theme.colors.surface,
+            }}
           >
-            <View style={styles.statCardHeader}>
-              <IconSymbol
-                name="heart.fill"
-                size={24}
-                color={filterType === "favorites" ? "white" : theme.colors.error}
-              />
-              <ThemedText
-                variant="h1"
-                style={[styles.statNumber, { color: filterType === "favorites" ? "white" : theme.colors.error }]}
-              >
-                {favoriteNotesCount}
-              </ThemedText>
-            </View>
-            <ThemedText
-              variant="body"
-              style={[styles.statLabel, { color: filterType === "favorites" ? "white" : theme.colors.text }]}
-            >
-              Favoritos
-            </ThemedText>
-          </ThemedCard>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            setFilterType("subject")
-          }}
-          style={styles.statCard}
-          activeOpacity={0.7}
-        >
-          <ThemedCard
-            variant="elevated"
-            padding="medium"
-            style={[
-              styles.statCardContent,
-              filterType === "subject" && {
-                backgroundColor: theme.colors.success,
-                borderWidth: 2,
-                borderColor: theme.colors.success,
-              },
-            ]}
-          >
-            <View style={styles.statCardHeader}>
-              <IconSymbol name="folder" size={24} color={filterType === "subject" ? "white" : theme.colors.success} />
-              <ThemedText
-                variant="h1"
-                style={[styles.statNumber, { color: filterType === "subject" ? "white" : theme.colors.success }]}
-              >
-                {subjectCount}
-              </ThemedText>
-            </View>
-            <ThemedText
-              variant="body"
-              style={[styles.statLabel, { color: filterType === "subject" ? "white" : theme.colors.text }]}
-            >
-              Materias
-            </ThemedText>
-          </ThemedCard>
-        </TouchableOpacity>
+            <IconSymbol name="heart.fill" size={20} color={filterFavorites ? "white" : theme.colors.error} />
+          </TouchableOpacity>
+        </View>
+        <ThemedButton
+          title="Nueva Nota"
+          variant="primary"
+          icon={<IconSymbol name="plus" size={18} color="white" />}
+          onPress={() => router.push("/notes/create")}
+          style={{ paddingHorizontal: theme.spacing.lg }}
+        />
       </View>
 
-      {/* Filter Status */}
-      {filterType !== "all" && (
-        <View style={styles.filterStatus}>
-          <View style={[styles.filterBadge, { backgroundColor: theme.colors.info + "20" }]}> 
-            <IconSymbol name="line.3.horizontal.decrease.circle" size={16} color={theme.colors.info} />
-            <ThemedText variant="body" style={{ color: theme.colors.info, marginLeft: 8, fontWeight: "600" }}>
-              {filterType === "favorites" && "Mostrando favoritos"}
-              {filterType === "subject" && !selectedSubject && "Selecciona una materia"}
-              {filterType === "subject" && selectedSubject && `Materia: ${selectedSubject}`}
-            </ThemedText>
-          </View>
-          <TouchableOpacity
-            onPress={() => {
-              setFilterType("all")
-              setSelectedSubject(null)
+      {/* Search Bar */}
+      {showSearch && (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: theme.spacing.md,
+            paddingVertical: theme.spacing.sm,
+            borderRadius: theme.borderRadius.md,
+            marginBottom: theme.spacing.sm,
+            gap: theme.spacing.sm,
+            backgroundColor: theme.colors.surface,
+          }}
+        >
+          <IconSymbol name="magnifyingglass" size={20} color={theme.colors.textMuted} />
+          <TextInput
+            style={{
+              flex: 1,
+              fontSize: 16,
+              paddingVertical: theme.spacing.xs,
+              color: theme.colors.text,
             }}
-            style={styles.clearFilter}
-          >
-            <IconSymbol name="xmark" size={16} color={theme.colors.textMuted} />
-          </TouchableOpacity>
+            placeholder="Buscar notas..."
+            placeholderTextColor={theme.colors.textMuted}
+            value={searchText}
+            onChangeText={setSearchText}
+            autoFocus={showSearch}
+          />
+          {searchText.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchText("")}>
+              <IconSymbol name="xmark.circle.fill" size={20} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Filter Info */}
+      {(searchText.trim() || filterFavorites) && (
+        <View style={{ marginBottom: theme.spacing.sm }}>
+          <ThemedText variant="caption" color="secondary">
+            {filteredNotes.length} nota{filteredNotes.length !== 1 ? "s" : ""}
+            {searchText.trim() && ` para "${searchText}"`}
+            {filterFavorites && " favoritas"}
+          </ThemedText>
         </View>
       )}
     </View>
   )
 
-  const renderEmptyState = () => {
-    if (totalNotes === 0) {
-      // Si no hay notas en absoluto, mostrar el creador de datos de prueba
-      return <TestDataCreator />
-    }
-
-    // Si hay notas pero el filtro no muestra ninguna
-    return (
-      <View style={styles.emptyState}>
-        <View style={[styles.emptyStateIcon, { backgroundColor: theme.colors.surface }]}> 
-          <IconSymbol
-            name={filterType === "favorites" ? "heart" : filterType === "subject" ? "folder" : "note.text"}
-            size={48}
-            color={theme.colors.textMuted}
-          />
-        </View>
-        <ThemedText variant="h3" style={styles.emptyStateTitle}>
-          {filterType === "favorites" && "Sin favoritos aún"}
-          {filterType === "subject" && !selectedSubject && "Selecciona una materia"}
-          {filterType === "subject" && selectedSubject && "Sin notas en esta materia"}
-        </ThemedText>
-        <ThemedText variant="body" color="secondary" style={styles.emptyStateDescription}>
-          {filterType === "favorites" && "Marca tus notas importantes como favoritas"}
-          {filterType === "subject" && !selectedSubject && "Toca en 'Materias' para filtrar por materia"}
-          {filterType === "subject" && selectedSubject && "Crea una nota para esta materia"}
-        </ThemedText>
+  const renderEmptyState = () => (
+    <View
+      style={{
+        alignItems: "center",
+        paddingVertical: theme.spacing.xl * 2,
+        paddingHorizontal: theme.spacing.lg,
+      }}
+    >
+      <View
+        style={{
+          width: 80,
+          height: 80,
+          borderRadius: 40,
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: theme.spacing.lg,
+          backgroundColor: theme.colors.surface,
+        }}
+      >
+        <IconSymbol
+          name={searchText.trim() || filterFavorites ? "magnifyingglass" : "note.text"}
+          size={48}
+          color={theme.colors.textMuted}
+        />
       </View>
-    )
-  }
+      <ThemedText variant="h3" style={{ textAlign: "center", marginBottom: theme.spacing.xs, fontWeight: "600" }}>
+        {searchText.trim() || filterFavorites ? "Sin resultados" : "Sin notas"}
+      </ThemedText>
+      <ThemedText
+        variant="body"
+        color="secondary"
+        style={{ textAlign: "center", lineHeight: 20, marginBottom: theme.spacing.lg }}
+      >
+        {searchText.trim() || filterFavorites
+          ? "Intenta con otros términos de búsqueda o filtros"
+          : "Crea tu primera nota para comenzar"}
+      </ThemedText>
+      {!searchText.trim() && !filterFavorites && (
+        <ThemedButton
+          title="Crear Primera Nota"
+          variant="primary"
+          icon={<IconSymbol name="plus" size={18} color="white" />}
+          onPress={() => router.push("/notes/create")}
+          style={{ alignSelf: "stretch", paddingVertical: theme.spacing.md }}
+        />
+      )}
+    </View>
+  )
 
-  if (loading && notes.length === 0 && !error) {
+  if (loading && notes.length === 0) {
     return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <ThemedView variant="background" style={styles.centeredContainer}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <ThemedText variant="body" style={{ marginTop: theme.spacing.md, color: theme.colors.secondary }}>
-              Cargando tus apuntes...
-            </ThemedText>
+      <SafeAreaView style={commonStyles.container}>
+        <ThemedView
+          variant="background"
+          style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: theme.spacing.lg }}
+        >
+          <View style={{ alignItems: "center" }}>
+            <ThemedView
+              variant="card"
+              style={{ padding: theme.spacing.xl, borderRadius: theme.borderRadius.xl, alignItems: "center" }}
+            >
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <ThemedText variant="body" style={{ marginTop: theme.spacing.md, color: theme.colors.secondary }}>
+                Cargando notas...
+              </ThemedText>
+            </ThemedView>
           </View>
         </ThemedView>
       </SafeAreaView>
@@ -328,9 +300,12 @@ export default function NotesScreen() {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.centeredContainer}>
-        <ThemedView variant="background" style={styles.centeredContainer}>
-          <View style={styles.errorContainer}>
+      <SafeAreaView style={commonStyles.container}>
+        <ThemedView
+          variant="background"
+          style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: theme.spacing.lg }}
+        >
+          <View style={{ alignItems: "center", gap: theme.spacing.md }}>
             <IconSymbol name="exclamationmark.triangle" size={48} color={theme.colors.error} />
             <ThemedText
               variant="h3"
@@ -346,158 +321,33 @@ export default function NotesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ThemedView variant="background" style={styles.container}>
+    <SafeAreaView style={commonStyles.container}>
+      <ThemedView variant="background" style={commonStyles.container}>
         <FlatList
-          data={displayedNotes}
+          data={filteredNotes}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={renderHeader}
           renderItem={({ item: note }) => (
             <NoteCard
               note={note}
               onPress={handleNotePress}
+              onEdit={handleEditNote}
               isFavorite={note.is_favorite}
               onFavoriteToggle={() => handleFavoriteToggle(note.id)}
-              className={
-                note.class_id ? allClasses.find((cls) => cls.id === note.class_id)?.name || "Sin nombre" : "Sin materia"
-              }
+              compact={false}
             />
           )}
           ListEmptyComponent={renderEmptyState}
           contentContainerStyle={[
-            styles.listContainer,
-            displayedNotes.length === 0 && totalNotes === 0 && { flex: 1 }
+            { paddingHorizontal: theme.spacing.md, paddingBottom: 100 },
+            filteredNotes.length === 0 && { flex: 1 },
           ]}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={refreshNotes} tintColor={theme.colors.primary} />
+          }
         />
       </ThemedView>
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  centeredContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  loadingContainer: {
-    alignItems: "center",
-  },
-  errorContainer: {
-    alignItems: "center",
-    gap: 16,
-  },
-  headerContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  headerContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  headerIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  statsContainer: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 20,
-  },
-  statCard: {
-    flex: 1,
-    height: 100,
-  },
-  statCardContent: {
-    height: "100%",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  statCardHeader: {
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: "800",
-    marginTop: 4,
-  },
-  statLabel: {
-    fontWeight: "600",
-    fontSize: 14,
-    textAlign: "center",
-  },
-  filterStatus: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  filterBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    flex: 1,
-  },
-  clearFilter: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  listContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 100,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-  },
-  emptyStateIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 24,
-  },
-  emptyStateTitle: {
-    textAlign: "center",
-    marginBottom: 12,
-    fontWeight: "700",
-  },
-  emptyStateDescription: {
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  firstNoteButton: {
-    marginTop: 24,
-    alignSelf: "stretch",
-    paddingVertical: 16,
-  },
-})

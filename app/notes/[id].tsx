@@ -6,27 +6,26 @@ import { IconSymbol } from "@/components/ui/IconSymbol"
 import { ThemedButton, ThemedCard, ThemedInput, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { classService } from "@/database/services/courseService"
 import {
-    type AttachmentData,
-    type CreateNoteRequest,
-    type NoteData,
-    notesService,
-    type UpdateNoteRequest,
+  type AttachmentData,
+  type CreateNoteRequest,
+  type NoteData,
+  notesService,
+  type UpdateNoteRequest,
 } from "@/database/services/notesService"
 import { useModal } from "@/hooks/modals"
 import { useTheme } from "@/hooks/useTheme"
 import * as DocumentPicker from "expo-document-picker"
 import * as ImagePicker from "expo-image-picker"
-import { Stack, useLocalSearchParams, useRouter } from "expo-router"
+import { useLocalSearchParams, useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  TouchableOpacity,
+  View,
 } from "react-native"
 
 export default function NoteDetailScreen() {
@@ -63,7 +62,8 @@ export default function NoteDetailScreen() {
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null)
   const [imageModalVisible, setImageModalVisible] = useState(false)
 
-  // (Estados de autocompletado de materia eliminados, ahora se usa ClassSelector)
+  // Estados para vista de adjuntos
+  const [showAttachmentsModal, setShowAttachmentsModal] = useState(false)
 
   // Efecto para cargar la nota y las materias cuando cambia el ID
   useEffect(() => {
@@ -71,12 +71,8 @@ export default function NoteDetailScreen() {
       setLoading(true)
       setError(null)
 
-      // Cargar las materias disponibles PRIMERO
-      // (Variable de autocompletado eliminada)
-      // (Variable de autocompletado eliminada)
       try {
         await classService.getAllClasses()
-        // (Lógica de autocompletado eliminada, solo se carga la nota)
       } catch (err: any) {
         console.error("Error al cargar las clases para sugerencias:", err)
       }
@@ -95,7 +91,6 @@ export default function NoteDetailScreen() {
           local_files_path: "",
           attachments: [],
         })
-        // (Lógica de autocompletado eliminada)
       } else if (typeof id === "string") {
         setIsNewNote(false)
         try {
@@ -112,10 +107,19 @@ export default function NoteDetailScreen() {
               local_files_path: loadedNote.local_files_path || "",
               attachments: loadedNote.attachments || [],
               user_id: loadedNote.user_id,
+              ai_summary: loadedNote.ai_summary,
             })
-            // Establecer el nombre de la materia en el input
-            // (Variable de autocompletado eliminada)
-            // (Lógica de autocompletado eliminada)
+
+            // Cargar archivos adjuntos existentes
+            if (loadedNote.attachments) {
+              const images = loadedNote.attachments.filter((att) => att.type === "image").map((att) => att.local_path)
+              const documents = loadedNote.attachments
+                .filter((att) => att.type === "document")
+                .map((att) => att.local_path)
+
+              setAttachedImages(images)
+              setAttachedDocuments(documents)
+            }
           } else {
             setError("Nota no encontrada.")
           }
@@ -163,6 +167,7 @@ export default function NoteDetailScreen() {
         is_favorite: noteForm.is_favorite,
         local_files_path: "StudyFiles",
         attachments: attachmentsToSave,
+        ai_summary: noteForm.ai_summary,
       }
 
       if (isNewNote) {
@@ -222,17 +227,16 @@ export default function NoteDetailScreen() {
     try {
       setGeneratingAISummary(true)
       setAiSummaryError(null)
-      
+
       const result = await notesService.generateAISummary(noteForm.id)
-      
+
       // Actualizar el formulario con el resumen generado
-      setNoteForm(prev => ({
+      setNoteForm((prev) => ({
         ...prev,
-        ai_summary: result.ai_summary
+        ai_summary: result.ai_summary,
       }))
-      
+
       showSuccess("Resumen de IA generado exitosamente.", "¡Resumen Listo!")
-      
     } catch (error: any) {
       console.error("Error al generar resumen de IA:", error)
       const errorMessage = error.message || "Error desconocido al generar el resumen"
@@ -257,7 +261,7 @@ export default function NoteDetailScreen() {
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
           aspect: [4, 3],
-          quality: 1,
+          quality: 0.8,
         })
       } else {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -269,7 +273,7 @@ export default function NoteDetailScreen() {
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
           aspect: [4, 3],
-          quality: 1,
+          quality: 0.8,
         })
       }
 
@@ -287,7 +291,12 @@ export default function NoteDetailScreen() {
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: "application/pdf",
+        type: [
+          "application/pdf",
+          "text/*",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ],
         copyToCacheDirectory: true,
       })
 
@@ -318,21 +327,15 @@ export default function NoteDetailScreen() {
   // Función para abrir documento
   const openDocument = async (uri: string) => {
     try {
-      // En una implementación real, podrías usar una librería como react-native-file-viewer
-      Alert.alert(
-        "Abrir Documento",
-        `¿Deseas abrir el documento ${uri.substring(uri.lastIndexOf("/") + 1)}?`,
-        [
-          { text: "Cancelar", style: "cancel" },
-          { 
-            text: "Abrir", 
-            onPress: () => {
-              // Aquí iría la lógica para abrir el documento
-              showSuccess("Abriendo documento...", "Info")
-            }
-          }
-        ]
-      )
+      Alert.alert("Abrir Documento", `¿Deseas abrir el documento ${uri.substring(uri.lastIndexOf("/") + 1)}?`, [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Abrir",
+          onPress: () => {
+            showSuccess("Abriendo documento...", "Info")
+          },
+        },
+      ])
     } catch {
       showError("No se pudo abrir el documento", "Error")
     }
@@ -341,8 +344,13 @@ export default function NoteDetailScreen() {
   // Renderizado de la UI
   if (loading) {
     return (
-      <ThemedView variant="background" style={styles.centeredContainer}>
-        <View style={styles.loadingContainer}>
+      <ThemedView variant="background" style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: theme.spacing.lg
+      }}>
+        <View style={{ alignItems: "center" }}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <ThemedText variant="body" style={{ marginTop: theme.spacing.md, color: theme.colors.secondary }}>
             {isNewNote ? "Preparando nueva nota..." : "Cargando nota..."}
@@ -354,8 +362,16 @@ export default function NoteDetailScreen() {
 
   if (error) {
     return (
-      <ThemedView variant="background" style={styles.centeredContainer}>
-        <View style={styles.errorContainer}>
+      <ThemedView variant="background" style={{
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: theme.spacing.lg
+      }}>
+        <View style={{
+          alignItems: "center",
+          gap: theme.spacing.md
+        }}>
           <IconSymbol name="exclamationmark.triangle" size={48} color={theme.colors.error} />
           <ThemedText
             variant="h3"
@@ -369,35 +385,61 @@ export default function NoteDetailScreen() {
     )
   }
 
+  const totalAttachments = attachedImages.length + attachedDocuments.length
+
   return (
     <ThemedView variant="background" style={{ flex: 1 }}>
-      <Stack.Screen
-        options={{
-          title: isNewNote ? "Nueva Nota" : noteForm.title || "Detalle de Nota",
-          headerRight: () =>
-            !isNewNote ? (
-              <ThemedButton
-                title="Eliminar"
-                variant="error"
-                onPress={handleDeleteNote}
-                style={{ marginLeft: theme.spacing.md }}
-              />
-            ) : null,
-        }}
-      />
+      <View style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border
+      }}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <IconSymbol name="chevron.left" size={24} color={theme.colors.primary} />
+        </TouchableOpacity>
+        <ThemedText variant="h3" style={{ flex: 1, textAlign: "center" }}>
+          {isNewNote ? "Nueva Nota" : noteForm.title || "Detalle de Nota"}
+        </ThemedText>
+        {!isNewNote && (
+          <TouchableOpacity 
+            onPress={handleDeleteNote}
+            style={{ padding: theme.spacing.sm }}
+          >
+            <IconSymbol name="trash" size={24} color={theme.colors.error} />
+          </TouchableOpacity>
+        )}
+      </View>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{
+          padding: theme.spacing.md,
+          paddingBottom: theme.spacing.xxl
+        }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {/* Header Card */}
-        <ThemedCard variant="elevated" padding="large" style={styles.headerCard}>
-          <View style={styles.headerContent}>
-            <View style={[styles.noteIcon, { backgroundColor: theme.colors.primary + "20" }]}>
+        <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.md }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{
+              width: 60,
+              height: 60,
+              borderRadius: 30,
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: theme.spacing.md,
+              backgroundColor: theme.colors.primary + "20"
+            }}>
               <IconSymbol name="note.text" size={32} color={theme.colors.primary} />
             </View>
-            <View style={styles.headerText}>
-              <ThemedText variant="h2" style={styles.headerTitle}>
+            <View style={{ flex: 1 }}>
+              <ThemedText variant="h2" style={{
+                fontWeight: "700",
+                marginBottom: 4
+              }}>
                 {isNewNote ? "Nueva Nota" : "Editar Nota"}
               </ThemedText>
               <ThemedText variant="body" color="secondary">
@@ -407,7 +449,13 @@ export default function NoteDetailScreen() {
             {!isNewNote && (
               <TouchableOpacity
                 onPress={() => setNoteForm({ ...noteForm, is_favorite: !noteForm.is_favorite })}
-                style={[styles.favoriteButton, noteForm.is_favorite && { backgroundColor: theme.colors.error + "20" }]}
+                style={{
+                  padding: theme.spacing.sm,
+                  borderRadius: 24,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: noteForm.is_favorite ? theme.colors.error + "20" : "transparent"
+                }}
               >
                 <IconSymbol
                   name={noteForm.is_favorite ? "heart.fill" : "heart"}
@@ -420,35 +468,40 @@ export default function NoteDetailScreen() {
         </ThemedCard>
 
         {/* Form Fields */}
-        <ThemedCard variant="elevated" padding="large" style={styles.formCard}>
+        <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.md }}>
           <ThemedInput
             label="Título *"
             value={noteForm.title}
             onChangeText={(text: string) => setNoteForm({ ...noteForm, title: text })}
             placeholder="Escribe el título de tu apunte"
-            style={styles.input}
+            style={{ marginBottom: theme.spacing.md }}
           />
 
           {/* Selector de materia moderno */}
-          <View style={styles.subjectContainer}>
+          <View style={{
+            marginBottom: theme.spacing.md,
+            zIndex: 1
+          }}>
             <ThemedText variant="h3" style={{ marginBottom: 8, color: theme.colors.primary, fontWeight: "700" }}>
               Materia
             </ThemedText>
-            <View style={{
-              backgroundColor: theme.colors.surfaceLight,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              paddingHorizontal: 4,
-              paddingVertical: 2,
-              marginBottom: 0,
-            }}>
+            <View
+              style={{
+                backgroundColor: theme.colors.surfaceLight,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                paddingHorizontal: 4,
+                paddingVertical: 2,
+                marginBottom: 0,
+              }}
+            >
               <ClassSelector
                 selectedClassId={noteForm.class_id}
                 onSelectClass={(cls) => setNoteForm((prev) => ({ ...prev, class_id: cls?.id || "" }))}
                 placeholder="Selecciona la materia de la nota"
                 required
-                style={{ marginBottom: 0, backgroundColor: 'transparent', borderWidth: 0 }}
+                style={{ marginBottom: 0, backgroundColor: "transparent", borderWidth: 0 }}
               />
             </View>
           </View>
@@ -460,7 +513,11 @@ export default function NoteDetailScreen() {
             placeholder="Escribe el contenido de tu apunte aquí..."
             multiline
             numberOfLines={12}
-            style={[styles.input, styles.contentInput]}
+            style={{
+              marginBottom: theme.spacing.md,
+              height: 200,
+              textAlignVertical: "top"
+            }}
           />
 
           <ThemedInput
@@ -476,140 +533,82 @@ export default function NoteDetailScreen() {
               })
             }
             placeholder="Ej: Álgebra, Examen, Cuántica"
-            style={styles.input}
+            style={{ marginBottom: theme.spacing.md }}
           />
         </ThemedCard>
 
-        {/* Attachments Section */}
-        <ThemedCard variant="elevated" padding="large" style={styles.attachmentsCard}>
-          <View style={styles.attachmentsHeader}>
-            <IconSymbol name="paperclip" size={24} color={theme.colors.secondary} />
-            <ThemedText variant="h3" style={styles.attachmentsTitle}>
-              Archivos Adjuntos
-            </ThemedText>
-          </View>
-
-          <View style={styles.attachmentButtons}>
-            <ThemedButton
-              title="Cámara"
-              variant="outline"
-              icon={<IconSymbol name="camera" size={18} color={theme.colors.primary} />}
-              onPress={() => pickImage(true)}
-              style={styles.attachmentButton}
-            />
-            <ThemedButton
-              title="Galería"
-              variant="outline"
-              icon={<IconSymbol name="photo" size={18} color={theme.colors.primary} />}
-              onPress={() => pickImage(false)}
-              style={styles.attachmentButton}
-            />
-            <ThemedButton
-              title="Documento"
-              variant="outline"
-              icon={<IconSymbol name="doc" size={18} color={theme.colors.primary} />}
-              onPress={pickDocument}
-              style={styles.attachmentButton}
-            />
-          </View>
-
-          {/* Mostrar imágenes adjuntas */}
-          {attachedImages.length > 0 && (
-            <View style={styles.attachedSection}>
-              <ThemedText variant="body" style={styles.attachedLabel}>
-                Imágenes ({attachedImages.length})
-              </ThemedText>
-              <View style={styles.imagesGrid}>
-                {attachedImages.map((uri, index) => (
-                  <View key={index} style={styles.imageContainer}>
-                    <TouchableOpacity onPress={() => viewImage(uri)} activeOpacity={0.8}>
-                      <Image source={{ uri }} style={styles.attachedImage} />
-                      <View style={styles.imageOverlay}>
-                        <IconSymbol name="eye" size={16} color="white" />
-                      </View>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => removeAttachment(uri, "image")} style={styles.removeButton}>
-                      <IconSymbol name="xmark" size={16} color="white" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Mostrar documentos adjuntos */}
-          {attachedDocuments.length > 0 && (
-            <View style={styles.attachedSection}>
-              <ThemedText variant="body" style={styles.attachedLabel}>
-                Documentos ({attachedDocuments.length})
-              </ThemedText>
-              {attachedDocuments.map((uri, index) => (
-                <TouchableOpacity 
-                  key={index} 
-                  style={styles.documentItem}
-                  onPress={() => openDocument(uri)}
-                  activeOpacity={0.7}
-                >
-                  <IconSymbol name="doc.fill" size={20} color={theme.colors.accent} />
-                  <ThemedText variant="body" style={styles.documentName}>
-                    {uri.substring(uri.lastIndexOf("/") + 1)}
-                  </ThemedText>
-                  <IconSymbol name="eye" size={16} color={theme.colors.primary} />
-                  <TouchableOpacity 
-                    onPress={(e) => {
-                      e.stopPropagation()
-                      removeAttachment(uri, "document")
-                    }} 
-                    style={styles.removeDocButton}
-                  >
-                    <IconSymbol name="trash" size={16} color={theme.colors.error} />
-                  </TouchableOpacity>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </ThemedCard>
-
-        {/* AI Summary Section - Solo mostrar si hay resumen o si se puede generar */}
-        {!isNewNote && (noteForm.ai_summary || noteForm.content.trim()) && (
-          <ThemedCard variant="elevated" padding="large" style={styles.formCard}>
-            <View style={styles.aiSummaryHeader}>
+        {/* AI Summary Section - Mostrar siempre si hay resumen o si se puede generar */}
+        {!isNewNote && (
+          <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.md }}>
+            <View style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: theme.spacing.sm
+            }}>
               <IconSymbol name="brain" size={24} color={theme.colors.accent} />
-              <ThemedText variant="h3" style={styles.aiSummaryTitle}>
+              <ThemedText variant="h3" style={{
+                marginLeft: theme.spacing.sm,
+                fontWeight: "600"
+              }}>
                 Resumen con IA
               </ThemedText>
             </View>
-            
-            {/* Si ya hay un resumen, mostrarlo primero */}
+
+            {/* Si ya hay un resumen, mostrarlo */}
             {noteForm.ai_summary ? (
-              <View style={styles.summaryContent}>
-                <ThemedText variant="body" style={styles.summaryLabel}>
-                  Resumen generado:
+              <View style={{ marginTop: theme.spacing.xs }}>
+                <ThemedText variant="body" style={{
+                  fontWeight: "600",
+                  marginBottom: theme.spacing.xs
+                }}>
+                  Resumen actual:
                 </ThemedText>
-                <View style={[styles.summaryContainer, { backgroundColor: theme.colors.surfaceLight }]}>
-                  <ThemedText variant="body" style={styles.summaryText}>
+                <View
+                  style={{
+                    borderRadius: theme.borderRadius.md,
+                    padding: theme.spacing.md,
+                    marginVertical: theme.spacing.sm,
+                    borderLeftWidth: 4,
+                    backgroundColor: theme.colors.surfaceLight,
+                    borderLeftColor: theme.colors.accent
+                  }}
+                >
+                  <ThemedText variant="body" style={{ lineHeight: 22 }}>
                     {noteForm.ai_summary}
                   </ThemedText>
                 </View>
-                <ThemedButton
-                  title={generatingAISummary ? "Regenerando..." : "Regenerar Resumen"}
-                  variant="outline"
-                  icon={
-                    generatingAISummary ? (
-                      <ActivityIndicator size="small" color={theme.colors.primary} />
-                    ) : (
-                      <IconSymbol name="arrow.clockwise" size={18} color={theme.colors.primary} />
-                    )
-                  }
-                  onPress={handleGenerateAISummary}
-                  disabled={generatingAISummary || !noteForm.content.trim()}
-                  style={styles.regenerateSummaryButton}
-                />
+                <View style={{
+                  flexDirection: "row",
+                  gap: theme.spacing.sm,
+                  marginTop: theme.spacing.sm
+                }}>
+                  <ThemedButton
+                    title={generatingAISummary ? "Regenerando..." : "Regenerar"}
+                    variant="outline"
+                    icon={
+                      generatingAISummary ? (
+                        <ActivityIndicator size="small" color={theme.colors.primary} />
+                      ) : (
+                        <IconSymbol name="arrow.clockwise" size={18} color={theme.colors.primary} />
+                      )
+                    }
+                    onPress={handleGenerateAISummary}
+                    disabled={generatingAISummary || !noteForm.content.trim()}
+                    style={{ flex: 1 }}
+                  />
+                  <ThemedButton
+                    title="Eliminar"
+                    variant="outline"
+                    icon={<IconSymbol name="trash" size={18} color={theme.colors.error} />}
+                    onPress={() => setNoteForm((prev) => ({ ...prev, ai_summary: undefined }))}
+                    style={{ flex: 1, borderColor: theme.colors.error }}
+                  />
+                </View>
               </View>
             ) : (
               /* Si no hay resumen, mostrar opción para generar */
               <View>
-                <ThemedText variant="body" color="secondary" style={styles.aiSummaryDescription}>
+                <ThemedText variant="body" color="secondary" style={{ marginBottom: theme.spacing.md }}>
                   Genera un resumen automático de tu nota usando inteligencia artificial
                 </ThemedText>
                 <ThemedButton
@@ -624,18 +623,194 @@ export default function NoteDetailScreen() {
                   }
                   onPress={handleGenerateAISummary}
                   disabled={generatingAISummary || !noteForm.content.trim()}
-                  style={styles.generateSummaryButton}
+                  style={{ marginBottom: theme.spacing.md }}
                 />
               </View>
             )}
 
             {aiSummaryError && (
-              <ThemedText variant="caption" color="error" style={styles.errorText}>
+              <ThemedText variant="caption" color="error" style={{
+                marginTop: theme.spacing.xs,
+                marginBottom: theme.spacing.sm
+              }}>
                 {aiSummaryError}
               </ThemedText>
             )}
           </ThemedCard>
         )}
+
+        {/* Attachments Section */}
+        <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.xl }}>
+          <View style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: theme.spacing.md
+          }}>
+            <IconSymbol name="paperclip" size={24} color={theme.colors.secondary} />
+            <ThemedText variant="h3" style={{
+              marginLeft: theme.spacing.sm,
+              fontWeight: "600",
+              flex: 1
+            }}>
+              Archivos Adjuntos
+            </ThemedText>
+            {totalAttachments > 0 && (
+              <TouchableOpacity
+                onPress={() => setShowAttachmentsModal(true)}
+                style={{
+                  paddingHorizontal: theme.spacing.sm,
+                  paddingVertical: 6,
+                  borderRadius: theme.borderRadius.sm,
+                  backgroundColor: theme.colors.primary + "20"
+                }}
+              >
+                <ThemedText variant="caption" style={{ color: theme.colors.primary, fontWeight: "600" }}>
+                  Ver todos ({totalAttachments})
+                </ThemedText>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={{
+            flexDirection: "row",
+            gap: theme.spacing.xs,
+            marginBottom: theme.spacing.md
+          }}>
+            <ThemedButton
+              title="Cámara"
+              variant="outline"
+              icon={<IconSymbol name="camera" size={18} color={theme.colors.primary} />}
+              onPress={() => pickImage(true)}
+              style={{ flex: 1 }}
+            />
+            <ThemedButton
+              title="Galería"
+              variant="outline"
+              icon={<IconSymbol name="photo" size={18} color={theme.colors.primary} />}
+              onPress={() => pickImage(false)}
+              style={{ flex: 1 }}
+            />
+            <ThemedButton
+              title="Documento"
+              variant="outline"
+              icon={<IconSymbol name="doc" size={18} color={theme.colors.primary} />}
+              onPress={pickDocument}
+              style={{ flex: 1 }}
+            />
+          </View>
+
+          {/* Preview de adjuntos */}
+          {totalAttachments > 0 && (
+            <View style={{ marginTop: theme.spacing.md }}>
+              <ThemedText variant="body" style={{
+                fontWeight: "600",
+                marginBottom: theme.spacing.sm
+              }}>
+                Vista previa:
+              </ThemedText>
+
+              {/* Mostrar solo las primeras 3 imágenes */}
+              {attachedImages.length > 0 && (
+                <View style={{
+                  flexDirection: "row",
+                  gap: theme.spacing.xs,
+                  marginBottom: theme.spacing.sm
+                }}>
+                  {attachedImages.slice(0, 3).map((uri, index) => (
+                    <TouchableOpacity key={index} onPress={() => viewImage(uri)} style={{ position: "relative" }}>
+                      <Image source={{ uri }} style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: theme.borderRadius.sm,
+                        resizeMode: "cover"
+                      }} />
+                      <TouchableOpacity
+                        onPress={() => removeAttachment(uri, "image")}
+                        style={{
+                          position: "absolute",
+                          top: -6,
+                          right: -6,
+                          backgroundColor: "#ff4444",
+                          borderRadius: 10,
+                          width: 20,
+                          height: 20,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <IconSymbol name="xmark" size={12} color="white" />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  ))}
+                  {attachedImages.length > 3 && (
+                    <TouchableOpacity
+                      onPress={() => setShowAttachmentsModal(true)}
+                      style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: theme.borderRadius.sm,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderWidth: 2,
+                        borderStyle: "dashed",
+                        backgroundColor: theme.colors.surface
+                      }}
+                    >
+                      <ThemedText variant="caption" style={{ color: theme.colors.primary, fontWeight: "600" }}>
+                        +{attachedImages.length - 3}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
+              {/* Mostrar documentos */}
+              {attachedDocuments.length > 0 && (
+                <View style={{ gap: theme.spacing.xs }}>
+                  {attachedDocuments.slice(0, 2).map((uri, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        padding: theme.spacing.xs,
+                        borderRadius: theme.borderRadius.sm,
+                        gap: theme.spacing.xs,
+                        backgroundColor: theme.colors.surface
+                      }}
+                      onPress={() => openDocument(uri)}
+                    >
+                      <IconSymbol name="doc.fill" size={16} color={theme.colors.accent} />
+                      <ThemedText variant="caption" style={{
+                        flex: 1,
+                        fontWeight: "500"
+                      }} numberOfLines={1}>
+                        {uri.substring(uri.lastIndexOf("/") + 1)}
+                      </ThemedText>
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation()
+                          removeAttachment(uri, "document")
+                        }}
+                        style={{ padding: 4 }}
+                      >
+                        <IconSymbol name="xmark" size={12} color={theme.colors.error} />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  ))}
+                  {attachedDocuments.length > 2 && (
+                    <ThemedText variant="caption" color="secondary" style={{
+                      textAlign: "center",
+                      fontStyle: "italic"
+                    }}>
+                      y {attachedDocuments.length - 2} más...
+                    </ThemedText>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+        </ThemedCard>
 
         {/* Save Button */}
         <ThemedButton
@@ -643,10 +818,10 @@ export default function NoteDetailScreen() {
           variant="primary"
           icon={<IconSymbol name="checkmark" size={18} color="white" />}
           onPress={handleSaveNote}
-          style={styles.saveButton}
+          style={{ marginBottom: theme.spacing.lg }}
         />
       </ScrollView>
-      
+
       {/* Modal para ver imagen en pantalla completa */}
       <Modal
         visible={imageModalVisible}
@@ -654,265 +829,212 @@ export default function NoteDetailScreen() {
         animationType="fade"
         onRequestClose={() => setImageModalVisible(false)}
       >
-        <View style={styles.imageModalOverlay}>
-          <TouchableOpacity 
-            style={styles.imageModalBackground}
+        <View style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.9)",
+          justifyContent: "center",
+          alignItems: "center"
+        }}>
+          <TouchableOpacity
+            style={{
+              flex: 1,
+              width: "100%",
+              justifyContent: "center",
+              alignItems: "center"
+            }}
             onPress={() => setImageModalVisible(false)}
             activeOpacity={1}
           >
-            <View style={styles.imageModalContent}>
+            <View style={{
+              width: "90%",
+              height: "80%",
+              position: "relative"
+            }}>
               {selectedImageUri && (
-                <Image 
-                  source={{ uri: selectedImageUri }} 
-                  style={styles.fullScreenImage}
-                  resizeMode="contain"
-                />
+                <Image source={{ uri: selectedImageUri }} style={{
+                  width: "100%",
+                  height: "100%"
+                }} resizeMode="contain" />
               )}
-              <TouchableOpacity
-                style={styles.closeImageButton}
-                onPress={() => setImageModalVisible(false)}
-              >
+              <TouchableOpacity style={{
+                position: "absolute",
+                top: 20,
+                right: 20,
+                backgroundColor: "rgba(0,0,0,0.6)",
+                borderRadius: 20,
+                padding: theme.spacing.xs
+              }} onPress={() => setImageModalVisible(false)}>
                 <IconSymbol name="xmark" size={24} color="white" />
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
         </View>
       </Modal>
-      
+
+      {/* Modal para ver todos los adjuntos */}
+      <Modal
+        visible={showAttachmentsModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAttachmentsModal(false)}
+      >
+        <ThemedView variant="background" style={{ flex: 1 }}>
+          <View style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: theme.spacing.lg,
+            paddingVertical: theme.spacing.md,
+            borderBottomWidth: 1,
+            borderBottomColor: theme.colors.border
+          }}>
+            <ThemedText variant="h2" style={{ fontWeight: "700" }}>
+              Archivos Adjuntos
+            </ThemedText>
+            <TouchableOpacity onPress={() => setShowAttachmentsModal(false)} style={{ padding: theme.spacing.xs }}>
+              <IconSymbol name="xmark" size={24} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={{
+            flex: 1,
+            paddingHorizontal: theme.spacing.lg
+          }}>
+            {/* Imágenes */}
+            {attachedImages.length > 0 && (
+              <View style={{ marginVertical: theme.spacing.lg }}>
+                <ThemedText variant="h3" style={{
+                  fontWeight: "600",
+                  marginBottom: theme.spacing.md
+                }}>
+                  Imágenes ({attachedImages.length})
+                </ThemedText>
+                <View style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: theme.spacing.sm
+                }}>
+                  {attachedImages.map((uri, index) => (
+                    <View key={index} style={{
+                      position: "relative",
+                      width: 100,
+                      height: 100
+                    }}>
+                      <TouchableOpacity onPress={() => viewImage(uri)} activeOpacity={0.8}>
+                        <Image source={{ uri }} style={{
+                          width: "100%",
+                          height: "100%",
+                          borderRadius: theme.borderRadius.sm,
+                          resizeMode: "cover"
+                        }} />
+                        <View style={{
+                          position: "absolute",
+                          bottom: 4,
+                          right: 4,
+                          backgroundColor: "rgba(0,0,0,0.6)",
+                          borderRadius: theme.borderRadius.sm,
+                          padding: 4
+                        }}>
+                          <IconSymbol name="eye" size={16} color="white" />
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => removeAttachment(uri, "image")} style={{
+                        position: "absolute",
+                        top: -8,
+                        right: -8,
+                        backgroundColor: "#ff4444",
+                        borderRadius: 12,
+                        width: 24,
+                        height: 24,
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}>
+                        <IconSymbol name="trash" size={14} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Documentos */}
+            {attachedDocuments.length > 0 && (
+              <View style={{ marginVertical: theme.spacing.lg }}>
+                <ThemedText variant="h3" style={{
+                  fontWeight: "600",
+                  marginBottom: theme.spacing.md
+                }}>
+                  Documentos ({attachedDocuments.length})
+                </ThemedText>
+                {attachedDocuments.map((uri, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: theme.spacing.md,
+                      borderRadius: theme.borderRadius.md,
+                      marginBottom: theme.spacing.xs,
+                      backgroundColor: theme.colors.surface
+                    }}
+                    onPress={() => openDocument(uri)}
+                    activeOpacity={0.7}
+                  >
+                    <IconSymbol name="doc.fill" size={24} color={theme.colors.accent} />
+                    <View style={{
+                      flex: 1,
+                      marginLeft: theme.spacing.sm
+                    }}>
+                      <ThemedText variant="body" style={{ fontWeight: "500" }}>
+                        {uri.substring(uri.lastIndexOf("/") + 1)}
+                      </ThemedText>
+                      <ThemedText variant="caption" color="secondary">
+                        Toca para abrir
+                      </ThemedText>
+                    </View>
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation()
+                        removeAttachment(uri, "document")
+                      }}
+                      style={{ padding: theme.spacing.xs }}
+                    >
+                      <IconSymbol name="trash" size={16} color={theme.colors.error} />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {totalAttachments === 0 && (
+              <View style={{
+                alignItems: "center",
+                paddingVertical: 60,
+                paddingHorizontal: theme.spacing.lg
+              }}>
+                <IconSymbol name="paperclip" size={48} color={theme.colors.textMuted} />
+                <ThemedText variant="h3" style={{
+                  textAlign: "center",
+                  marginTop: theme.spacing.md,
+                  marginBottom: theme.spacing.xs,
+                  fontWeight: "600"
+                }}>
+                  Sin archivos adjuntos
+                </ThemedText>
+                <ThemedText variant="body" color="secondary" style={{
+                  textAlign: "center",
+                  lineHeight: 20
+                }}>
+                  Usa los botones de arriba para agregar imágenes o documentos
+                </ThemedText>
+              </View>
+            )}
+          </ScrollView>
+        </ThemedView>
+      </Modal>
+
       <AppModal {...modalProps} />
     </ThemedView>
   )
 }
 
-const styles = StyleSheet.create({
-  centeredContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  loadingContainer: {
-    alignItems: "center",
-  },
-  errorContainer: {
-    alignItems: "center",
-    gap: 16,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  headerCard: {
-    marginBottom: 16,
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  noteIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-  },
-  headerText: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  favoriteButton: {
-    padding: 12,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  formCard: {
-    marginBottom: 16,
-  },
-  input: {
-    marginBottom: 16,
-  },
-  subjectContainer: {
-    marginBottom: 16,
-    zIndex: 1,
-  },
-  suggestionsCard: {
-    position: "absolute",
-    top: 70,
-    left: 0,
-    right: 0,
-    maxHeight: 150,
-    zIndex: 10,
-    padding: 0,
-  },
-  suggestionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  suggestionText: {
-    marginLeft: 12,
-  },
-  contentInput: {
-    height: 200,
-    textAlignVertical: "top",
-  },
-  attachmentsCard: {
-    marginBottom: 24,
-  },
-  attachmentsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  attachmentsTitle: {
-    marginLeft: 12,
-    fontWeight: "600",
-  },
-  attachmentButtons: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 16,
-  },
-  attachmentButton: {
-    flex: 1,
-  },
-  attachedSection: {
-    marginTop: 16,
-  },
-  attachedLabel: {
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  imagesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  imageContainer: {
-    position: "relative",
-  },
-  attachedImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    resizeMode: "cover",
-  },
-  removeButton: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    backgroundColor: "#ff4444",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  documentItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    backgroundColor: "#f8f9fa",
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  documentName: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  removeDocButton: {
-    padding: 8,
-  },
-  saveButton: {
-    marginBottom: 20,
-  },
-  // Estilos para resumen de IA
-  aiSummaryHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  aiSummaryTitle: {
-    marginLeft: 12,
-    fontWeight: "600",
-  },
-  aiSummaryDescription: {
-    marginBottom: 16,
-  },
-  generateSummaryButton: {
-    marginBottom: 16,
-  },
-  regenerateSummaryButton: {
-    marginTop: 12,
-  },
-  summaryContainer: {
-    borderRadius: 8,
-    padding: 16,
-    marginVertical: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: "#8B5CF6",
-  },
-  errorText: {
-    marginTop: 8,
-    marginBottom: 12,
-  },
-  summaryContent: {
-    backgroundColor: "#f8f9fa",
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 16,
-  },
-  summaryLabel: {
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  summaryText: {
-    lineHeight: 22,
-  },
-  // Estilos para el modal de imagen
-  imageOverlay: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 12,
-    padding: 4,
-  },
-  imageModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageModalBackground: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageModalContent: {
-    width: '90%',
-    height: '80%',
-    position: 'relative',
-  },
-  fullScreenImage: {
-    width: '100%',
-    height: '100%',
-  },
-  closeImageButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 20,
-    padding: 8,
-  },
-})

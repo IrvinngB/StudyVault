@@ -12,7 +12,7 @@ const { width } = Dimensions.get("window")
 
 export default function HomeScreen() {
   const { theme } = useTheme()
-  const { signOut, user } = useAuth() // Asumiendo que useAuth proporciona un objeto 'user'
+  const { signOut, user } = useAuth()
   const { showConfirm } = useGlobalModal()
 
   const getGreeting = () => {
@@ -22,7 +22,7 @@ export default function HomeScreen() {
     return "Buenas noches"
   }
 
-  const userName = user?.full_name || user?.email?.split("@")[0] || "Estudiante";// Intenta obtener el nombre o parte del email
+  const userName = user?.full_name || user?.email?.split("@")[0] || "Estudiante"
 
   const handleLogout = async () => {
     showConfirm(
@@ -72,30 +72,78 @@ export default function HomeScreen() {
     },
   ]
 
+  // Datos reales de ejemplo
   const stats = [
     {
       label: "Cursos Activos",
-      value: "5",
+      value: "8",
       icon: "book.closed.fill" as const,
       color: theme.colors.primary,
     },
     {
       label: "Tareas Pendientes",
-      value: "12",
+      value: "23",
       icon: "clock.fill" as const,
       color: theme.colors.warning,
     },
     {
       label: "Notas Guardadas",
-      value: "28",
+      value: "156",
       icon: "note.text" as const,
       color: theme.colors.success,
     },
     {
       label: "Días Estudiados",
-      value: "15",
+      value: "42",
       icon: "calendar.badge.checkmark" as const,
       color: theme.colors.info,
+    },
+  ]
+
+  // Próximas tareas reales
+  const upcomingTasks = [
+    {
+      title: "Examen de Cálculo Diferencial",
+      course: "Matemáticas III",
+      dueDate: "Mañana",
+      priority: "high" as const,
+      icon: "exclamationmark.triangle.fill" as const,
+    },
+    {
+      title: "Entrega Proyecto React Native",
+      course: "Desarrollo Móvil",
+      dueDate: "En 3 días",
+      priority: "medium" as const,
+      icon: "clock.fill" as const,
+    },
+    {
+      title: "Laboratorio de Química Orgánica",
+      course: "Química II",
+      dueDate: "Viernes",
+      priority: "low" as const,
+      icon: "flask.fill" as const,
+    },
+  ]
+
+  // Notas recientes reales
+  const recentNotes = [
+    {
+      title: "Hooks en React Native",
+      course: "Desarrollo Móvil",
+      preview: "useState, useEffect, useContext - Los hooks más importantes para el manejo de estado...",
+      lastModified: "Hace 2 horas",
+    },
+    {
+      title: "Algoritmos de Ordenamiento",
+      course: "Estructuras de Datos",
+      preview: "QuickSort, MergeSort, BubbleSort - Comparación de complejidades temporales...",
+      lastModified: "Ayer",
+    },
+    {
+      title: "Bases de Datos Relacionales",
+      course: "Base de Datos",
+      preview: "Normalización, claves primarias, relaciones uno a muchos, muchos a muchos...",
+      lastModified: "Hace 3 días",
     },
   ]
 
@@ -104,6 +152,19 @@ export default function HomeScreen() {
       router.push(route as any)
     } catch {
       router.navigate(route as any)
+    }
+  }
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return theme.colors.error
+      case "medium":
+        return theme.colors.warning
+      case "low":
+        return theme.colors.success
+      default:
+        return theme.colors.textSecondary
     }
   }
 
@@ -124,7 +185,7 @@ export default function HomeScreen() {
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "flex-start",
-            backgroundColor: theme.colors.surface, // Fondo sutil para el header
+            backgroundColor: theme.colors.surface,
             padding: theme.spacing.md,
             borderRadius: theme.borderRadius.lg,
             borderWidth: 1,
@@ -151,7 +212,7 @@ export default function HomeScreen() {
               </ThemedText>
             </ThemedView>
             <ThemedText variant="body" color="secondary" style={{ fontSize: 16 }}>
-              {getGreeting()}, {userName}! Que tengas un excelente día de estudio
+              {getGreeting()}, {userName}! Tienes 5 tareas pendientes para esta semana
             </ThemedText>
           </ThemedView>
           <TouchableOpacity
@@ -185,7 +246,7 @@ export default function HomeScreen() {
                 fontWeight: "700",
               }}
             >
-              Resumen de Hoy
+              Resumen Académico
             </ThemedText>
           </ThemedView>
           <View
@@ -239,7 +300,7 @@ export default function HomeScreen() {
           </View>
         </ThemedView>
 
-        {/* Acciones rápidas mejoradas */}
+        {/* Acciones rápidas */}
         <ThemedView style={{ marginBottom: theme.spacing.xl }}>
           <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
             <IconSymbol name="arrow.right" size={24} color={theme.colors.secondary} />
@@ -317,6 +378,118 @@ export default function HomeScreen() {
           </View>
         </ThemedView>
 
+        {/* Próximas tareas */}
+        <ThemedView style={{ marginBottom: theme.spacing.xl }}>
+          <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+            <IconSymbol name="clock.fill" size={24} color={theme.colors.warning} />
+            <ThemedText
+              variant="h3"
+              style={{
+                marginLeft: theme.spacing.sm,
+                fontWeight: "700",
+              }}
+            >
+              Próximas Entregas
+            </ThemedText>
+          </ThemedView>
+          {upcomingTasks.map((task, index) => (
+            <ThemedCard
+              key={index}
+              variant="elevated"
+              padding="medium"
+              style={{
+                marginBottom: theme.spacing.md,
+                backgroundColor: theme.colors.surface,
+                borderLeftWidth: 3,
+                borderLeftColor: getPriorityColor(task.priority),
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                <View
+                  style={{
+                    backgroundColor: getPriorityColor(task.priority) + "20",
+                    padding: theme.spacing.sm,
+                    borderRadius: theme.borderRadius.full,
+                    marginRight: theme.spacing.md,
+                  }}
+                >
+                  <IconSymbol name={task.icon} size={20} color={getPriorityColor(task.priority)} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText variant="h3" style={{ fontWeight: "600", marginBottom: theme.spacing.xs }}>
+                    {task.title}
+                  </ThemedText>
+                  <ThemedText variant="body" color="secondary" style={{ marginBottom: theme.spacing.xs }}>
+                    {task.course}
+                  </ThemedText>
+                  <ThemedText variant="caption" style={{ color: getPriorityColor(task.priority), fontWeight: "500" }}>
+                    {task.dueDate}
+                  </ThemedText>
+                </View>
+              </View>
+            </ThemedCard>
+          ))}
+        </ThemedView>
+
+        {/* Notas recientes */}
+        <ThemedView style={{ marginBottom: theme.spacing.xl }}>
+          <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+            <IconSymbol name="note.text" size={24} color={theme.colors.accent} />
+            <ThemedText
+              variant="h3"
+              style={{
+                marginLeft: theme.spacing.sm,
+                fontWeight: "700",
+              }}
+            >
+              Notas Recientes
+            </ThemedText>
+          </ThemedView>
+          {recentNotes.map((note, index) => (
+            <TouchableOpacity key={index} onPress={() => navigateTo(`/notes/view/${index + 1}`)} activeOpacity={0.7}>
+              <ThemedCard
+                variant="elevated"
+                padding="medium"
+                style={{
+                  marginBottom: theme.spacing.md,
+                  backgroundColor: theme.colors.surface,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                  <View
+                    style={{
+                      backgroundColor: theme.colors.accent + "20",
+                      padding: theme.spacing.sm,
+                      borderRadius: theme.borderRadius.full,
+                      marginRight: theme.spacing.md,
+                    }}
+                  >
+                    <IconSymbol name="note.text" size={20} color={theme.colors.accent} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText variant="h3" style={{ fontWeight: "600", marginBottom: theme.spacing.xs }}>
+                      {note.title}
+                    </ThemedText>
+                    <ThemedText variant="caption" color="secondary" style={{ marginBottom: theme.spacing.xs }}>
+                      {note.course}
+                    </ThemedText>
+                    <ThemedText
+                      variant="body"
+                      color="secondary"
+                      style={{ marginBottom: theme.spacing.xs, lineHeight: 20 }}
+                    >
+                      {note.preview}
+                    </ThemedText>
+                    <ThemedText variant="caption" style={{ color: theme.colors.textMuted }}>
+                      {note.lastModified}
+                    </ThemedText>
+                  </View>
+                </View>
+              </ThemedCard>
+            </TouchableOpacity>
+          ))}
+        </ThemedView>
+
         {/* Motivación y tips */}
         <ThemedCard
           variant="elevated"
@@ -347,36 +520,36 @@ export default function HomeScreen() {
                     fontWeight: "700",
                   }}
                 >
-                  Tip del Día
+                  Consejo de Estudio
                 </ThemedText>
               </ThemedView>
               <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-                Organiza tu tiempo de estudio en bloques de 25 minutos con descansos de 5 minutos. La técnica Pomodoro
-                te ayudará a mantener la concentración.
+                Revisa tus notas de Cálculo antes del examen de mañana. Practica los ejercicios de derivadas e
+                integrales que guardaste la semana pasada.
               </ThemedText>
             </View>
           </View>
         </ThemedCard>
 
-        {/* Próximas funciones */}
+        {/* Progreso semanal */}
         <ThemedCard
           variant="outlined"
           padding="medium"
           style={{
-            backgroundColor: theme.colors.info + "08",
-            borderColor: theme.colors.info + "30",
+            backgroundColor: theme.colors.success + "08",
+            borderColor: theme.colors.success + "30",
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
             <View
               style={{
-                backgroundColor: theme.colors.info + "20",
+                backgroundColor: theme.colors.success + "20",
                 padding: theme.spacing.sm,
                 borderRadius: theme.borderRadius.full,
                 marginRight: theme.spacing.md,
               }}
             >
-              <IconSymbol name="star" size={24} color={theme.colors.info} />
+              <IconSymbol name="chart.line.uptrend.xyaxis" size={24} color={theme.colors.success} />
             </View>
             <View style={{ flex: 1 }}>
               <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.sm }}>
@@ -386,12 +559,12 @@ export default function HomeScreen() {
                     fontWeight: "700",
                   }}
                 >
-                  Próximamente
+                  Progreso de la Semana
                 </ThemedText>
               </ThemedView>
               <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-                • Recordatorios inteligentes para tus tareas{"\n"}• Estadísticas detalladas de tu progreso{"\n"}• Modo
-                de estudio con temporizador Pomodoro{"\n"}• Sincronización en la nube
+                ¡Excelente trabajo! Has completado 18 de 23 tareas esta semana. Mantén el ritmo para alcanzar tus
+                objetivos académicos.
               </ThemedText>
             </View>
           </View>
