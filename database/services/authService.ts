@@ -1,5 +1,5 @@
 import { apiClient } from '../api/client';
-import type { AuthSession, UserProfile } from '../models/types';
+import type { AuthSession, UserProfile } from '@/database/models/types';
 
 export class AuthService {
   private static instance: AuthService;
