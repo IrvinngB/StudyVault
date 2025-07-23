@@ -6,11 +6,12 @@ import { FloatingActionButton } from "@/components/ui/FloatingActionButton"
 import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { EVENT_TYPES_CONFIG } from "@/constants/Calendar"
 import type {
-    CalendarEvent,
-    CreateCalendarEventRequest,
-    UpdateCalendarEventRequest,
+  CalendarEvent,
+  CreateCalendarEventRequest,
+  UpdateCalendarEventRequest,
 } from "@/database/models/calendarTypes"
 import { useCalendar } from "@/hooks/useCalendar"
+import { useClasses } from "@/hooks/useClasses"
 import { useTheme } from "@/hooks/useTheme"
 import { formatTimeForDisplay, isValidDate, safeParseDate } from "@/utils/dateHelpers"; // Usar funciones más seguras
 import { Ionicons } from "@expo/vector-icons"
@@ -90,6 +91,7 @@ const getDaysInMonth = (year: number, month: number): Date[] => {
 
 export default function CalendarScreen() {
   const { theme } = useTheme()
+  const { getClassById } = useClasses()
   const today = new Date()
 
   // Estado mes y año seleccionados
@@ -103,6 +105,9 @@ export default function CalendarScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  
+  // State para almacenar nombres de cursos
+  const [classNames, setClassNames] = useState<Record<string, string>>({})
 
   // Hook del calendario
   const {
@@ -148,6 +153,35 @@ export default function CalendarScreen() {
       Alert.alert("Error", error, [{ text: "OK", onPress: clearError }])
     }
   }, [error, clearError])
+
+  // Cargar nombres de cursos cuando cambien los eventos
+  useEffect(() => {
+    const loadClassNames = async () => {
+      const classIds = new Set<string>()
+      events.forEach(event => {
+        if (event.class_id) {
+          classIds.add(event.class_id)
+        }
+      })
+      
+      const names: Record<string, string> = {}
+      for (const classId of classIds) {
+        try {
+          const classData = await getClassById(classId)
+          if (classData) {
+            names[classId] = classData.name
+          }
+        } catch (error) {
+          console.error(`Error loading class ${classId}:`, error)
+        }
+      }
+      setClassNames(names)
+    }
+    
+    if (events.length > 0) {
+      loadClassNames()
+    }
+  }, [events, getClassById])
 
   // Cambiar mes (prev / next)
   const changeMonth = (increment: number) => {
@@ -279,10 +313,25 @@ export default function CalendarScreen() {
               {item.description}
             </ThemedText>
           ) : null}
+          
+          {/* Mostrar curso y salón de manera sutil */}
           {(item.location || item.classroom) ? (
-            <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12, marginTop: 4 }}>
-              📍 {item.classroom || item.location || 'Sin ubicación'}
-            </ThemedText>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              {item.location && item.classroom ? (
+                <>
+                  <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
+                    � {item.location}
+                  </ThemedText>
+                  <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12, marginLeft: 8 }}>
+                    🏫 {item.classroom}
+                  </ThemedText>
+                </>
+              ) : (
+                <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
+                  {item.location ? `� ${item.location}` : `🏫 ${item.classroom}`}
+                </ThemedText>
+              )}
+            </View>
           ) : null}
         </View>
         <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>

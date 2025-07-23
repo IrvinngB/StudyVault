@@ -183,8 +183,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         event_type: eventType,
         event_category: currentEventConfig?.category || "general_event",
         class_id: selectedClass?.id || undefined,
-        location: currentEventConfig?.supportsClassroom ? undefined : location.trim() || undefined,
-        classroom: currentEventConfig?.supportsClassroom ? classroom.trim() || undefined : undefined,
+        location: currentEventConfig?.supportsClassroom 
+          ? (classroom.trim() || undefined) // Para eventos con aula, guardar el classroom en location
+          : (location.trim() || undefined), // Para otros eventos, usar location normal
         reminder_minutes: reminderMinutes,
         is_recurring: currentEventConfig?.supportsRecurrence ? isRecurring : false,
         recurrence_pattern: isRecurring

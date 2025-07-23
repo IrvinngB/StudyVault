@@ -1,12 +1,15 @@
 "use client"
 
+import { ClassSelector } from "@/components/calendar/ClassSelector"
 import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { EVENT_TYPES_CONFIG } from "@/constants/Calendar"
 import type { CalendarEvent, EventType, UpdateCalendarEventRequest } from "@/database/models/calendarTypes"
-import type { ClassData } from "@/database/services"
+import type { ClassData as ClassDataWithClassroom } from "@/database/models/types"
+import { useClasses } from "@/hooks/useClasses"
 import { useTheme } from "@/hooks/useTheme"
 import { formatDateForDisplay, formatTimeForDisplay, isValidDate, safeParseDate } from "@/utils/dateHelpers"; // Usar funciones más seguras
 import { Ionicons } from "@expo/vector-icons"
+import { useRouter } from "expo-router"
 import type React from "react"
 import { useEffect, useState } from "react"
 import { Alert, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native"
@@ -27,6 +30,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   onDeleteEvent,
 }) => {
   const { theme } = useTheme()
+  const { getClassById } = useClasses()
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
 
@@ -40,7 +45,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const [classroom, setClassroom] = useState("")
   const [reminderMinutes, setReminderMinutes] = useState(15)
   const [isRecurring, setIsRecurring] = useState(false)
-  const [selectedClass, setSelectedClass] = useState<ClassData | null>(null)
+  const [selectedClass, setSelectedClass] = useState<ClassDataWithClassroom | null>(null)
 
   // Get current event type config
   const currentEventConfig = EVENT_TYPES_CONFIG.find((config) => config.value === eventType)
@@ -49,14 +54,32 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   const isRecurringInstance = event?.id.includes("_recurring_") || false
   const originalEventId = isRecurringInstance ? event?.id.split("_recurring_")[0] : event?.id
 
+  // Function to navigate to course details
+  const handleNavigateToCourse = () => {
+    if (selectedClass?.id) {
+      router.push(`/courses/${selectedClass.id}`)
+    }
+  }
+
   // Initialize form with event data
   useEffect(() => {
     if (event) {
       setTitle(event.title)
       setDescription(event.description || "")
       setEventType(event.event_type)
-      setLocation(event.location || "")
-      setClassroom(event.classroom || "")
+      
+      // Determine if this event type supports classroom
+      const eventTypeConfig = EVENT_TYPES_CONFIG.find(config => config.value === event.event_type)
+      const supportsClassroom = eventTypeConfig?.supportsClassroom || false
+      
+      if (supportsClassroom) {
+        setClassroom(event.location || "")
+        setLocation("")
+      } else {
+        setLocation(event.location || "")
+        setClassroom("")
+      }
+      
       setReminderMinutes(event.reminder_minutes)
       setIsRecurring(event.is_recurring)
 
@@ -75,11 +98,49 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
       setStartTime(formatTime(startDate))
       setEndTime(formatTime(endDate))
 
-      // Note: We'd need to fetch class data if class_id exists
-      // For now, we'll set selectedClass to null and handle it later
-      setSelectedClass(null)
+      // Load class data if class_id exists
+      if (event.class_id) {
+        const loadClassData = async () => {
+          try {
+            const classData = await getClassById(event.class_id!)
+            if (classData && classData.id) {
+              // Convertir el tipo de ClassData (services) a ClassDataWithClassroom (types)
+              const classWithClassroom: ClassDataWithClassroom = {
+                id: classData.id,
+                name: classData.name,
+                code: classData.code,
+                description: classData.description,
+                instructor: classData.instructor,
+                professor: classData.instructor, // Mapear instructor a professor
+                schedule: undefined, // No disponible en el tipo de services
+                classroom: undefined, // Asignar undefined por defecto
+                color: classData.color,
+                credits: classData.credits,
+                semester: classData.semester,
+                syllabus_url: classData.syllabus_url,
+                is_active: classData.is_active,
+                user_id: classData.user_id || '',
+                created_at: classData.created_at || '',
+                updated_at: classData.updated_at || ''
+              }
+              
+              setSelectedClass(classWithClassroom)
+              // Si no hay classroom definido en el evento y la clase tiene uno, usar el de la clase
+              if (!event.classroom && classWithClassroom.classroom) {
+                setClassroom(classWithClassroom.classroom)
+              }
+            }
+          } catch (error) {
+            console.error("Error loading class data:", error)
+            setSelectedClass(null)
+          }
+        }
+        loadClassData()
+      } else {
+        setSelectedClass(null)
+      }
     }
-  }, [event])
+  }, [event, getClassById])
 
   // Función para formatear y validar la hora
   const formatTimeToHHMM = (timeString: string): string => {
@@ -246,8 +307,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           event_type: eventType,
           event_category: currentEventConfig?.category || "general_event",
           class_id: selectedClass?.id || undefined,
-          location: currentEventConfig?.supportsClassroom ? undefined : location.trim() || undefined,
-          classroom: currentEventConfig?.supportsClassroom ? classroom.trim() || undefined : undefined,
+          location: currentEventConfig?.supportsClassroom 
+            ? (classroom.trim() || undefined) // Para eventos con aula, guardar el classroom en location
+            : (location.trim() || undefined), // Para otros eventos, usar location normal
           reminder_minutes: reminderMinutes,
           is_recurring: currentEventConfig?.supportsRecurrence ? isRecurring : false,
           recurrence_pattern: isRecurring
@@ -563,59 +625,127 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
             )}
           </View>
 
-          {/* Location/Classroom */}
-          {(event.location || event.classroom || isEditing) && (
-            <View style={styles.section}>
-              {isEditing ? (
-                currentEventConfig?.supportsClassroom ? (
-                  <View>
-                    <ThemedText variant="h3" style={[styles.sectionTitle, { color: theme.colors.text }]}>
-                      Aula/Salón
-                    </ThemedText>
-                    <TextInput
-                      style={[
-                        styles.textInput,
-                        {
-                          backgroundColor: theme.colors.surface,
-                          color: theme.colors.text,
-                          borderColor: theme.colors.border,
-                        },
-                      ]}
-                      value={classroom}
-                      onChangeText={setClassroom}
-                      placeholder="Número de aula o salón"
-                      placeholderTextColor={theme.colors.textMuted}
-                      maxLength={50}
-                    />
-                  </View>
-                ) : (
-                  <View>
-                    <ThemedText variant="h3" style={[styles.sectionTitle, { color: theme.colors.text }]}>
-                      Ubicación
-                    </ThemedText>
-                    <TextInput
-                      style={[
-                        styles.textInput,
-                        {
-                          backgroundColor: theme.colors.surface,
-                          color: theme.colors.text,
-                          borderColor: theme.colors.border,
-                        },
-                      ]}
-                      value={location}
-                      onChangeText={setLocation}
-                      placeholder="Ubicación del evento"
-                      placeholderTextColor={theme.colors.textMuted}
-                      maxLength={200}
-                    />
-                  </View>
-                )
-              ) : (
+          {/* Classroom/Room Information - Solo mostrar cuando hay classroom y no está en edición */}
+          {/* Classroom/Location Information - Solo mostrar cuando hay ubicación y no está en edición */}
+          {event.location && !isEditing && (() => {
+            const eventTypeConfig = EVENT_TYPES_CONFIG.find(config => config.value === event.event_type)
+            const supportsClassroom = eventTypeConfig?.supportsClassroom || false
+            
+            return (
+              <View style={styles.section}>
                 <View style={styles.infoRow}>
                   <Ionicons name="location-outline" size={20} color={theme.colors.textMuted} />
                   <ThemedText variant="body" style={{ color: theme.colors.text, marginLeft: 12 }}>
-                    {event.classroom || event.location || "Sin ubicación especificada"}
+                    {supportsClassroom ? `Salón: ${event.location}` : `Ubicación: ${event.location}`}
                   </ThemedText>
+                </View>
+              </View>
+            )
+          })()}
+
+          {/* Course Information - Solo mostrar cuando hay clase seleccionada y no está en edición */}
+          {selectedClass && !isEditing && (
+            <View style={styles.section}>
+              <TouchableOpacity 
+                style={styles.courseButton}
+                onPress={handleNavigateToCourse}
+                activeOpacity={0.7}
+              >
+                <View style={styles.infoRow}>
+                  <Ionicons name="school-outline" size={20} color={theme.colors.textMuted} />
+                  <ThemedText variant="body" style={{ color: theme.colors.primary, marginLeft: 12, textDecorationLine: 'underline' }}>
+                    Curso: {selectedClass.name}
+                  </ThemedText>
+                  <Ionicons name="chevron-forward-outline" size={16} color={theme.colors.primary} style={{ marginLeft: 8 }} />
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Class Selector - Solo en modo edición y para eventos que requieren clase */}
+          {isEditing && currentEventConfig?.requiresClass && (
+            <View style={styles.section}>
+              <ThemedText variant="h3" style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                Clase *
+              </ThemedText>
+              <ClassSelector
+                selectedClassId={selectedClass?.id}
+                onSelectClass={(classData) => {
+                  if (classData) {
+                    // Convertir el tipo de ClassData (services) a ClassDataWithClassroom (types)
+                    const classWithClassroom: ClassDataWithClassroom = {
+                      id: classData.id || '',
+                      name: classData.name,
+                      code: classData.code,
+                      description: classData.description,
+                      instructor: classData.instructor,
+                      professor: classData.instructor, // Mapear instructor a professor
+                      schedule: undefined, // No disponible en el tipo de services
+                      classroom: undefined, // Asignar undefined por defecto
+                      color: classData.color,
+                      credits: classData.credits,
+                      semester: classData.semester,
+                      syllabus_url: classData.syllabus_url,
+                      is_active: classData.is_active,
+                      user_id: classData.user_id || '',
+                      created_at: classData.created_at || '',
+                      updated_at: classData.updated_at || ''
+                    }
+                    setSelectedClass(classWithClassroom)
+                  } else {
+                    setSelectedClass(null)
+                  }
+                }}
+                placeholder="Seleccionar clase"
+                required={true}
+              />
+            </View>
+          )}
+
+          {/* Location/Classroom - Solo en modo edición */}
+          {isEditing && (
+            <View style={styles.section}>
+              {currentEventConfig?.supportsClassroom ? (
+                <View>
+                  <ThemedText variant="h3" style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                    Aula/Salón
+                  </ThemedText>
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      {
+                        backgroundColor: theme.colors.surface,
+                        color: theme.colors.text,
+                        borderColor: theme.colors.border,
+                      },
+                    ]}
+                    value={classroom}
+                    onChangeText={setClassroom}
+                    placeholder="Número de aula o salón"
+                    placeholderTextColor={theme.colors.textMuted}
+                    maxLength={50}
+                  />
+                </View>
+              ) : (
+                <View>
+                  <ThemedText variant="h3" style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                    Ubicación
+                  </ThemedText>
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      {
+                        backgroundColor: theme.colors.surface,
+                        color: theme.colors.text,
+                        borderColor: theme.colors.border,
+                      },
+                    ]}
+                    value={location}
+                    onChangeText={setLocation}
+                    placeholder="Ubicación del evento"
+                    placeholderTextColor={theme.colors.textMuted}
+                    maxLength={200}
+                  />
                 </View>
               )}
             </View>
@@ -768,6 +898,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
+  },
+  courseButton: {
+    borderRadius: 8,
+    padding: 4,
   },
   textInput: {
     borderWidth: 1,
