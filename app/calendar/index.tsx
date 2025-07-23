@@ -6,9 +6,9 @@ import { FloatingActionButton } from "@/components/ui/FloatingActionButton"
 import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { EVENT_TYPES_CONFIG } from "@/constants/Calendar"
 import type {
-  CalendarEvent,
-  CreateCalendarEventRequest,
-  UpdateCalendarEventRequest,
+    CalendarEvent,
+    CreateCalendarEventRequest,
+    UpdateCalendarEventRequest,
 } from "@/database/models/calendarTypes"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useTheme } from "@/hooks/useTheme"
@@ -219,13 +219,13 @@ export default function CalendarScreen() {
         ]}
       >
         <ThemedText variant="h3" style={{ color: isSelected ? theme.colors.surface : theme.colors.text }}>
-          {item.getDate()}
+          {String(item?.getDate?.() || 1)}
         </ThemedText>
         <ThemedText
           variant="body"
           style={{ color: isSelected ? theme.colors.surface : theme.colors.textMuted, fontSize: 12, marginTop: 2 }}
         >
-          {daysSpanish[item.getDay()].substring(0, 3)}
+          {(daysSpanish[item?.getDay?.() || 0] || 'Día').substring(0, 3)}
         </ThemedText>
       </TouchableOpacity>
     )
@@ -272,21 +272,21 @@ export default function CalendarScreen() {
         <Ionicons name={iconName} size={24} color={iconColor} style={{ marginRight: 12 }} />
         <View style={{ flex: 1 }}>
           <ThemedText variant="h3" style={{ color: theme.colors.text }}>
-            {item.title}
+            {item.title || 'Sin título'}
           </ThemedText>
           {item.description ? (
             <ThemedText variant="body" style={{ color: theme.colors.secondary }}>
               {item.description}
             </ThemedText>
           ) : null}
-          {item.location || item.classroom ? (
+          {(item.location || item.classroom) ? (
             <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12, marginTop: 4 }}>
-              📍 {item.classroom || item.location}
+              📍 {item.classroom || item.location || 'Sin ubicación'}
             </ThemedText>
           ) : null}
         </View>
         <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
-          {formatTimeForDisplay(startDateTime)}
+          {formatTimeForDisplay(startDateTime) || '--:--'}
         </ThemedText>
       </TouchableOpacity>
     )
@@ -302,7 +302,7 @@ export default function CalendarScreen() {
               <Ionicons name="chevron-back-outline" size={28} color={theme.colors.primary} />
             </TouchableOpacity>
             <ThemedText variant="h1" style={{ color: theme.colors.primary }}>
-              {months[month]} {year}
+              {months[month] || 'Mes'} {year || new Date().getFullYear()}
             </ThemedText>
             <TouchableOpacity onPress={() => changeMonth(1)} style={styles.arrowButton}>
               <Ionicons name="chevron-forward-outline" size={28} color={theme.colors.primary} />
@@ -328,7 +328,7 @@ export default function CalendarScreen() {
 
           {/* Eventos */}
           <ThemedText variant="h2" style={{ marginBottom: 12 }}>
-            Eventos del día {formatDateLong(selectedDay)}
+            Eventos del día {formatDateLong(selectedDay) || 'Fecha seleccionada'}
           </ThemedText>
 
           {loading ? (
