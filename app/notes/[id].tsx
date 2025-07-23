@@ -15,14 +15,18 @@ import {
 import { useModal } from "@/hooks/modals"
 import { useTheme } from "@/hooks/useTheme"
 import * as DocumentPicker from "expo-document-picker"
+import * as FileSystem from 'expo-file-system'
 import * as ImagePicker from "expo-image-picker"
+import * as IntentLauncher from 'expo-intent-launcher'
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Modal,
+  Platform,
   ScrollView,
   TouchableOpacity,
   View,
@@ -52,7 +56,7 @@ export default function NoteDetailScreen() {
 
   // Estados para adjuntos
   const [attachedImages, setAttachedImages] = useState<string[]>([])
-  const [attachedDocuments, setAttachedDocuments] = useState<string[]>([])
+  const [attachedDocuments, setAttachedDocuments] = useState<{ uri: string, name: string, mimeType: string }[]>([])
 
   // Estados para resumen de IA
   const [generatingAISummary, setGeneratingAISummary] = useState(false)
@@ -115,7 +119,11 @@ export default function NoteDetailScreen() {
               const images = loadedNote.attachments.filter((att) => att.type === "image").map((att) => att.local_path)
               const documents = loadedNote.attachments
                 .filter((att) => att.type === "document")
-                .map((att) => att.local_path)
+                .map((att) => ({
+                  uri: att.local_path,
+                  name: att.filename,
+                  mimeType: att.filename.endsWith('.pdf') ? 'application/pdf' : 'text/plain'
+                }))
 
               setAttachedImages(images)
               setAttachedDocuments(documents)
@@ -149,11 +157,11 @@ export default function NoteDetailScreen() {
         size: 0,
         local_path: uri,
       })),
-      ...attachedDocuments.map((uri) => ({
-        filename: uri.substring(uri.lastIndexOf("/") + 1),
+      ...attachedDocuments.map((doc) => ({
+        filename: doc.name,
         type: "document" as const,
         size: 0,
-        local_path: uri,
+        local_path: doc.uri,
       })),
     ]
 
@@ -301,8 +309,13 @@ export default function NoteDetailScreen() {
       })
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setAttachedDocuments((prev) => [...prev, result.assets[0].uri])
-        showSuccess(`Documento "${result.assets[0].name}" adjuntado.`, "Adjunto")
+        const asset = result.assets[0]
+        setAttachedDocuments((prev) => [...prev, {
+          uri: asset.uri,
+          name: asset.name,
+          mimeType: asset.mimeType || ""
+        }])
+        showSuccess(`Documento "${asset.name}" adjuntado.`, "Adjunto")
       }
     } catch (err: any) {
       console.error("Error al seleccionar documento:", err)
@@ -314,7 +327,7 @@ export default function NoteDetailScreen() {
     if (type === "image") {
       setAttachedImages((prev) => prev.filter((item) => item !== uri))
     } else {
-      setAttachedDocuments((prev) => prev.filter((item) => item !== uri))
+      setAttachedDocuments((prev) => prev.filter((item) => item.uri !== uri))
     }
   }
 
@@ -325,19 +338,32 @@ export default function NoteDetailScreen() {
   }
 
   // Función para abrir documento
-  const openDocument = async (uri: string) => {
+  const openDocument = async (uri: string, mimeType: string) => {
     try {
-      Alert.alert("Abrir Documento", `¿Deseas abrir el documento ${uri.substring(uri.lastIndexOf("/") + 1)}?`, [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Abrir",
-          onPress: () => {
-            showSuccess("Abriendo documento...", "Info")
-          },
-        },
-      ])
-    } catch {
-      showError("No se pudo abrir el documento", "Error")
+      if (Platform.OS === 'android') {
+        if (!FileSystem.documentDirectory) {
+          throw new Error('Document directory is not available');
+        }
+
+        const fileName = uri.split('/').pop();
+        if (!fileName) {
+          throw new Error('Invalid file URI');
+        }
+
+        const fileUri = FileSystem.documentDirectory + fileName;
+        await FileSystem.copyAsync({ from: uri, to: fileUri });
+
+        const contentUri = await FileSystem.getContentUriAsync(fileUri);
+        IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+          data: contentUri,
+          flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+          type: mimeType,
+        });
+      } else {
+        Linking.openURL(uri);
+      }
+    } catch (error) {
+      console.error('Error opening document:', error);
     }
   }
 
@@ -573,9 +599,55 @@ export default function NoteDetailScreen() {
                     borderLeftColor: theme.colors.accent
                   }}
                 >
-                  <ThemedText variant="body" style={{ lineHeight: 22 }}>
-                    {noteForm.ai_summary}
-                  </ThemedText>
+                  {/* Mostrar resumen IA de forma amigable si es un objeto serializado */}
+                  {(() => {
+                    let summary = noteForm.ai_summary;
+                    let parsed: any = null;
+                    // Intentar parsear el string como objeto JS
+                    try {
+                      // Reemplazar comillas simples por dobles para intentar parsear como JSON
+                      const jsonStr = summary.replace(/'/g, '"');
+                      parsed = JSON.parse(jsonStr);
+                    } catch {
+                      parsed = null;
+                    }
+                    if (parsed && typeof parsed === 'object') {
+                      return (
+                        <View>
+                          {parsed.titulo && (
+                            <ThemedText variant="h3" style={{ fontWeight: "700", marginBottom: 4 }}>{parsed.titulo}</ThemedText>
+                          )}
+                          {parsed.puntos_clave && Array.isArray(parsed.puntos_clave) && (
+                            <View style={{ marginBottom: 8 }}>
+                              <ThemedText variant="body" style={{ fontWeight: "600", marginBottom: 2 }}>Puntos clave:</ThemedText>
+                              {parsed.puntos_clave.map((p: string, i: number) => (
+                                <ThemedText key={i} variant="body" style={{ marginLeft: 12, marginBottom: 1 }}>• {p}</ThemedText>
+                              ))}
+                            </View>
+                          )}
+                          {parsed.resumen && (
+                            <View style={{ marginBottom: 8 }}>
+                              <ThemedText variant="body" style={{ fontWeight: "600", marginBottom: 2 }}>Resumen:</ThemedText>
+                              <ThemedText variant="body">{parsed.resumen}</ThemedText>
+                            </View>
+                          )}
+                          {parsed.conceptos && Array.isArray(parsed.conceptos) && (
+                            <View style={{ marginBottom: 4 }}>
+                              <ThemedText variant="body" style={{ fontWeight: "600", marginBottom: 2 }}>Conceptos:</ThemedText>
+                              <ThemedText variant="body">{parsed.conceptos.join(", ")}</ThemedText>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    } else {
+                      // Si no se puede parsear, mostrar como antes
+                      return (
+                        <ThemedText variant="body" style={{ lineHeight: 22 }}>
+                          {noteForm.ai_summary}
+                        </ThemedText>
+                      );
+                    }
+                  })()}
                 </View>
                 <View style={{
                   flexDirection: "row",
@@ -767,7 +839,7 @@ export default function NoteDetailScreen() {
               {/* Mostrar documentos */}
               {attachedDocuments.length > 0 && (
                 <View style={{ gap: theme.spacing.xs }}>
-                  {attachedDocuments.slice(0, 2).map((uri, index) => (
+                  {attachedDocuments.slice(0, 2).map((doc, index) => (
                     <TouchableOpacity
                       key={index}
                       style={{
@@ -778,19 +850,23 @@ export default function NoteDetailScreen() {
                         gap: theme.spacing.xs,
                         backgroundColor: theme.colors.surface
                       }}
-                      onPress={() => openDocument(uri)}
+                      onPress={() => openDocument(doc.uri, doc.mimeType)}
                     >
-                      <IconSymbol name="doc.fill" size={16} color={theme.colors.accent} />
+                      <IconSymbol 
+                        name={doc.mimeType === "application/pdf" ? "doc.richtext" : "doc.fill"} 
+                        size={16} 
+                        color={theme.colors.accent} 
+                      />
                       <ThemedText variant="caption" style={{
                         flex: 1,
                         fontWeight: "500"
                       }} numberOfLines={1}>
-                        {uri.substring(uri.lastIndexOf("/") + 1)}
+                        {doc.name}
                       </ThemedText>
                       <TouchableOpacity
                         onPress={(e) => {
                           e.stopPropagation()
-                          removeAttachment(uri, "document")
+                          removeAttachment(doc.uri, "document")
                         }}
                         style={{ padding: 4 }}
                       >
@@ -966,7 +1042,7 @@ export default function NoteDetailScreen() {
                 }}>
                   Documentos ({attachedDocuments.length})
                 </ThemedText>
-                {attachedDocuments.map((uri, index) => (
+                {attachedDocuments.map((doc, index) => (
                   <TouchableOpacity
                     key={index}
                     style={{
@@ -977,16 +1053,20 @@ export default function NoteDetailScreen() {
                       marginBottom: theme.spacing.xs,
                       backgroundColor: theme.colors.surface
                     }}
-                    onPress={() => openDocument(uri)}
+                    onPress={() => openDocument(doc.uri, doc.mimeType)}
                     activeOpacity={0.7}
                   >
-                    <IconSymbol name="doc.fill" size={24} color={theme.colors.accent} />
+                    <IconSymbol 
+                      name={doc.mimeType === "application/pdf" ? "doc.richtext" : "doc.fill"} 
+                      size={24} 
+                      color={theme.colors.accent} 
+                    />
                     <View style={{
                       flex: 1,
                       marginLeft: theme.spacing.sm
                     }}>
                       <ThemedText variant="body" style={{ fontWeight: "500" }}>
-                        {uri.substring(uri.lastIndexOf("/") + 1)}
+                        {doc.name}
                       </ThemedText>
                       <ThemedText variant="caption" color="secondary">
                         Toca para abrir
@@ -995,7 +1075,7 @@ export default function NoteDetailScreen() {
                     <TouchableOpacity
                       onPress={(e) => {
                         e.stopPropagation()
-                        removeAttachment(uri, "document")
+                        removeAttachment(doc.uri, "document")
                       }}
                       style={{ padding: theme.spacing.xs }}
                     >
