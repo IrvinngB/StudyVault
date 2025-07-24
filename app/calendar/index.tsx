@@ -11,6 +11,7 @@ import type {
   UpdateCalendarEventRequest,
 } from "@/database/models/calendarTypes"
 import { useCalendar } from "@/hooks/useCalendar"
+import { useClasses } from "@/hooks/useClasses"
 import { useTheme } from "@/hooks/useTheme"
 import { formatTimeForDisplay, isValidDate, safeParseDate } from "@/utils/dateHelpers"; // Usar funciones más seguras
 import { Ionicons } from "@expo/vector-icons"
@@ -90,6 +91,7 @@ const getDaysInMonth = (year: number, month: number): Date[] => {
 
 export default function CalendarScreen() {
   const { theme } = useTheme()
+  const { getClassById } = useClasses()
   const today = new Date()
 
   // Estado mes y año seleccionados
@@ -103,6 +105,9 @@ export default function CalendarScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
+  
+  // State para almacenar nombres de cursos
+  const [classNames, setClassNames] = useState<Record<string, string>>({})
 
   // Hook del calendario
   const {
@@ -148,6 +153,35 @@ export default function CalendarScreen() {
       Alert.alert("Error", error, [{ text: "OK", onPress: clearError }])
     }
   }, [error, clearError])
+
+  // Cargar nombres de cursos cuando cambien los eventos
+  useEffect(() => {
+    const loadClassNames = async () => {
+      const classIds = new Set<string>()
+      events.forEach(event => {
+        if (event.class_id) {
+          classIds.add(event.class_id)
+        }
+      })
+      
+      const names: Record<string, string> = {}
+      for (const classId of classIds) {
+        try {
+          const classData = await getClassById(classId)
+          if (classData) {
+            names[classId] = classData.name
+          }
+        } catch (error) {
+          console.error(`Error loading class ${classId}:`, error)
+        }
+      }
+      setClassNames(names)
+    }
+    
+    if (events.length > 0) {
+      loadClassNames()
+    }
+  }, [events, getClassById])
 
   // Cambiar mes (prev / next)
   const changeMonth = (increment: number) => {
@@ -219,13 +253,13 @@ export default function CalendarScreen() {
         ]}
       >
         <ThemedText variant="h3" style={{ color: isSelected ? theme.colors.surface : theme.colors.text }}>
-          {item.getDate()}
+          {String(item?.getDate?.() || 1)}
         </ThemedText>
         <ThemedText
           variant="body"
           style={{ color: isSelected ? theme.colors.surface : theme.colors.textMuted, fontSize: 12, marginTop: 2 }}
         >
-          {daysSpanish[item.getDay()].substring(0, 3)}
+          {(daysSpanish[item?.getDay?.() || 0] || 'Día').substring(0, 3)}
         </ThemedText>
       </TouchableOpacity>
     )
@@ -272,21 +306,36 @@ export default function CalendarScreen() {
         <Ionicons name={iconName} size={24} color={iconColor} style={{ marginRight: 12 }} />
         <View style={{ flex: 1 }}>
           <ThemedText variant="h3" style={{ color: theme.colors.text }}>
-            {item.title}
+            {item.title || 'Sin título'}
           </ThemedText>
           {item.description ? (
             <ThemedText variant="body" style={{ color: theme.colors.secondary }}>
               {item.description}
             </ThemedText>
           ) : null}
-          {item.location || item.classroom ? (
-            <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12, marginTop: 4 }}>
-              📍 {item.classroom || item.location}
-            </ThemedText>
+          
+          {/* Mostrar curso y salón de manera sutil */}
+          {(item.location || item.classroom) ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              {item.location && item.classroom ? (
+                <>
+                  <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
+                    � {item.location}
+                  </ThemedText>
+                  <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12, marginLeft: 8 }}>
+                    🏫 {item.classroom}
+                  </ThemedText>
+                </>
+              ) : (
+                <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
+                  {item.location ? `� ${item.location}` : `🏫 ${item.classroom}`}
+                </ThemedText>
+              )}
+            </View>
           ) : null}
         </View>
         <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
-          {formatTimeForDisplay(startDateTime)}
+          {formatTimeForDisplay(startDateTime) || '--:--'}
         </ThemedText>
       </TouchableOpacity>
     )
@@ -302,7 +351,7 @@ export default function CalendarScreen() {
               <Ionicons name="chevron-back-outline" size={28} color={theme.colors.primary} />
             </TouchableOpacity>
             <ThemedText variant="h1" style={{ color: theme.colors.primary }}>
-              {months[month]} {year}
+              {months[month] || 'Mes'} {year || new Date().getFullYear()}
             </ThemedText>
             <TouchableOpacity onPress={() => changeMonth(1)} style={styles.arrowButton}>
               <Ionicons name="chevron-forward-outline" size={28} color={theme.colors.primary} />
@@ -328,7 +377,7 @@ export default function CalendarScreen() {
 
           {/* Eventos */}
           <ThemedText variant="h2" style={{ marginBottom: 12 }}>
-            Eventos del día {formatDateLong(selectedDay)}
+            Eventos del día {formatDateLong(selectedDay) || 'Fecha seleccionada'}
           </ThemedText>
 
           {loading ? (

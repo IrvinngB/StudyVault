@@ -79,7 +79,8 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
         setEvents(prevEvents => [...prevEvents, response.data!]);
         
         // Schedule notification for the event using reminder_minutes
-        if (eventData.reminder_minutes && eventData.reminder_minutes > 0) {
+        // Note: Notifications are disabled in Expo Go since SDK 53
+        if (eventData.reminder_minutes && eventData.reminder_minutes > 0 && !__DEV__) {
           try {
             // Import at the top of the file
             const { requestNotificationPermission, scheduleCalendarNotification, setupAndroidChannel } = await import('@/utils/notifications');
@@ -135,7 +136,8 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
         );
         
         // Update notification for the event if reminder_minutes is set
-        if (eventData.reminder_minutes !== undefined && eventData.reminder_minutes > 0 && eventData.start_datetime) {
+        // Note: Notifications are disabled in Expo Go since SDK 53
+        if (eventData.reminder_minutes !== undefined && eventData.reminder_minutes > 0 && eventData.start_datetime && !__DEV__) {
           try {
             // Import at the top of the file
             const { requestNotificationPermission, scheduleCalendarNotification, setupAndroidChannel } = await import('@/utils/notifications');

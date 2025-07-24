@@ -17,7 +17,7 @@ export type {
 } from './notesService';
 
 export type {
-  AuthSession,
+  ApiResponse, AuthSession,
   UserProfile
 } from '../models/types';
 

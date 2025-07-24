@@ -279,87 +279,14 @@ class NotesService {
    */
   async generateAISummary(noteId: string): Promise<{ message: string; ai_summary: string }> {
     try {
-      console.log('📝 NotesService: Generando resumen de IA:', noteId);
-      
-      // Primero obtenemos la nota para extraer su contenido
-      const note = await this.getNoteById(noteId);
-      if (!note) {
-        throw new Error('Nota no encontrada');
+      console.log('📝 NotesService: Generando resumen de IA vía API Study:', noteId);
+      // Llamar al endpoint de FastAPI que genera el resumen y actualiza la nota
+      const response = await this.apiClient.post<{ message: string; ai_summary: string }>(`/notes/${noteId}/generate-summary`, {});
+      if (!response || !response.ai_summary) {
+        throw new Error('El backend no devolvió un resumen válido');
       }
-      
-      // Preparamos el contenido para enviar a la IA
-      const contentToSummarize = `${note.title}\n\n${note.content}`;
-      
-      // Llamamos directamente al servicio de IA
-      console.log('🤖 Llamando al servicio de IA...');
-      const aiResponse = await fetch('http://143.244.166.48/api/summarize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ notes: contentToSummarize }),
-      });
-      
-      if (!aiResponse.ok) {
-        throw new Error(`Error del servicio de IA: ${aiResponse.status}`);
-      }
-      
-      const aiData = await aiResponse.json();
-      
-      if (!aiData.success || !aiData.summary) {
-        throw new Error('El servicio de IA no devolvió un resumen válido');
-      }
-      
-      // Formatear la respuesta de la IA
-      let formattedSummary: string;
-      
-      if (typeof aiData.summary === 'object') {
-        // Respuesta estructurada de la IA
-        const parts: string[] = [];
-        
-        if (aiData.summary.titulo) {
-          parts.push(`📋 ${aiData.summary.titulo}`);
-        }
-        
-        if (aiData.summary.puntos_clave && Array.isArray(aiData.summary.puntos_clave)) {
-          parts.push('\n🔑 Puntos Clave:');
-          aiData.summary.puntos_clave.forEach((punto: string) => {
-            parts.push(`• ${punto}`);
-          });
-        }
-        
-        if (aiData.summary.resumen) {
-          parts.push(`\n📝 Resumen:\n${aiData.summary.resumen}`);
-        }
-        
-        if (aiData.summary.conceptos && Array.isArray(aiData.summary.conceptos)) {
-          parts.push('\n💡 Conceptos Importantes:');
-          aiData.summary.conceptos.forEach((concepto: string) => {
-            parts.push(`• ${concepto}`);
-          });
-        }
-        
-        formattedSummary = parts.join('\n');
-      } else {
-        // Respuesta de texto plano
-        formattedSummary = String(aiData.summary);
-      }
-      
-      // Actualizamos la nota con el resumen generado
-      const updateData: UpdateNoteRequest = {
-        id: noteId,
-        ai_summary: formattedSummary,
-      };
-      
-      await this.updateNote(updateData);
-      
       console.log('✅ NotesService: Resumen de IA generado y guardado exitosamente');
-      
-      return {
-        message: 'Resumen de IA generado exitosamente',
-        ai_summary: formattedSummary
-      };
-      
+      return response;
     } catch (error) {
       console.error('❌ NotesService: Error al generar resumen de IA:', error);
       throw new Error(`No se pudo generar el resumen de IA: ${error instanceof Error ? error.message : 'Error desconocido'}`);

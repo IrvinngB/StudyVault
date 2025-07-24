@@ -7,9 +7,11 @@ import { classService } from "@/database/services/courseService"
 import { notesService, type NoteData } from "@/database/services/notesService"
 import { useModal } from "@/hooks/modals"
 import { useCommonStyles, useTheme } from "@/hooks/useTheme"
+import * as FileSystem from 'expo-file-system'
+import * as IntentLauncher from 'expo-intent-launcher'
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { useEffect, useState } from "react"
-import { ActivityIndicator, Image, Modal, ScrollView, TouchableOpacity, View } from "react-native"
+import { ActivityIndicator, Image, Linking, Modal, Platform, ScrollView, TouchableOpacity, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
 export default function NoteViewScreen() {
@@ -118,6 +120,36 @@ Esta acción no se puede deshacer.`,
       return "Fecha inválida"
     }
   }
+
+  const openDocument = async (uri: string, mimeType: string) => {
+    try {
+      if (Platform.OS === 'android') {
+        if (!FileSystem.documentDirectory) {
+          throw new Error('Document directory is not available')
+        }
+
+        const fileName = uri.split('/').pop();
+        if (!fileName) {
+          throw new Error('Invalid file URI')
+        }
+
+        const fileUri = FileSystem.documentDirectory + fileName;
+        await FileSystem.copyAsync({ from: uri, to: fileUri });
+
+        const contentUri = await FileSystem.getContentUriAsync(fileUri);
+        IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+          data: contentUri,
+          flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+          type: mimeType,
+        });
+      } else {
+        Linking.openURL(uri);
+      }
+    } catch (error) {
+      console.error('Error opening document:', error);
+      showError('No se pudo abrir el documento');
+    }
+  };
 
   if (loading) {
     return (
@@ -244,9 +276,44 @@ Esta acción no se puede deshacer.`,
                   Resumen con IA
                 </ThemedText>
               </ThemedView>
-              <ThemedText variant="body">
-                {note.ai_summary}
-              </ThemedText>
+              {/* Mostrar resumen IA de forma amigable si es un objeto serializado */}
+              {(() => {
+                let summary = note.ai_summary;
+                let parsed: any = null;
+                try {
+                  // Reemplazar comillas simples por dobles para intentar parsear como JSON
+                  const jsonStr = summary.replace(/'/g, '"');
+                  parsed = JSON.parse(jsonStr);
+                } catch {
+                  parsed = null;
+                }
+                if (parsed && typeof parsed === 'object') {
+                  return (
+                    <ThemedView style={{ gap: theme.spacing.xs }}>
+                      {parsed.titulo && (
+                        <ThemedText variant="body" style={{ fontWeight: "700", marginBottom: 2 }}>{parsed.titulo}</ThemedText>
+                      )}
+                      {parsed.puntos_clave && Array.isArray(parsed.puntos_clave) && (
+                        <ThemedView style={{ marginBottom: 2 }}>
+                          {parsed.puntos_clave.map((p: string, i: number) => (
+                            <ThemedText key={i} variant="body" style={{ marginLeft: 8 }}>• {p}</ThemedText>
+                          ))}
+                        </ThemedView>
+                      )}
+                      {parsed.resumen && (
+                        <ThemedText variant="body" style={{ marginBottom: 2 }}>{parsed.resumen}</ThemedText>
+                      )}
+                      {parsed.conceptos && Array.isArray(parsed.conceptos) && (
+                        <ThemedText variant="body">Conceptos: {parsed.conceptos.join(", ")}</ThemedText>
+                      )}
+                    </ThemedView>
+                  );
+                } else {
+                  return (
+                    <ThemedText variant="body">{note.ai_summary}</ThemedText>
+                  );
+                }
+              })()}
             </ThemedCard>
           )}
 
@@ -362,16 +429,17 @@ Esta acción no se puede deshacer.`,
                     Documentos ({documents.length})
                   </ThemedText>
                   {documents.slice(0, 3).map((attachment, index) => (
-                    <ThemedView
+                    <TouchableOpacity
                       key={index}
-                      variant="surface"
                       style={{
                         flexDirection: "row",
                         alignItems: "center",
                         padding: theme.spacing.sm,
                         borderRadius: theme.borderRadius.xs,
                         gap: theme.spacing.sm,
+                        backgroundColor: theme.colors.surface,
                       }}
+                      onPress={() => openDocument(attachment.local_path, attachment.mime_type || 'application/octet-stream')}
                     >
                       <IconSymbol name="doc.fill" size={20} color={theme.colors.success} />
                       <ThemedText variant="body" style={{ flex: 1 }} numberOfLines={1}>
@@ -380,7 +448,7 @@ Esta acción no se puede deshacer.`,
                       <ThemedText variant="caption" color="secondary">
                         {attachment.size > 0 ? `${(attachment.size / 1024).toFixed(1)} KB` : ""}
                       </ThemedText>
-                    </ThemedView>
+                    </TouchableOpacity>
                   ))}
                   {documents.length > 3 && (
                     <ThemedButton

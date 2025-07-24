@@ -84,3 +84,26 @@ export interface NoteData {
   created_at: string
   updated_at: string
 }
+
+// Generic API Response type
+export interface ApiResponse<T = any> {
+  success: boolean
+  data?: T
+  error?: string
+}
+
+// Auth types
+export interface AuthSession {
+  user: UserProfile
+  access_token: string
+  refresh_token?: string
+  expires_at?: number
+}
+
+export interface UserProfile {
+  id: string
+  email: string
+  name?: string
+  created_at: string
+  updated_at: string
+}
