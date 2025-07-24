@@ -6,7 +6,9 @@ import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { EVENT_TYPES_CONFIG, REMINDER_OPTIONS } from "@/constants/Calendar"
 import type { CreateCalendarEventRequest, EventType } from "@/database/models/calendarTypes"
 import type { ClassData } from "@/database/services"
+import { useAuth } from "@/hooks/useAuth"
 import { useTheme } from "@/hooks/useTheme"
+import { scheduleCalendarNotification } from "@/utils/notifications"
 import { convertLocalToUTC, formatTimeWithPreferences, getTimezoneInfo } from "@/utils/timezoneHelpers"
 import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
@@ -28,6 +30,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   selectedDate,
 }) => {
   const { theme } = useTheme()
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false)
   const [use24HourFormat, setUse24HourFormat] = useState(false)
 
@@ -200,6 +203,32 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       console.log("🚀 FINAL EVENT DATA:", JSON.stringify(eventData, null, 2))
 
       await onCreateEvent(eventData)
+
+      // Programar notificación si el campo de recordatorio tiene un valor válido Y NO es un evento tipo clase
+      if (reminderMinutes > 0 && eventType !== "class") {
+          const notificationData = {
+            userId: user?.id || "unknown-user",
+            title,
+            body: description || "Evento programado",
+            date: startDateTimeString,
+            minutosAntes: reminderMinutes,
+            type: "calendar",
+        };
+
+        try {
+          await scheduleCalendarNotification(notificationData);
+          console.log("✅ Notificación programada exitosamente:", notificationData);
+        } catch (error) {
+          console.error("❌ Error al programar la notificación:", error);
+          // No mostrar alerta al usuario cuando falla la notificación,
+          // ya que el evento se creó correctamente
+          console.log("⚠️ No se pudo crear la notificación, pero el evento se creó correctamente");
+        }
+      } else if (eventType === "class") {
+        console.log("📚 No se programó notificación porque es un evento tipo clase.");
+      } else if (reminderMinutes <= 0) {
+        console.log("⏰ No se programó notificación porque el campo de recordatorio está vacío o es 0.");
+      }
 
       // Cerrar modal automáticamente al completar exitosamente
       setTimeout(() => {
