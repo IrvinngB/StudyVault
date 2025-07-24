@@ -1,14 +1,14 @@
-import React from 'react';
-import { View } from 'react-native';
-import { ThemedCard, ThemedText } from '@/components/ui/ThemedComponents';
-import { useTheme } from '@/hooks/useTheme';
+import React from 'react'
+import { View } from 'react-native'
+import { ThemedCard, ThemedText } from '@/components/ui/ThemedComponents'
+import { useTheme } from '@/hooks/useTheme'
 
 interface CourseHeaderCardProps {
-  nombre: string;
-  codigo?: string;
-  creditos?: number;
-  escala: number;
-  notaActual: number;
+  nombre: string
+  codigo?: string
+  creditos?: number
+  escala: number
+  notaActual: number
 }
 
 export default function CourseHeaderCard({
@@ -18,32 +18,32 @@ export default function CourseHeaderCard({
   escala,
   notaActual
 }: CourseHeaderCardProps) {
-  const { theme } = useTheme();
+  const { theme } = useTheme()
 
   return (
-    <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        {/* Nota actual */}
-        <View style={{ justifyContent: 'center' }}>
+    <ThemedCard
+      variant="elevated"
+      padding="large"
+      style={{
+        alignSelf: 'center',
+        marginBottom: theme.spacing.lg,
+        width: '93%'
+      }}
+    >
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap'
+        }}
+      >
+        {/* 📘 Info del curso a la izquierda */}
+        <View style={{ justifyContent: 'center', flex: 1 }}>
           <ThemedText
-            variant="h1"
-            style={{
-              fontSize: 48,
-              fontWeight: 'bold',
-              color: theme.colors.primary,
-              marginBottom: theme.spacing.xs
-            }}
+            variant="h2"
+            style={{ fontWeight: 'bold', marginBottom: theme.spacing.xs }}
           >
-            {notaActual.toFixed(1)}
-          </ThemedText>
-          <ThemedText variant="caption" color="secondary">
-            Nota actual
-          </ThemedText>
-        </View>
-
-        {/* Info del curso */}
-        <View style={{ alignItems: 'flex-end' }}>
-          <ThemedText variant="h2" style={{ fontWeight: 'bold', marginBottom: theme.spacing.xs }}>
             {nombre}
           </ThemedText>
           {codigo && (
@@ -60,7 +60,27 @@ export default function CourseHeaderCard({
             Escala: {escala}
           </ThemedText>
         </View>
+
+        {/* 🎯 Nota actual a la derecha */}
+        <View style={{ alignItems: 'flex-end', flexShrink: 1, maxWidth: '40%' }}>
+          <ThemedText
+            variant="h1"
+            style={{
+              fontWeight: 'bold',
+              color: theme.colors.primary,
+              marginBottom: theme.spacing.xs
+            }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {notaActual.toFixed(1)}
+          </ThemedText>
+          <ThemedText variant="caption" color="secondary">
+            Nota actual
+          </ThemedText>
+        </View>
       </View>
     </ThemedCard>
-  );
+  )
 }

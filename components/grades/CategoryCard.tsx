@@ -70,10 +70,27 @@ export default function CategoryCard({
       const allGrades = await gradesService.getGrades(classId)
       const filtradas = allGrades.filter(g => g.category_id === categoryId)
       setEvaluaciones(filtradas)
+      await syncEvaluacionesConEscala(filtradas)
     } catch (error: any) {
       Alert.alert('Error', error.message || 'No se pudieron cargar las calificaciones')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const syncEvaluacionesConEscala = async (lista: GradeData[]) => {
+    const key = `gradingScale:${classId}`
+    const stored = await AsyncStorage.getItem(key)
+    const nuevaEscala = stored ? Number(stored) : null
+    if (!nuevaEscala) return
+
+    const actualizables = lista.filter(ev => ev.max_score !== nuevaEscala)
+    for (const ev of actualizables) {
+      try {
+        await gradesService.patchGrade(ev.id, { max_score: nuevaEscala })
+      } catch (err) {
+        console.warn(`❌ No se pudo actualizar la escala de ${ev.id}:`, err)
+      }
     }
   }
 
