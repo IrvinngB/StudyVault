@@ -13,7 +13,6 @@ export interface GradeData {
   calendar_event_id?: string
   event_type?: string
   graded_at?: string
-  notes?: string
   created_at: string
   updated_at?: string
 }
@@ -28,7 +27,6 @@ export interface CreateGradeRequest {
   calendar_event_id?: string
   event_type?: string
   graded_at?: string
-  notes?: string
 }
 
 export interface UpdateGradeRequest extends Partial<CreateGradeRequest> {}
@@ -55,7 +53,6 @@ class GradesService {
         ...(gradeData.calendar_event_id && { calendar_event_id: gradeData.calendar_event_id }),
         ...(gradeData.event_type && { event_type: gradeData.event_type }),
         ...(gradeData.graded_at && { graded_at: gradeData.graded_at }),
-        ...(gradeData.notes && { notes: gradeData.notes })
       }
 
       console.log('🟡 GradesService: Enviando payload de creación', payload)
@@ -125,7 +122,6 @@ class GradesService {
       if (updateData.calendar_event_id !== undefined) payload.calendar_event_id = updateData.calendar_event_id
       if (updateData.event_type !== undefined) payload.event_type = updateData.event_type
       if (updateData.graded_at !== undefined) payload.graded_at = updateData.graded_at
-      if (updateData.notes !== undefined) payload.notes = updateData.notes
 
       console.log('🟡 GradesService: Payload de actualización', payload)
 
