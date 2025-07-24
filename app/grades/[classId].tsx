@@ -6,11 +6,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useLocalSearchParams } from "expo-router"
 import { ThemedView, ThemedText, ThemedButton, ThemedCard } from "@/components/ui/ThemedComponents"
 
-import AddCategoryForm from "@/components/grades/AddCategoryForm"
-import CategoryCard from "@/components/grades/CategoryCard"
+import AddCategoryForm from "@/components/grades/Forms/AddCategoryForm"
+import CategoryCard from "@/components/grades/Cards/CategoryCard"
 import GradeScaleSelector from "@/components/grades/GradeScaleSelector"
-import CourseHeaderCard from "@/components/grades/CourseHeaderCard"
-import GradeSummaryCard from "@/components/grades/GradeSummaryCard"
+import CourseHeaderCard from "@/components/grades/Cards/CourseHeaderCard"
+import GradeSummaryCard from "@/components/grades/Cards/GradeSummaryCard"
 
 import { classService } from "@/database/services/courseService"
 import { gradesService } from "@/database/services/gradesService"
@@ -178,6 +178,7 @@ export default function GradesByCategoryScreen() {
                     classId={classId}
                     onSuccess={handleNewCategory}
                     onCancel={() => setShowForm(false)}
+                    porcentajeActual={porcentajeActual}
                   />
                 )}
               </>
@@ -193,6 +194,7 @@ export default function GradesByCategoryScreen() {
             categoryId={item.id}
             nombre={item.name}
             porcentaje={item.percentage}
+            onUpdate={loadAllData}
           />
         )}
 

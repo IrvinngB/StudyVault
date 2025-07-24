@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import {
   View,
   ActivityIndicator,
-  Alert
+  TouchableOpacity,
+  Modal
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
@@ -11,34 +12,50 @@ import {
   ThemedButton
 } from '@/components/ui/ThemedComponents'
 import { useTheme } from '@/hooks/useTheme'
-import DateTimePickerModal from 'react-native-modal-datetime-picker'
 import { gradesService } from '@/database/services/gradesService'
+import { categoryService } from '@/database/services/categoryService'
 import type { GradeData } from '@/database/services/gradesService'
-import EvaluationFormModal from '@/components/grades/EvaluationForm'
+import EvaluationFormModal from '@/components/grades/Forms/EvaluationForm'
+import EditCategoryForm from '@/components/grades/Forms/EditCategoryForm'
+import EditEvaluationForm from '@/components/grades/Forms/EditEvaluationForm'
 
 interface CategoryCardProps {
   classId: string
   categoryId: string
   nombre: string
   porcentaje: number
+  onDelete?: (categoryId: string) => void
+  onUpdate?: () => void
 }
 
 export default function CategoryCard({
   classId,
   categoryId,
   nombre,
-  porcentaje
+  porcentaje,
+  onDelete,
+  onUpdate
 }: CategoryCardProps) {
   const { theme } = useTheme()
+
   const [evaluaciones, setEvaluaciones] = useState<GradeData[]>([])
   const [loading, setLoading] = useState(false)
   const [formVisible, setFormVisible] = useState(false)
+  const [editFormVisible, setEditFormVisible] = useState(false)
+  const [editEvaluationId, setEditEvaluationId] = useState<string | null>(null)
+  const [editEvaluationData, setEditEvaluationData] = useState<{
+    title: string
+    description?: string
+    score: number
+    max_score: number
+    graded_at: string
+  } | null>(null)
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     score: '',
-    max_score: '', // se obtiene automáticamente
+    max_score: '',
     graded_at: '',
     calendar_event_id: '',
     event_type: ''
@@ -64,6 +81,11 @@ export default function CategoryCard({
     }
   }, [formVisible])
 
+  const reload = async () => {
+  await loadEvaluaciones()
+}
+
+
   const loadEvaluaciones = async () => {
     setLoading(true)
     try {
@@ -72,7 +94,7 @@ export default function CategoryCard({
       setEvaluaciones(filtradas)
       await syncEvaluacionesConEscala(filtradas)
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudieron cargar las calificaciones')
+      console.error('❌ Error al cargar evaluaciones:', error)
     } finally {
       setLoading(false)
     }
@@ -89,9 +111,14 @@ export default function CategoryCard({
       try {
         await gradesService.patchGrade(ev.id, { max_score: nuevaEscala })
       } catch (err) {
-        console.warn(`❌ No se pudo actualizar la escala de ${ev.id}:`, err)
+        console.warn(`❌ Error al actualizar escala de ${ev.id}:`, err)
       }
     }
+  }
+
+  const handleConfirmDate = (date: Date) => {
+    setFormData(prev => ({ ...prev, graded_at: date.toISOString() }))
+    setDatePickerVisible(false)
   }
 
   const validateEvaluation = (data: typeof formData): string | null => {
@@ -101,21 +128,16 @@ export default function CategoryCard({
     if (!data.title.trim()) return 'El título es obligatorio'
     if (!data.graded_at) return 'Selecciona una fecha'
     if (isNaN(score) || score < 0) return 'La nota debe ser válida'
-    if (isNaN(max)) return 'La escala de calificación no está definida'
+    if (isNaN(max)) return 'La escala no está definida'
     if (score > max) return `La nota no puede superar el máximo (${max})`
 
     return null
   }
 
-  const handleConfirmDate = (date: Date) => {
-    setFormData(prev => ({ ...prev, graded_at: date.toISOString() }))
-    setDatePickerVisible(false)
-  }
-
   const handleSubmit = async () => {
     const errorMsg = validateEvaluation(formData)
     if (errorMsg) {
-      Alert.alert('Validación', errorMsg)
+      console.error('❌ Validación:', errorMsg)
       return
     }
 
@@ -144,13 +166,25 @@ export default function CategoryCard({
         calendar_event_id: '',
         event_type: ''
       })
+
+      onUpdate?.()
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'No se pudo guardar la evaluación')
+      console.error('❌ Error al guardar evaluación:', error)
     }
   }
 
   const GradeItem = ({ ev }: { ev: GradeData }) => (
-    <View
+    <TouchableOpacity
+      onPress={() => {
+        setEditEvaluationId(ev.id)
+        setEditEvaluationData({
+          title: ev.title ?? '',
+          description: ev.description ?? '',
+          score: ev.score,
+          max_score: ev.max_score,
+          graded_at: ev.graded_at ?? ''
+        })
+      }}
       style={{
         backgroundColor: theme.colors.surface,
         padding: theme.spacing.sm,
@@ -165,12 +199,33 @@ export default function CategoryCard({
       </ThemedText>
       <ThemedText>Nota: {ev.score} / {ev.max_score}</ThemedText>
       <ThemedText>Fecha: {new Date(ev.graded_at!).toLocaleDateString()}</ThemedText>
-    </View>
+    </TouchableOpacity>
   )
 
   return (
     <>
-      <ThemedCard variant="outlined" padding="medium" style={{ marginTop: theme.spacing.md }}>
+      <ThemedCard variant="outlined" padding="medium" style={{ marginTop: theme.spacing.md, position: 'relative' }}>
+        <View
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            zIndex: 10,
+            backgroundColor: theme.colors.surface,
+            paddingHorizontal: theme.spacing.sm,
+            paddingVertical: theme.spacing.xs,
+            borderRadius: theme.borderRadius.sm,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+          }}
+        >
+          <TouchableOpacity onPress={() => setEditFormVisible(true)}>
+            <ThemedText variant="button" style={{ fontSize: 12 }}>
+              Editar
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+
         <ThemedText variant="h3">{nombre}</ThemedText>
         <ThemedText>Porcentaje: {porcentaje}%</ThemedText>
 
@@ -188,7 +243,6 @@ export default function CategoryCard({
             {evaluaciones.map(ev => (
               <GradeItem key={ev.id} ev={ev} />
             ))}
-
             {evaluaciones.length === 0 && (
               <ThemedText
                 variant="bodySmall"
@@ -212,6 +266,70 @@ export default function CategoryCard({
         setDatePickerVisible={setDatePickerVisible}
         onConfirmDate={handleConfirmDate}
       />
+
+      <Modal
+        visible={editFormVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setEditFormVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: theme.spacing.md,
+          }}
+        >
+          <View style={{ width: '100%' }}>
+            <EditCategoryForm
+              categoryId={categoryId}
+              currentName={nombre}
+              currentPercentage={porcentaje}
+              onCancel={() => setEditFormVisible(false)}
+              onSuccess={() => {
+                setEditFormVisible(false)
+                onDelete?.(categoryId)
+              }}
+              onUpdate={onUpdate}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {editEvaluationId && editEvaluationData && (
+        <Modal
+          visible={true}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setEditEvaluationId(null)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.4)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: theme.spacing.md
+            }}
+          >
+            <View style={{ width: '100%' }}>
+              <EditEvaluationForm
+                categoryId={categoryId}
+                evaluationId={editEvaluationId}
+                initialData={editEvaluationData}
+                onCancel={() => setEditEvaluationId(null)}
+                onSuccess={() => {
+                  setEditEvaluationId(null)
+                  reload()
+                }}
+                onUpdate={reload}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
     </>
   )
 }
