@@ -75,6 +75,10 @@ export default function RegisterScreen() {
           'Registro exitoso',
           () => router.replace('/login')
         );
+        showSuccess(
+          'Te hemos enviado un correo para confirmar tu email. Por favor, revisa tu bandeja de entrada.',
+          'Registro exitoso'
+        );
       } else {
         console.log('❌ Registration failed:', result.error);
         showError(
