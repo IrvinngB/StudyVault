@@ -1,8 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
+<<<<<<< HEAD
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const App = () => {
+=======
+import { useRouter } from 'expo-router';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+const App = () => {
+  // Esto es lo nuevo: useRouter para navegar entre pantallas
+  const router = useRouter();
+
+>>>>>>> 9bd0cb2 (feat: agregar sección de perfil con políticas, información de la app, edición de perfil y apartado de ayuda con contactos)
   const navItems = [
     { id: 'schedule', icon: 'calendar-outline', label: 'Horarios', color: '#4F46E5' },
     { id: 'tasks', icon: 'checkmark-circle-outline', label: 'Tareas', color: '#059669' },
@@ -28,6 +38,14 @@ const App = () => {
     // Aquí se implementarán las acciones rápidas
   };
 
+<<<<<<< HEAD
+=======
+  // Nueva función para navegar al perfil
+  const handleProfilePress = () => {
+    router.push('/profile'); // Esto navega a la pantalla de perfil
+  };
+
+>>>>>>> 9bd0cb2 (feat: agregar sección de perfil con políticas, información de la app, edición de perfil y apartado de ayuda con contactos)
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -36,7 +54,12 @@ const App = () => {
           <Text style={styles.greeting}>¡Hola! 👋</Text>
           <Text style={styles.title}>StudyVault</Text>
         </View>
+<<<<<<< HEAD
         <TouchableOpacity style={styles.profileButton}>
+=======
+        {/* Botón del perfil actualizado con navegación */}
+        <TouchableOpacity style={styles.profileButton} onPress={handleProfilePress}>
+>>>>>>> 9bd0cb2 (feat: agregar sección de perfil con políticas, información de la app, edición de perfil y apartado de ayuda con contactos)
           <Ionicons name="person-circle-outline" size={32} color="#4F46E5" />
         </TouchableOpacity>
       </View>
