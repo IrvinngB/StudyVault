@@ -140,10 +140,39 @@ class GradesService {
   /**
    * Actualizar parcialmente una calificación (PATCH)
    */
-  async patchGrade(id: string /*, data: Partial<UpdateGradeRequest>*/): Promise<GradeData> {
-    // Método pendiente de implementar por Iván 😎
-    throw new Error('Método patchGrade aún no implementado')
+  /**
+ * Actualizar parcialmente una calificación (PATCH)
+ */
+  async patchGrade(id: string, data: Partial<UpdateGradeRequest>): Promise<GradeData> {
+    try {
+      const payload: Partial<GradeData> = {}
+
+      if (data.title !== undefined) payload.title = data.title
+      if (data.description !== undefined) payload.description = data.description
+      if (data.score !== undefined) payload.score = data.score
+      if (data.max_score !== undefined) payload.max_score = data.max_score
+      if (data.calendar_event_id !== undefined) payload.calendar_event_id = data.calendar_event_id
+      if (data.event_type !== undefined) payload.event_type = data.event_type
+      if (data.graded_at !== undefined) payload.graded_at = data.graded_at
+      if (data.class_id !== undefined) payload.class_id = data.class_id
+      if (data.category_id !== undefined) payload.category_id = data.category_id
+
+      console.log('🟡 GradesService: PATCH de calificación', { id, payload })
+
+      const response = await this.apiClient.patch<GradeData>(`/grades/${id}`, payload)
+
+      console.log('✅ GradesService: Calificación actualizada (PATCH)', response)
+      return response
+    } catch (error) {
+      console.error('❌ GradesService: Error al hacer PATCH', error)
+      throw new Error(
+        `No se pudo aplicar la actualización parcial: ${
+          error instanceof Error ? error.message : 'Error desconocido'
+        }`
+      )
+    }
   }
+
 
   /**
    * Eliminar una calificación

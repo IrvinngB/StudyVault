@@ -4,30 +4,49 @@ import React, { useEffect, useState } from "react"
 import { FlatList, RefreshControl, Alert, View } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useLocalSearchParams } from "expo-router"
-import { ThemedView, ThemedText, ThemedButton } from "@/components/ui/ThemedComponents"
+import { ThemedView, ThemedText, ThemedButton, ThemedCard } from "@/components/ui/ThemedComponents"
 
-import AddCategoryForm from "@/components/grades/AddCategoryForm"
-import CategoryCard from "@/components/grades/CategoryCard"
+import AddCategoryForm from "@/components/grades/Forms/AddCategoryForm"
+import CategoryCard from "@/components/grades/Cards/CategoryCard"
 import GradeScaleSelector from "@/components/grades/GradeScaleSelector"
+import CourseHeaderCard from "@/components/grades/Cards/CourseHeaderCard"
+import GradeSummaryCard from "@/components/grades/Cards/GradeSummaryCard"
+
+import { classService } from "@/database/services/courseService"
+import { gradesService } from "@/database/services/gradesService"
 import { categoryService } from "@/database/services/categoryService"
 import type { CategoryGradeData } from "@/database/services/categoryService"
+import type { GradeData } from "@/database/services/gradesService"
+import { calculateWeightedGrade } from "@/utils/calculateGrade"
 import { useTheme } from "@/hooks/useTheme"
 
 export default function GradesByCategoryScreen() {
   const { classId } = useLocalSearchParams<{ classId: string }>()
   const { theme } = useTheme()
+
   const [categories, setCategories] = useState<CategoryGradeData[]>([])
+  const [evaluaciones, setEvaluaciones] = useState<GradeData[]>([])
+  const [defaultMaxScore, setDefaultMaxScore] = useState<number | null>(null)
+  const [notaActual, setNotaActual] = useState(0)
+  const [cursoInfo, setCursoInfo] = useState({
+    nombre: '',
+    codigo: '',
+    creditos: 0
+  })
+
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [defaultMaxScore, setDefaultMaxScore] = useState<number | null>(null)
 
   useEffect(() => {
-    if (classId) {
-      loadScale()
-      loadCategories()
-    }
+    if (classId) loadScale()
   }, [classId])
+
+  useEffect(() => {
+    if (classId && defaultMaxScore !== null) {
+      loadAllData()
+    }
+  }, [classId, defaultMaxScore])
 
   const loadScale = async () => {
     try {
@@ -39,14 +58,29 @@ export default function GradesByCategoryScreen() {
     }
   }
 
-  const loadCategories = async () => {
-    if (!classId) return
+  const loadAllData = async () => {
     setLoading(true)
     try {
-      const response = await categoryService.getCategoriesByClassId(classId)
-      setCategories(response)
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "No se pudieron cargar las categorías")
+      const [grades, cats, clase] = await Promise.all([
+        gradesService.getGrades(classId),
+        categoryService.getCategoriesByClassId(classId),
+        classService.getClassById(classId)
+      ])
+
+      setEvaluaciones(grades)
+      setCategories(cats)
+
+      setCursoInfo({
+        nombre: clase.name,
+        codigo: clase.code ?? '',
+        creditos: clase.credits ?? 0
+      })
+
+      const promedio = calculateWeightedGrade(grades, cats, defaultMaxScore!)
+      setNotaActual(promedio)
+    } catch (error) {
+      Alert.alert("Error", "No se pudo cargar la información del curso")
+      console.error("❌ Error:", error)
     } finally {
       setLoading(false)
     }
@@ -54,7 +88,7 @@ export default function GradesByCategoryScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await loadCategories()
+    await loadAllData()
     setRefreshing(false)
   }
 
@@ -74,6 +108,25 @@ export default function GradesByCategoryScreen() {
     }
   }
 
+  const porcentajeActual = categories.reduce((acc, cat) => acc + cat.percentage, 0)
+  const mostrarBoton = defaultMaxScore !== null && (defaultMaxScore !== 100 || porcentajeActual < 100)
+  const porcentajeDisponible = defaultMaxScore === 100 ? 100 - porcentajeActual : null
+
+  // ✅ Preparar resumen para GradeSummaryCard
+  const resumenCategorias =
+    defaultMaxScore === 100
+      ? categories.map(cat => ({
+          nombre: cat.name,
+          porcentaje: cat.percentage,
+          evaluaciones: evaluaciones
+            .filter(ev => ev.category_id === cat.id)
+            .map(ev => ({
+              nota: ev.score,
+              notaMaxima: ev.max_score
+            }))
+        }))
+      : []
+
   if (!classId) {
     return (
       <ThemedView
@@ -87,23 +140,48 @@ export default function GradesByCategoryScreen() {
 
   return (
     <ThemedView variant="background" style={{ flex: 1 }}>
+      {defaultMaxScore !== null && (
+        <CourseHeaderCard
+          nombre={cursoInfo.nombre}
+          codigo={cursoInfo.codigo}
+          creditos={cursoInfo.creditos}
+          escala={defaultMaxScore}
+          notaActual={notaActual}
+        />
+      )}
+
       <FlatList
         ListHeaderComponent={() => (
           <View style={{ marginBottom: theme.spacing.md }}>
             {!defaultMaxScore ? (
               <GradeScaleSelector classId={classId} onSelect={handleScaleSelect} />
-            ) : !showForm ? (
-              <ThemedButton
-                title="Agregar nueva categoría"
-                variant="primary"
-                onPress={() => setShowForm(true)}
-              />
             ) : (
-              <AddCategoryForm
-                classId={classId}
-                onSuccess={handleNewCategory}
-                onCancel={() => setShowForm(false)}
-              />
+              <>
+                {porcentajeDisponible !== null && porcentajeDisponible > 0 && (
+                  <ThemedCard variant="outlined" padding="medium" style={{ marginBottom: theme.spacing.sm }}>
+                    <ThemedText variant="body">
+                      Te queda {porcentajeDisponible}% por asignar en categorías.
+                    </ThemedText>
+                  </ThemedCard>
+                )}
+
+                {!showForm ? (
+                  mostrarBoton && (
+                    <ThemedButton
+                      title="Agregar nueva categoría"
+                      variant="primary"
+                      onPress={() => setShowForm(true)}
+                    />
+                  )
+                ) : (
+                  <AddCategoryForm
+                    classId={classId}
+                    onSuccess={handleNewCategory}
+                    onCancel={() => setShowForm(false)}
+                    porcentajeActual={porcentajeActual}
+                  />
+                )}
+              </>
             )}
           </View>
         )}
@@ -116,8 +194,15 @@ export default function GradesByCategoryScreen() {
             categoryId={item.id}
             nombre={item.name}
             porcentaje={item.percentage}
+            onUpdate={loadAllData}
           />
         )}
+
+        ListFooterComponent={() =>
+          defaultMaxScore === 100 && (
+            <GradeSummaryCard categorias={resumenCategorias} escala={defaultMaxScore} />
+          )
+        }
 
         refreshControl={
           <RefreshControl
