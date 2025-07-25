@@ -79,12 +79,42 @@ export class AuthService {
    */
   public async resetPassword(email: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // For now, return a mock response since password reset isn't implemented in API
-      return { 
-        success: true 
-      };
+      await apiClient.post('/auth/reset-password', { email });
+      return { success: true };
     } catch (error) {
       console.error('❌ Reset password error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  /**
+   * Update password (used after reset)
+   */
+  public async updatePassword(password: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      await apiClient.post('/auth/update-password', { password });
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Update password error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  /**
+   * Resend confirmation email
+   */
+  public async resendConfirmationEmail(email: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      await apiClient.post('/auth/resend-confirmation', { email });
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Resend confirmation error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'

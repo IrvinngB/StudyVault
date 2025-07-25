@@ -16,6 +16,27 @@ import { ModalProvider } from "@/hooks/ModalProvider"
 import { AuthProvider } from "@/hooks/useAuth"
 import { useColorScheme } from "@/hooks/useColorScheme"
 import { ThemeProvider as CustomThemeProvider } from "@/hooks/useTheme"
+import { usePasswordResetDeepLink } from "@/hooks/usePasswordResetDeepLink"
+
+function AppContent() {
+  // Initialize deep link handling
+  usePasswordResetDeepLink();
+
+  return (
+    <View style={{ flex: 1 }}>
+      <BackButton /> {/* Position the BackButton manually */}
+      <Stack
+        screenOptions={{
+          headerShown: false, // Disable default header
+        }}
+      >
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+      </Stack>
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme()
@@ -58,18 +79,7 @@ export default function RootLayout() {
           <CustomThemeProvider>
             <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
               <AuthNavigator>
-                <View style={{ flex: 1 }}>
-                  <BackButton /> {/* Position the BackButton manually */}
-                  <Stack
-                    screenOptions={{
-                      headerShown: false, // Disable default header
-                    }}
-                  >
-                    <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                    <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-                  </Stack>
-                </View>
+                <AppContent />
               </AuthNavigator>
               <StatusBar style="auto" />
             </ThemeProvider>

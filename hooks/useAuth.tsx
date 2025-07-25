@@ -11,6 +11,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, userData?: { name?: string }) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
+  resendConfirmationEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -129,6 +131,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const updatePassword = useCallback(async (password: string) => {
+    try {
+      return await authService.updatePassword(password);
+    } catch (error) {
+      console.error('Update password error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error al actualizar la contraseña'
+      };
+    }
+  }, []);
+
+  const resendConfirmationEmail = useCallback(async (email: string) => {
+    try {
+      return await authService.resendConfirmationEmail(email);
+    } catch (error) {
+      console.error('Resend confirmation error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Error al reenviar email de confirmación'
+      };
+    }
+  }, []);
+
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
     try {
       const result = await authService.updateProfile(updates);
@@ -163,6 +189,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signUp,
     signOut,
     resetPassword,
+    updatePassword,
+    resendConfirmationEmail,
     updateProfile,
   };
 

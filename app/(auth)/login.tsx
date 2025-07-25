@@ -160,7 +160,17 @@ export default function LoginScreen() {
                   onChangeText={(text) => setFormData(prev => ({ ...prev, password: text }))}
                   secureTextEntry
                   error={errors.password}
-                />            
+                />
+
+                {/* Forgot password link */}
+                <View style={{ alignItems: 'flex-end' }}>
+                  <ThemedButton
+                    title="¿Olvidaste tu contraseña?"
+                    variant="ghost"
+                    size="small"
+                    onPress={() => router.push('/forgot-password')}
+                  />
+                </View>
 
                 <ThemedButton
                   title={isLoading ? "Iniciando sesión..." : "🔑 Iniciar Sesión"}
