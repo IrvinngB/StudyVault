@@ -4,7 +4,7 @@ import { useClasses } from '@/hooks/useClasses';
 import { useTheme } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface ClassSelectorProps {
   selectedClassId?: string;
@@ -55,14 +55,16 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({
     setIsExpanded(false);
   };
 
-  const renderClassItem = ({ item }: { item: ClassData }) => {
+  const renderClassItem = (item: ClassData, index: number) => {
     return (
       <TouchableOpacity
+        key={item.id || item.name || index}
         style={[
           styles.classItem,
           {
             backgroundColor: theme.colors.surface,
             borderBottomColor: theme.colors.border,
+            borderBottomWidth: index < classes.length - 1 ? 1 : 0, // No border en el último item
           }
         ]}
         onPress={() => handleSelectClass(item)}
@@ -197,16 +199,16 @@ export const ClassSelector: React.FC<ClassSelectorProps> = ({
               )}
             </View>
           ) : (
-            <FlatList
-              data={classes}
-              keyExtractor={(item) => item.id || item.name}
-              renderItem={renderClassItem}
+            <ScrollView
               style={styles.classList}
-              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.classListContent}
+              showsVerticalScrollIndicator={true}
               nestedScrollEnabled={true}
-              maxToRenderPerBatch={10}
-              initialNumToRender={5}
-            />
+              bounces={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {classes.map((item, index) => renderClassItem(item, index))}
+            </ScrollView>
           )}
         </View>
       )}
@@ -265,10 +267,13 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   classList: {
+    flex: 1,
     maxHeight: 180,
   },
+  classListContent: {
+    flexGrow: 1,
+  },
   classItem: {
-    borderBottomWidth: 1,
     minHeight: 48,
   },
   classItemContent: {

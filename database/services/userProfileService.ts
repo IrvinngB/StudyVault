@@ -22,7 +22,7 @@ export class UserProfileService {
   async getCurrentUserProfile(): Promise<UserProfile | null> {
     try {
       console.log("📤 Getting current user profile...")
-      const response = await this.apiClient.get<UserProfile>("/user-profiles/me")
+      const response = await this.apiClient.get<UserProfile>("/profile/me")
       console.log("✅ User profile retrieved successfully")
       return response
     } catch (error) {
@@ -37,7 +37,7 @@ export class UserProfileService {
   async createUserProfile(data: UserProfileCreate): Promise<UserProfile | null> {
     try {
       console.log("📤 Creating user profile...")
-      const response = await this.apiClient.post<UserProfile>("/user-profiles/", data)
+      const response = await this.apiClient.post<UserProfile>("/profile/", data)
       console.log("✅ User profile created successfully")
       return response
     } catch (error) {
@@ -52,7 +52,7 @@ export class UserProfileService {
   async updateUserProfile(data: UserProfileUpdate): Promise<UserProfile | null> {
     try {
       console.log("📤 Updating user profile...", data)
-      const response = await this.apiClient.put<UserProfile>("/user-profiles/me", data)
+      const response = await this.apiClient.put<UserProfile>("/profile/me", data)
       console.log("✅ User profile updated successfully")
       return response
     } catch (error) {
@@ -67,7 +67,7 @@ export class UserProfileService {
   async patchUserProfile(data: UserProfileUpdate): Promise<UserProfile | null> {
     try {
       console.log("📤 Patching user profile...", data)
-      const response = await this.apiClient.patch<UserProfile>("/user-profiles/me", data)
+      const response = await this.apiClient.patch<UserProfile>("/profile/me", data)
       console.log("✅ User profile patched successfully")
       return response
     } catch (error) {
@@ -82,7 +82,7 @@ export class UserProfileService {
   async deleteUserProfile(): Promise<boolean> {
     try {
       console.log("📤 Deleting user profile...")
-      await this.apiClient.delete("/user-profiles/me")
+      await this.apiClient.delete("/profile/me")
       console.log("✅ User profile deleted successfully")
       return true
     } catch (error) {

@@ -5,7 +5,7 @@ import { ThemedButton, ThemedCard, ThemedText, ThemedView } from "@/components/u
 import { ThemeSelector } from "@/components/ui/ThemeSelector"
 import { useAuth } from "@/hooks/useAuth"
 import { useTheme } from "@/hooks/useTheme"
-import { useUserDevices, useUserProfile } from "@/hooks/useUserProfile"
+import { useUserProfile } from "@/hooks/useUserProfile"
 import { formatTimeWithPreferences, getTimezoneInfo } from "@/utils/timezoneHelpers"
 import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
@@ -18,24 +18,22 @@ interface AppSettings {
   timezone: string
   use24HourFormat: boolean
   notifications: boolean
-  autoSync: boolean
   language: string
   theme: string
 }
 
 export default function ProfileAndSettingsScreen() {
   const { theme } = useTheme()
-  const { signOut } = useAuth()
+  const { signOut, user } = useAuth()
   const insets = useSafeAreaInsets()
   
-  // Usar los nuevos hooks
-  const { profile, loading: profileLoading, updateProfile } = useUserProfile()
-  const { activeDevicesCount, registerCurrentDevice, syncCurrentDevice } = useUserDevices()
+  // Usar los nuevos hooks - solo si tenemos usuario autenticado
+  const { profile, loading: profileLoading, updateProfile, refresh: refreshProfile } = useUserProfile()
 
   // Estados para edición
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [editedProfile, setEditedProfile] = useState({
-    full_name: "",
+    full_name: user?.name || "",
     timezone: "",
   })
 
@@ -44,7 +42,6 @@ export default function ProfileAndSettingsScreen() {
     timezone: "auto",
     use24HourFormat: false,
     notifications: true,
-    autoSync: true,
     language: "es",
     theme: "auto",
   })
@@ -61,17 +58,23 @@ export default function ProfileAndSettingsScreen() {
     }
   }, [profile])
 
-  // Cargar configuraciones guardadas y registrar dispositivo
+  // Cargar configuraciones guardadas
   useEffect(() => {
     loadSettings()
-    registerCurrentDevice() // Registrar dispositivo automáticamente
+    
+    // Cargar perfil manualmente solo si el usuario está autenticado
+    if (user) {
+      refreshProfile().catch((error) => {
+        console.log("Could not load profile from backend:", error)
+      })
+    }
     
     // Actualizar info de zona horaria cada minuto
     const interval = setInterval(() => {
       setTimezoneInfo(getTimezoneInfo())
     }, 60000)
     return () => clearInterval(interval)
-  }, [registerCurrentDevice])
+  }, [refreshProfile, user])
 
   const loadSettings = async () => {
     try {
@@ -79,8 +82,8 @@ export default function ProfileAndSettingsScreen() {
       if (savedSettings) {
         setSettings(JSON.parse(savedSettings))
       }
-    } catch (error) {
-      console.error("Error loading settings:", error)
+    } catch {
+      console.error("Error loading settings")
     }
   }
 
@@ -88,8 +91,6 @@ export default function ProfileAndSettingsScreen() {
     try {
       await AsyncStorage.setItem("app_settings", JSON.stringify(newSettings))
       setSettings(newSettings)
-      // Sincronizar dispositivo cuando cambian las configuraciones
-      await syncCurrentDevice()
     } catch (error) {
       console.error("Error saving settings:", error)
       Alert.alert("Error", "No se pudieron guardar las configuraciones")
@@ -152,7 +153,7 @@ export default function ProfileAndSettingsScreen() {
             try {
               await AsyncStorage.clear()
               Alert.alert("Éxito", "Datos limpiados correctamente")
-            } catch (error) {
+            } catch {
               Alert.alert("Error", "No se pudieron limpiar los datos")
             }
           },
@@ -292,13 +293,13 @@ export default function ProfileAndSettingsScreen() {
                   )}
                 </View>
 
-                {/* Información del dispositivo */}
+                {/* Plan */}
                 <View>
                   <ThemedText variant="bodySmall" color="secondary" style={{ marginBottom: 4 }}>
-                    Dispositivos activos
+                    Plan
                   </ThemedText>
                   <ThemedText variant="body">
-                    {activeDevicesCount} dispositivo{activeDevicesCount !== 1 ? "s" : ""} registrado{activeDevicesCount !== 1 ? "s" : ""}
+                    {profile?.subscription_tier || "No especificado"}
                   </ThemedText>
                 </View>
 
@@ -381,7 +382,7 @@ export default function ProfileAndSettingsScreen() {
                   <View style={{ flex: 1 }}>
                     <ThemedText variant="body">Notificaciones</ThemedText>
                     <ThemedText variant="caption" color="secondary">
-                      Recibir recordatorios de eventos
+                      Recibir recordatorios de eventos (solo en este dispositivo)
                     </ThemedText>
                   </View>
                   <Switch
@@ -389,26 +390,6 @@ export default function ProfileAndSettingsScreen() {
                     onValueChange={(value) => updateSetting("notifications", value)}
                     trackColor={{ false: theme.colors.border, true: theme.colors.primary + "40" }}
                     thumbColor={settings.notifications ? theme.colors.primary : theme.colors.textMuted}
-                  />
-                </View>
-
-                {/* Sincronización automática */}
-                <View style={{ 
-                  flexDirection: "row", 
-                  alignItems: "center", 
-                  justifyContent: "space-between" 
-                }}>
-                  <View style={{ flex: 1 }}>
-                    <ThemedText variant="body">Sincronización automática</ThemedText>
-                    <ThemedText variant="caption" color="secondary">
-                      Sincronizar datos cuando abres la app
-                    </ThemedText>
-                  </View>
-                  <Switch
-                    value={settings.autoSync}
-                    onValueChange={(value) => updateSetting("autoSync", value)}
-                    trackColor={{ false: theme.colors.border, true: theme.colors.primary + "40" }}
-                    thumbColor={settings.autoSync ? theme.colors.primary : theme.colors.textMuted}
                   />
                 </View>
 

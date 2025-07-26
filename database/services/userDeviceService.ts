@@ -39,7 +39,7 @@ export class UserDeviceService {
       const deviceInfo = this.getCurrentDeviceInfo()
       console.log("📱 Registering current device...", deviceInfo)
       
-      const response = await this.apiClient.post<UserDevice>("/user-devices/", deviceInfo)
+      const response = await this.apiClient.post<UserDevice>("/devices/", deviceInfo)
       console.log("✅ Device registered successfully")
       return response
     } catch (error) {
@@ -54,7 +54,7 @@ export class UserDeviceService {
   async getUserDevices(): Promise<UserDevice[]> {
     try {
       console.log("📤 Getting user devices...")
-      const response = await this.apiClient.get<UserDevice[]>("/user-devices/")
+      const response = await this.apiClient.get<UserDevice[]>("/devices/")
       console.log(`✅ Retrieved ${response.length} devices`)
       return response
     } catch (error) {
@@ -69,7 +69,7 @@ export class UserDeviceService {
   async getDevice(deviceId: string): Promise<UserDevice | null> {
     try {
       console.log("📤 Getting device:", deviceId)
-      const response = await this.apiClient.get<UserDevice>(`/user-devices/${deviceId}`)
+      const response = await this.apiClient.get<UserDevice>(`/devices/${deviceId}`)
       console.log("✅ Device retrieved successfully")
       return response
     } catch (error) {
@@ -84,7 +84,7 @@ export class UserDeviceService {
   async updateDevice(deviceId: string, data: UserDeviceUpdate): Promise<UserDevice | null> {
     try {
       console.log("📤 Updating device:", deviceId, data)
-      const response = await this.apiClient.put<UserDevice>(`/user-devices/${deviceId}`, data)
+      const response = await this.apiClient.put<UserDevice>(`/devices/${deviceId}`, data)
       console.log("✅ Device updated successfully")
       return response
     } catch (error) {
@@ -101,7 +101,7 @@ export class UserDeviceService {
       const deviceInfo = this.getCurrentDeviceInfo()
       console.log("🔄 Syncing current device...")
       
-      await this.apiClient.post<any>(`/user-devices/${deviceInfo.device_id}/sync`)
+      await this.apiClient.post<any>(`/devices/${deviceInfo.device_id}/sync`)
       console.log("✅ Device synced successfully")
       return true
     } catch (error) {
@@ -116,7 +116,7 @@ export class UserDeviceService {
   async deactivateDevice(deviceId: string): Promise<boolean> {
     try {
       console.log("📤 Deactivating device:", deviceId)
-      await this.apiClient.delete(`/user-devices/${deviceId}`)
+      await this.apiClient.delete(`/devices/${deviceId}`)
       console.log("✅ Device deactivated successfully")
       return true
     } catch (error) {

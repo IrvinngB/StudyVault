@@ -6,6 +6,8 @@ export interface UserProfile {
   timezone?: string
   created_at: string
   updated_at: string
+  plan?: string
+  subscription_tier?: string
 }
 
 export interface UserProfileCreate {

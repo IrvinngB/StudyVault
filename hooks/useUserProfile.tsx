@@ -1,7 +1,7 @@
 import type { UserDevice, UserProfile, UserProfileUpdate } from "@/database/models/userTypes"
 import { UserDeviceService } from "@/database/services/userDeviceService"
 import { UserProfileService } from "@/database/services/userProfileService"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -16,6 +16,7 @@ export function useUserProfile() {
     setError(null)
     try {
       const result = await profileService.getCurrentUserProfile()
+      console.log("📥 Profile data received:", result);
       setProfile(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error loading profile")
@@ -52,10 +53,11 @@ export function useUserProfile() {
     }
   }, [profileService])
 
-  // Cargar perfil al montar el componente
-  useEffect(() => {
-    loadProfile()
-  }, [loadProfile])
+  // Opcionalmente cargar perfil al montar el componente
+  // Comentado para evitar errores 404 automáticos
+  // useEffect(() => {
+  //   loadProfile()
+  // }, [loadProfile])
 
   return {
     profile,
@@ -142,10 +144,11 @@ export function useUserDevices() {
   // Obtener conteo de dispositivos activos
   const activeDevicesCount = devices.filter(device => device.is_active).length
 
-  // Cargar dispositivos al montar el componente
-  useEffect(() => {
-    loadDevices()
-  }, [loadDevices])
+  // Opcionalmente cargar dispositivos al montar el componente  
+  // Comentado para evitar errores 404 automáticos
+  // useEffect(() => {
+  //   loadDevices()
+  // }, [loadDevices])
 
   return {
     devices,
