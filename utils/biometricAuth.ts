@@ -33,11 +33,19 @@ export async function getCredentials() {
   }
 }
 
-export async function clearCredentials() {
+export async function clearCredentialsIfNeeded(newEmail: string | null) {
   try {
-    await SecureStore.deleteItemAsync(EMAIL_KEY)
-    await SecureStore.deleteItemAsync(PASSWORD_KEY)
-    console.log("Credenciales eliminadas")
+    const currentCredentials = await getCredentials()
+
+    // Si no hay credenciales guardadas, no hacer nada
+    if (!currentCredentials) return
+
+    // Si el nuevo correo es diferente al actual, eliminar credenciales
+    if (newEmail && currentCredentials.email !== newEmail) {
+      await SecureStore.deleteItemAsync(EMAIL_KEY)
+      await SecureStore.deleteItemAsync(PASSWORD_KEY)
+      console.log("Credenciales eliminadas para el usuario anterior.")
+    }
   } catch (error) {
     console.error("Error eliminando credenciales:", error)
   }

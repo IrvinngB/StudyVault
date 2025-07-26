@@ -7,8 +7,9 @@ export function AuthNavigator({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // No redirigir si todavía se está cargando
-    if (isLoading) return;
+    if (isLoading) {
+      return; // No realizar ninguna acción mientras se está cargando
+    }
 
     // Obtener información de la ruta actual
     const isAuthRoute = pathname.startsWith('/(auth)') || pathname.startsWith('/login') || pathname.startsWith('/register');

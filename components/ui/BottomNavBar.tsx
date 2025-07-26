@@ -22,40 +22,16 @@ const navItems: NavItem[] = [
     label: "Inicio",
   },
   {
-    route: "/courses",
-    icon: "book",
-    activeIcon: "book.fill",
-    label: "Cursos",
-  },
-  {
-    route: "/notes",
-    icon: "note.text",
-    activeIcon: "note.text",
-    label: "Notas",
-  },
-  {
     route: "/calendar",
     icon: "calendar",
     activeIcon: "calendar",
     label: "Calendario",
   },
   {
-    route: "/tasks",
-    icon: "checklist",
-    activeIcon: "checklist",
-    label: "Tareas",
-  },
-  {
     route: "/settings/unified",
     icon: "gear",
     activeIcon: "gear.fill",
-    label: "Perfil",
-  },
-  {
-    route: "/thdemes-demo",
-    icon: "person",
-    activeIcon: "person.fill",
-    label: "prototipos",
+    label: "Ajustes",
   },
 ]
 

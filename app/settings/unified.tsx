@@ -1,6 +1,5 @@
 "use client"
 
-import { IconSymbol } from "@/components/ui/IconSymbol"
 import { ThemedButton, ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { ThemeSelector } from "@/components/ui/ThemeSelector"
 import { useAuth } from "@/hooks/useAuth"
@@ -179,10 +178,6 @@ export default function ProfileAndSettingsScreen() {
           justifyContent: "space-between",
           marginTop: 8
         }}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <IconSymbol name="chevron.left" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          <ThemedText variant="h2">Perfil y Configuración</ThemedText>
           <View style={{ width: 24 }} />
         </View>
       </View>

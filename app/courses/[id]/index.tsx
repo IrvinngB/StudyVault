@@ -532,7 +532,6 @@ export default function UnifiedCourseScreen() {
               }
             }}
           />
-          <ThemedButton title="Ver Notas" variant="outline" onPress={() => setActiveTab("notes")} />
         </View>
       </ThemedCard>
 

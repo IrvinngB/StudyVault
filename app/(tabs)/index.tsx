@@ -5,6 +5,7 @@ import { ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedCompon
 import { useGlobalModal } from "@/hooks/ModalProvider"
 import { useAuth } from "@/hooks/useAuth"
 import { useTheme } from "@/hooks/useTheme"
+import { clearCredentialsIfNeeded } from '@/utils/biometricAuth'
 import { router } from "expo-router"
 import { Dimensions, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -31,15 +32,15 @@ export default function HomeScreen() {
       "¿Estás seguro de que quieres cerrar sesión?",
       async () => {
         try {
-          await signOut()
+          const currentEmail = user?.email || null;
+          await signOut();
+          await clearCredentialsIfNeeded(currentEmail);
           router.replace("/(auth)/login")
         } catch (error) {
           console.error("Error al cerrar sesión:", error)
-          router.replace("/(auth)/login")
         }
       },
       () => {
-        // Callback para cancelar - no hacer nada
         console.log("Logout cancelado")
       },
       "Cerrar Sesión",
@@ -62,7 +63,7 @@ export default function HomeScreen() {
       description: "Organiza tus pendientes",
     },
     {
-      title: "Notas",
+      title: "Apuntes",
       icon: "note.text" as const,
       route: "/notes",
       color: theme.colors.accent,

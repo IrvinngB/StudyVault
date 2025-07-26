@@ -9,14 +9,14 @@ import {
 import { useModal } from '@/hooks/modals';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
-import { authenticateBiometric, getCredentials, isBiometricAvailable, saveCredentials } from '@/utils/biometricAuth';
+import { authenticateBiometric, getCredentials, isBiometricAvailable, updateCredentialsIfNeeded } from '@/utils/biometricAuth';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
 export default function LoginScreen() {
   const { theme } = useTheme();
-  const { signIn, isLoading, isAuthenticated } = useAuth();
+  const { signIn, signOut, isLoading, isAuthenticated } = useAuth();
   const { modalProps, showError, showSuccess, showWarning, showInfo } = useModal();
   const [formData, setFormData] = useState({
     email: '',
@@ -37,51 +37,35 @@ export default function LoginScreen() {
   }, [isAuthenticated]);
   // Login normal
   const handleLogin = async () => {
-    // Limpiar errores
-    setErrors({});
-    console.log('🚀 Starting login process');
-
-    // Validaciones básicas
-    const newErrors: { [key: string]: string } = {};
+    setErrors({})
+    const newErrors: { [key: string]: string } = {}
     if (!formData.email.trim()) {
-      newErrors.email = 'El email es requerido';
+      newErrors.email = 'El email es requerido'
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'El email no es válido';
+      newErrors.email = 'El email no es válido'
     }
     if (!formData.password) {
-      newErrors.password = 'La contraseña es requerida';
+      newErrors.password = 'La contraseña es requerida'
     }
     if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
+      setErrors(newErrors)
+      return
     }
     try {
-      console.log('🔑 Signing in with Supabase...');
-      const result = await signIn(
-        formData.email.trim(),
-        formData.password
-      );
+      const result = await signIn(formData.email.trim(), formData.password)
       if (result.success) {
-        // Guardar credenciales para biometría
-        try {
-          await saveCredentials(formData.email.trim(), formData.password);
-        } catch (e) {
-          console.warn('No se pudieron guardar las credenciales para biometría:', e);
-        }
-        console.log('✅ Login successful!');
+        // Actualizar credenciales biométricas con la nueva cuenta
+        await updateCredentialsIfNeeded(formData.email.trim(), formData.password)
         showSuccess('¡Bienvenido de vuelta a StudyVault!', 'Inicio de sesión exitoso');
-        setTimeout(() => router.replace('/(tabs)'), 1200);
+        setTimeout(() => {
+          router.replace('/(tabs)'); // Redirigir después de mostrar el modal
+        }, 1500);
       } else {
-        console.log('❌ Login failed:', result.error);
-        // Mostrar siempre el mensaje real del backend, o uno genérico si no hay
-        showError(
-          result.error || 'Credenciales incorrectas. Verifica tu email y contraseña.',
-          'Error al iniciar sesión'
-        );
+        showError(result.error || 'Credenciales incorrectas. Verifica tu email y contraseña.', 'Error al iniciar sesión')
       }
     } catch (error) {
-      console.error('💥 Login error:', error);
-      showError('No se pudo conectar con el servidor. Verifica tu conexión a internet.', 'Error de conexión');
+      console.error('Error al iniciar sesión:', error)
+      showError('No se pudo conectar con el servidor. Verifica tu conexión a internet.', 'Error de conexión')
     }
   };
 
@@ -114,7 +98,18 @@ export default function LoginScreen() {
     }
   };
 
-
+  const handleLogout = async () => {
+    try {
+      const currentEmail = formData.email.trim();
+      await signOut(); // Lógica para cerrar sesión
+      // Eliminar credenciales solo si es necesario
+      showSuccess('Has cerrado sesión correctamente.', 'Sesión cerrada');
+      setTimeout(() => router.replace('/login'), 1200);
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      showError('No se pudo cerrar sesión. Intenta nuevamente.', 'Error al cerrar sesión');
+    }
+  };
 
   return (
     <>

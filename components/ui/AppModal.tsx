@@ -1,15 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
-    Animated,
-    BackHandler,
-    Dimensions,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Animated,
+  BackHandler,
+  Dimensions,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 export type ModalType = 'error' | 'warning' | 'info' | 'success' | 'confirm';
@@ -92,6 +92,28 @@ export const AppModal: React.FC<AppModalProps> = ({
 
   const config = typeConfig[type];
 
+  // Mover handleClose antes del useEffect
+  const handleClose = useCallback(() => {
+    // Evitar múltiples llamadas al cierre
+    if (!visible) return;
+
+    // Animar salida
+    Animated.parallel([
+      Animated.timing(scaleAnim, {
+        toValue: 0.8,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+    });
+  }, [visible, scaleAnim, opacityAnim, onClose]);
+
   useEffect(() => {
     if (visible) {
       // Animate in
@@ -116,9 +138,8 @@ export const AppModal: React.FC<AppModalProps> = ({
 
       // Auto close timer
       if (autoClose && autoClose > 0) {
-        autoCloseTimer.current = setTimeout((): NodeJS.Timeout => {
+        autoCloseTimer.current = setTimeout(() => {
           handleClose();
-          return autoCloseTimer.current as NodeJS.Timeout;
         }, autoClose);
       }
 
@@ -141,40 +162,41 @@ export const AppModal: React.FC<AppModalProps> = ({
         clearTimeout(autoCloseTimer.current);
       }
     }
-  }, [visible]);
+  }, [visible, autoClose, handleClose, opacityAnim, scaleAnim, slideAnim]);
 
-  const handleClose = () => {
-    // Animate out
-    Animated.parallel([
-      Animated.timing(scaleAnim, {
-        toValue: 0.8,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onClose();
-    });
-  };
+  useEffect(() => {
+    if (!visible) {
+      // Reset animations and clear timers when modal is not visible
+      scaleAnim.setValue(0);
+      opacityAnim.setValue(0);
+      slideAnim.setValue(50);
+
+      if (autoCloseTimer.current) {
+        clearTimeout(autoCloseTimer.current);
+        autoCloseTimer.current = null;
+      }
+    }
+
+    return () => {
+      // Cleanup on unmount or visibility change
+      if (autoCloseTimer.current) {
+        clearTimeout(autoCloseTimer.current);
+      }
+    };
+  }, [visible, autoClose, handleClose, opacityAnim, scaleAnim, slideAnim]);
 
   const handleConfirm = () => {
     if (onConfirm) {
       onConfirm();
-    } else {
-      handleClose();
     }
+    handleClose(); // Asegurar que el modal se cierre después de confirmar
   };
 
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
-    } else {
-      handleClose();
     }
+    handleClose(); // Asegurar que el modal se cierre después de cancelar
   };
 
   const displayTitle = title || config.defaultTitle;
@@ -308,7 +330,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // iconEmoji eliminado
   title: {
     fontSize: 20,
     fontWeight: '700',
