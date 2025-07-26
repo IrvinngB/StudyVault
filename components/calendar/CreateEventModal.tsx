@@ -206,23 +206,49 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
       // Programar notificación si el campo de recordatorio tiene un valor válido Y NO es un evento tipo clase
       if (reminderMinutes > 0 && eventType !== "class") {
+        // Crear la fecha local para la notificación (NO UTC)
+        const [year, month, day] = selectedDate.split("-").map(Number)
+        const localEventDateTime = new Date(
+          year,
+          month - 1,
+          day,
+          startTime.getHours(),
+          startTime.getMinutes(),
+          startTime.getSeconds()
+        )
+
+        // Verificar que el evento esté en el futuro
+        const now = new Date()
+        if (localEventDateTime <= now) {
+          console.warn("⚠️ Evento programado en el pasado, no se creará notificación")
+        } else {
           const notificationData = {
             userId: user?.id || "unknown-user",
             title,
             body: description || "Evento programado",
-            date: startDateTimeString,
+            date: localEventDateTime, // Usar fecha local en lugar de UTC
             minutosAntes: reminderMinutes,
             type: "calendar",
-        };
+          };
 
-        try {
-          await scheduleCalendarNotification(notificationData);
-          console.log("✅ Notificación programada exitosamente:", notificationData);
-        } catch (error) {
-          console.error("❌ Error al programar la notificación:", error);
-          // No mostrar alerta al usuario cuando falla la notificación,
-          // ya que el evento se creó correctamente
-          console.log("⚠️ No se pudo crear la notificación, pero el evento se creó correctamente");
+          console.log("📅 Datos de notificación:", {
+            fechaSeleccionada: selectedDate,
+            horaInicio: startTime.toLocaleTimeString(),
+            eventoLocal: localEventDateTime.toLocaleString(),
+            minutosAntes: reminderMinutes,
+            horaNotificacion: new Date(localEventDateTime.getTime() - reminderMinutes * 60000).toLocaleString(),
+            ahora: now.toLocaleString()
+          });
+
+          try {
+            await scheduleCalendarNotification(notificationData);
+            console.log("✅ Notificación programada exitosamente");
+          } catch (error) {
+            console.error("❌ Error al programar la notificación:", error);
+            // No mostrar alerta al usuario cuando falla la notificación,
+            // ya que el evento se creó correctamente
+            console.log("⚠️ No se pudo crear la notificación, pero el evento se creó correctamente");
+          }
         }
       } else if (eventType === "class") {
         console.log("📚 No se programó notificación porque es un evento tipo clase.");

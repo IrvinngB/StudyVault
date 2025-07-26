@@ -26,7 +26,7 @@ export default function HomeScreen() {
 
   const userName = user?.email?.split("@")[0] || "Estudiante"
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     showConfirm(
       "¿Estás seguro de que quieres cerrar sesión?",
       async () => {
@@ -38,7 +38,10 @@ export default function HomeScreen() {
           router.replace("/(auth)/login")
         }
       },
-      undefined,
+      () => {
+        // Callback para cancelar - no hacer nada
+        console.log("Logout cancelado")
+      },
       "Cerrar Sesión",
     )
   }
@@ -83,18 +86,15 @@ export default function HomeScreen() {
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <ThemedView variant="background" style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
             justifyContent: "center",
             paddingHorizontal: theme.spacing.md,
-            paddingTop: theme.spacing.md, // Espaciado superior ajustado
-            paddingBottom: insets.bottom || theme.spacing.xs, // Reducir aún más el espaciado inferior
+            paddingTop: theme.spacing.md,
+            paddingBottom: insets.bottom || theme.spacing.xs,
           }}
           showsVerticalScrollIndicator={false}
         >

@@ -46,10 +46,10 @@ const navItems: NavItem[] = [
     label: "Tareas",
   },
   {
-    route: "/settings",
+    route: "/settings/unified",
     icon: "gear",
     activeIcon: "gear.fill",
-    label: "Ajustes",
+    label: "Perfil",
   },
   {
     route: "/thdemes-demo",
@@ -89,7 +89,7 @@ export function BottomNavBar() {
             >
               <View style={styles.iconContainer}>
                 <IconSymbol
-                  name={active ? item.activeIcon : item.icon}
+                  name={active ? (item.activeIcon as any) : (item.icon as any)}
                   size={24}
                   color={active ? theme.colors.primary : theme.colors.textMuted}
                 />
