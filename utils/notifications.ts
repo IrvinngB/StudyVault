@@ -1,0 +1,183 @@
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+
+export async function requestNotificationPermission() {
+  const { status } = await Notifications.getPermissionsAsync();
+  if (status !== 'granted') {
+    const { status: newStatus } = await Notifications.requestPermissionsAsync();
+    return newStatus === 'granted';
+  }
+  return true;
+}
+
+// Función para guardar notificaciones usando el endpoint
+async function saveNotificationToDatabase({ userId, title, message, scheduledFor, type }: { userId: string; title: string; message: string; scheduledFor: Date; type: string }) {
+  try {
+    // Importar ApiClient para usar la configuración correcta de la API
+    const { ApiClient } = await import('../database/api/client');
+    const apiClient = ApiClient.getInstance();
+    
+    const notificationData = {
+      title,
+      message,
+      scheduled_for: scheduledFor.toISOString(),
+      type,
+      // No necesitamos incluir user_id ya que el backend lo asigna automáticamente
+      // basándose en el token de autenticación
+    };
+
+    console.log('📤 Enviando notificación a la API:', notificationData);
+    const response = await apiClient.post<any>('/notifications/', notificationData);
+
+    if (response && response.success && response.data) {
+      console.log('✅ Notification saved via API:', response.data.id || response.data);
+      return response.data;
+    } else {
+      const errorDetails = response ? response.error : 'Unknown error';
+      console.error('❌ API response error:', errorDetails);
+      return null;
+    }
+  } catch (error) {
+    console.error('❌ Failed to save notification via API:', error);
+    // No lanzamos el error para evitar que falle la creación del evento
+    // si falla la creación de la notificación
+    return null;
+  }
+}
+
+// Programa una notificación local para un evento de calendario
+// Puedes especificar minutosAntes para que la notificación se dispare antes del evento
+export async function scheduleCalendarNotification({ userId, title, body, date, minutosAntes = 0, type = 'calendar' }: { userId: string; title: string; body: string; date: Date | string; minutosAntes?: number; type?: string }) {
+  let localNotificationId = null;
+  
+  try {
+    // Asegurarnos de que estamos trabajando con objetos Date adecuados
+    const fechaEvento = new Date(date);
+    
+    // Calcular cuándo debe notificarse (X minutos antes del evento)
+    const fechaNotificacion = new Date(fechaEvento.getTime() - (minutosAntes * 60000));
+    
+    // Verificar si la fecha de notificación ya pasó
+    const now = new Date();
+    if (fechaNotificacion <= now) {
+      console.warn(`⚠️ Notification scheduled for past time:`, {
+        now: now.toLocaleString(),
+        eventTime: fechaEvento.toLocaleString(),
+        notificationTime: fechaNotificacion.toLocaleString(),
+        minutesBeforeEvent: minutosAntes,
+        minutesDifference: Math.round((fechaNotificacion.getTime() - now.getTime()) / 60000)
+      });
+      
+      // Si la hora ya pasó, podemos enviar una notificación inmediata si el evento aún no ha ocurrido
+      if (fechaEvento > now) {
+        console.log(`⚠️ Sending immediate notification instead as event hasn't occurred yet`);
+        // Configuramos la notificación para 3 segundos en el futuro (casi inmediata)
+        fechaNotificacion.setTime(now.getTime() + 3000);
+      } else {
+        console.log(`⚠️ Event already passed, skipping notification`);
+        return null;
+      }
+    }
+
+    console.log(`📱 Scheduling notification:`);
+    console.log(`- Title: ${title}`);
+    console.log(`- Event time: ${fechaEvento.toLocaleString()}`);
+    console.log(`- Reminder minutes: ${minutosAntes}`);
+    console.log(`- Notification time: ${fechaNotificacion.toLocaleString()}`);
+    console.log(`- Time until notification: ${Math.round((fechaNotificacion.getTime() - now.getTime()) / 60000)} minutes`);
+
+    // Primero programamos la notificación local (esto debe funcionar incluso sin conexión)
+    // Aseguramos que la fecha es un objeto Date válido
+    const triggerDate = new Date(fechaNotificacion);
+    
+    console.log(`📆 Scheduling notification for exact time:`, {
+      rawDate: fechaNotificacion,
+      triggerDateISOString: triggerDate.toISOString(),
+      triggerDateLocaleString: triggerDate.toLocaleString(),
+      currentTime: new Date().toLocaleString(),
+      timeDifference: `${Math.round((triggerDate.getTime() - new Date().getTime()) / 60000)} minutes from now`
+    });
+    
+    // Convertir el contenido a 'any' para poder añadir las propiedades sin errores de tipo
+    const notificationContent: any = {
+      title,
+      body,
+      sound: 'default',
+      priority: 'high',
+      vibrate: [0, 250, 250, 250],
+      // Corrigiendo advertencia de deprecación - estas propiedades están disponibles en expo-notifications
+      // pero TypeScript no las reconoce correctamente
+      shouldShowBanner: true,
+      shouldShowList: true,
+      data: { 
+        eventDate: fechaEvento.toISOString(),
+        scheduledFor: triggerDate.toISOString() // Guardar también la hora programada
+      },
+    };
+
+    localNotificationId = await Notifications.scheduleNotificationAsync({
+      content: notificationContent,
+      trigger: {
+        type: 'datetime',
+        date: triggerDate,
+        ...(Platform.OS === 'android' ? { channelId: 'calendar-reminders' } : {}),
+      } as any, // 'as any' para evitar error de tipado, seguro en Expo
+    });
+
+    console.log(`✅ Local notification scheduled with ID: ${localNotificationId}`);
+
+    // Luego intentamos guardar en la base de datos (esto puede fallar si no hay conexión)
+    try {
+      const dbResult = await saveNotificationToDatabase({
+        userId,
+        title,
+        message: body,
+        scheduledFor: fechaNotificacion,
+        type,
+      });
+      
+      if (dbResult) {
+        console.log('✅ Remote notification record created in database');
+      } else {
+        console.warn('⚠️ Failed to create remote notification record, but local notification was scheduled');
+      }
+    } catch (dbError) {
+      // Si falla el guardado en la BD, no afecta la notificación local
+      console.warn('⚠️ Could not save notification to database, but local notification was scheduled:', dbError);
+    }
+
+    return localNotificationId;
+  } catch (error) {
+    console.error('❌ Failed to schedule notification:', error);
+    
+    // Si ya habíamos creado la notificación local pero falló otra parte, no lanzamos el error
+    if (localNotificationId) {
+      console.log('⚠️ Error in notification process, but local notification was scheduled');
+      return localNotificationId;
+    }
+    
+    // Solo lanzamos el error si falló la creación de la notificación local
+    throw error;
+  }
+}
+
+export async function setupAndroidChannel() {
+  if (Platform.OS === 'android') {
+    try {
+      await Notifications.setNotificationChannelAsync('calendar-reminders', {
+        name: 'Calendar Reminders',
+        description: 'Notificaciones de recordatorio para eventos del calendario',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+      });
+      console.log('✅ Android notification channel setup complete');
+    } catch (error) {
+      console.error('❌ Failed to set up Android notification channel:', error);
+      throw error;
+    }
+  }
+}
