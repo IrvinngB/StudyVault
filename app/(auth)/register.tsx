@@ -71,9 +71,13 @@ export default function RegisterScreen() {
       if (result.success) {
         console.log('✅ Registration successful!');
         showSuccess(
-          `¡Bienvenido ${formData.name}! Tu cuenta ha sido creada exitosamente. Revisa tu email para confirmar tu cuenta.`,
+          `¡Bienvenido ${formData.name}! Tu cuenta ha sido creada exitosamente. Revisa tu email para confirmar tu cuenta antes de iniciar sesión. El enlace se abrirá automáticamente en esta app.`,
           'Registro exitoso',
-          () => router.replace('/(tabs)')
+          () => router.replace('/login')
+        );
+        showSuccess(
+          'Te hemos enviado un correo para confirmar tu email. Por favor, revisa tu bandeja de entrada.',
+          'Registro exitoso'
         );
       } else {
         console.log('❌ Registration failed:', result.error);
