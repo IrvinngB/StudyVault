@@ -1,6 +1,7 @@
 import {
   ThemedCard,
-  ThemedText
+  ThemedText,
+  ThemedButton
 } from '@/components/ui/ThemedComponents';
 import { ClassData } from '@/database/services/courseService';
 import { useTheme } from '@/hooks/useTheme';
@@ -42,12 +43,10 @@ export default function CourseCard({ course }: CourseCardProps) {
     }
   };
 
-  // Validación de datos para prevenir errores
   if (!course || !course.name) {
     return null;
   }
 
-  // Asegurar que todos los valores son strings válidos
   const courseName = String(course.name || '');
   const courseCode = course.code ? String(course.code) : '';
   const courseSemester = course.semester ? String(course.semester) : '';
@@ -249,7 +248,7 @@ export default function CourseCard({ course }: CourseCardProps) {
           </View>
         </View>
 
-        {/* Description preview (if available) */}
+        {/* Description preview */}
         {courseDescription && courseDescription.length > 0 && (
           <View style={{ 
             marginTop: theme.spacing.sm,
@@ -269,6 +268,20 @@ export default function CourseCard({ course }: CourseCardProps) {
             </ThemedText>
           </View>
         )}
+
+        {/* 👉 Botón para ver calificaciones */}
+        <ThemedButton
+          title="Ver calificaciones"
+          variant="outline"
+          onPress={() => {
+            if (course.id) {
+              router.push(`/grades/${course.id}` as any);
+            } else {
+              Alert.alert('Error', 'No se puede acceder a las calificaciones.');
+            }
+          }}
+          style={{ marginTop: theme.spacing.md }}
+        />
       </ThemedCard>
     </TouchableOpacity>
   );
