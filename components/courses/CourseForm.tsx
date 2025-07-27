@@ -1,298 +1,331 @@
-import { AppModal } from '@/components/ui/AppModal';
-import {
-  ThemedButton,
-  ThemedCard,
-  ThemedInput,
-  ThemedText,
-  ThemedView
-} from '@/components/ui/ThemedComponents';
-import { classService, CreateClassRequest } from '@/database/services/courseService';
-import { useModal } from '@/hooks/modals';
-import { useTheme } from '@/hooks/useTheme';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+"use client"
 
-interface CourseFormData {
-  name: string;
-  code?: string;
-  instructor?: string;
-  color: string;
-  credits?: number;
-  semester?: string;
-  description?: string;
-  syllabus_url?: string;
-  is_active: boolean;
-}
+import { AppModal } from "@/components/ui/AppModal"
+import { IconSymbol } from "@/components/ui/IconSymbol"
+import { ThemedButton, ThemedCard, ThemedInput, ThemedText } from "@/components/ui/ThemedComponents"
+import { classService, type CreateClassRequest } from "@/database/services/courseService"
+import { useModal } from "@/hooks/modals"
+import { useTheme } from "@/hooks/useTheme"
+import { useState } from "react"
+import { ScrollView, Switch, TouchableOpacity, View } from "react-native"
 
 interface CourseFormProps {
-  onSuccess?: (courseId: string) => void;
+  onSuccess?: (courseId: string) => void
 }
 
-const defaultCourse: CourseFormData = {
-  name: '',
-  code: '',
-  instructor: '',
-  color: '#3B82F6',
-  credits: undefined,
-  semester: '2025-1',
-  description: '',
-  syllabus_url: '',
-  is_active: true
-};
-
-const courseColors = [
-  '#3B82F6', '#EF4444', '#10B981', '#F59E0B',
-  '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
-];
-
 export default function CourseForm({ onSuccess }: CourseFormProps) {
-  const { theme } = useTheme();
-  const { modalProps, showInfo, showSuccess, showError } = useModal();
-  const [formData, setFormData] = useState<CourseFormData>(defaultCourse);
-  const [errors, setErrors] = useState<{[key: string]: string | undefined}>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { theme } = useTheme()
+  const { modalProps, showError, showSuccess } = useModal()
 
-  const handleChange = (field: keyof CourseFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-    }
-  };
+  // Estados del formulario
+  const [courseName, setCourseName] = useState("")
+  const [courseCode, setCourseCode] = useState("")
+  const [instructor, setInstructor] = useState("")
+  const [description, setDescription] = useState("")
+  const [credits, setCredits] = useState("")
+  const [semester, setSemester] = useState("")
+  const [syllabusUrl, setSyllabusUrl] = useState("")
+  const [isActive, setIsActive] = useState(true)
+  const [selectedColor, setSelectedColor] = useState(theme.colors.primary)
+  const [loading, setLoading] = useState(false)
+
+  // Colores predefinidos mejorados
+  const colorOptions = [
+    { color: "#2196F3", name: "Azul" },
+    { color: "#4CAF50", name: "Verde" },
+    { color: "#FF9800", name: "Naranja" },
+    { color: "#9C27B0", name: "Púrpura" },
+    { color: "#F44336", name: "Rojo" },
+    { color: "#00BCD4", name: "Cian" },
+    { color: "#795548", name: "Marrón" },
+    { color: "#E91E63", name: "Rosa" },
+    { color: "#607D8B", name: "Azul Gris" },
+    { color: "#8BC34A", name: "Verde Claro" },
+    { color: "#FFC107", name: "Ámbar" },
+    { color: "#3F51B5", name: "Índigo" },
+  ]
 
   const validateForm = (): boolean => {
-    const newErrors: {[key: string]: string | undefined} = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'El nombre del curso es requerido';
+    if (!courseName.trim()) {
+      showError("El nombre del curso es obligatorio.", "Error de validación")
+      return false
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    if (credits && credits.trim() && isNaN(Number(credits))) {
+      showError("Los créditos deben ser un número válido.", "Error de validación")
+      return false
+    }
 
-  const showSyllabusInfo = () => {
-    showInfo(
-      'Es el enlace donde tu universidad publica la información del curso:\n\n' +
-      '• eCampus (UTP)\n' +
-      '• Microsoft Teams\n' +
-      '• Google Classroom\n' +
-      '• Moodle\n\n' +
-      'Ahí encontrarás tareas, material de clase, calificaciones y anuncios del profesor.',
-      '📚 ¿Qué es el Aula Virtual?'
-    );
-  };
+    if (syllabusUrl && syllabusUrl.trim()) {
+      const urlToValidate = syllabusUrl.trim()
+      const isValidUrl =
+        urlToValidate.startsWith("http://") || urlToValidate.startsWith("https://") || urlToValidate.includes(".")
+
+      if (!isValidUrl) {
+        showError("La URL del aula virtual no es válida.", "Error de validación")
+        return false
+      }
+    }
+
+    return true
+  }
 
   const handleSubmit = async () => {
-    if (!validateForm()) return;
-    
-    setIsSubmitting(true);
+    if (!validateForm()) return
+
     try {
-      console.log('🚀 INICIANDO CREACIÓN DE CURSO');
-      console.log('📋 Form data:', formData);
-      
-      // Preparar datos siguiendo el patrón correcto - solo enviar campos con valor
-      const courseDataToCreate: CreateClassRequest = {
-        name: formData.name.trim(),
-        ...(formData.code?.trim() && { code: formData.code.trim() }),
-        ...(formData.instructor?.trim() && { instructor: formData.instructor.trim() }),
-        color: formData.color,
-        ...(formData.credits && { credits: formData.credits }),
-        ...(formData.semester?.trim() && { semester: formData.semester.trim() }),
-        ...(formData.description?.trim() && { description: formData.description.trim() }),
-        ...(formData.syllabus_url?.trim() && { syllabus_url: formData.syllabus_url.trim() }),
-        is_active: formData.is_active
-      };
-      
-      console.log('📤 Data to send to API:', courseDataToCreate);
-      
-      const newCourse = await classService.createClass(courseDataToCreate);
-      
-      if (newCourse) {
-        console.log('✅ Curso creado exitosamente:', newCourse);
-        showSuccess(
-          `El curso "${newCourse.name}" ha sido creado correctamente.`,
-          '🎉 ¡Éxito!',
-          () => {
-            if (onSuccess && newCourse.id) {
-              onSuccess(newCourse.id);
-            } else {
-              router.back();
-            }
-          }
-        );
-        
-        // Reset form
-        setFormData(defaultCourse);
-        setErrors({});
+      setLoading(true)
+
+      const courseData: CreateClassRequest = {
+        name: courseName.trim(),
+        code: courseCode.trim() || undefined,
+        instructor: instructor.trim() || undefined,
+        description: description.trim() || undefined,
+        credits: credits && !isNaN(Number(credits)) ? Number(credits) : undefined,
+        semester: semester.trim() || undefined,
+        syllabus_url: syllabusUrl.trim() || undefined,
+        color: selectedColor,
+        is_active: isActive,
       }
+
+      const newCourse = await classService.createClass(courseData)
+
+      showSuccess(`"${courseName}" ha sido creado exitosamente.`, "✅ Curso Creado", () => {
+        if (onSuccess && newCourse.id) {
+          onSuccess(newCourse.id)
+        }
+      })
+
+      // Limpiar formulario
+      resetForm()
     } catch (error) {
-      console.error('❌ Error al crear el curso:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      
-      showError(`No se pudo crear el curso: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido"
+      showError(`No se pudo crear el curso: ${errorMessage}`, "Error")
     } finally {
-      setIsSubmitting(false);
+      setLoading(false)
     }
-  };
+  }
+
+  const resetForm = () => {
+    setCourseName("")
+    setCourseCode("")
+    setInstructor("")
+    setDescription("")
+    setCredits("")
+    setSemester("")
+    setSyllabusUrl("")
+    setIsActive(true)
+    setSelectedColor(theme.colors.primary)
+  }
 
   return (
-    <ThemedView>
-      <ThemedCard variant="elevated" padding="large">
-        {/* Header */}
-        <View style={{ marginBottom: theme.spacing.xl }}>
-          <ThemedText variant="h1" color="primary" style={{ marginBottom: theme.spacing.xs }}>
-            📚 Nuevo Curso
-          </ThemedText>
-          <ThemedText variant="body" color="secondary">
-            Completa la información de tu nueva materia
+    <ScrollView showsVerticalScrollIndicator={false}>
+      {/* Header */}
+      <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+          <View
+            style={{
+              width: 50,
+              height: 50,
+              backgroundColor: selectedColor,
+              borderRadius: theme.borderRadius.lg,
+              marginRight: theme.spacing.md,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <ThemedText variant="h2" style={{ color: "white", fontWeight: "bold" }}>
+              {courseName.charAt(0).toUpperCase() || "C"}
+            </ThemedText>
+          </View>
+          <View style={{ flex: 1 }}>
+            <ThemedText variant="h1" style={{ color: theme.colors.primary }}>
+              Nuevo Curso
+            </ThemedText>
+            <ThemedText variant="body" color="secondary">
+              Completa la información del curso
+            </ThemedText>
+          </View>
+        </View>
+      </ThemedCard>
+
+      {/* Información Básica */}
+      <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+          <IconSymbol name="doc.text" size={24} color={theme.colors.primary} />
+          <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, color: theme.colors.primary }}>
+            Información Básica
           </ThemedText>
         </View>
 
-        {/* Form Fields */}
-        <View style={{ gap: theme.spacing.md }}>
-          <ThemedInput
-            label="Nombre del curso *"
-            placeholder="Ej: Introducción a la Programación"
-            value={formData.name}
-            onChangeText={(value) => handleChange('name', value)}
-            error={errors.name}
-          />
+        <ThemedInput
+          label="Nombre del Curso *"
+          value={courseName}
+          onChangeText={setCourseName}
+          placeholder="Ej: Cálculo Diferencial"
+          style={{ marginBottom: theme.spacing.md }}
+        />
 
-          <ThemedInput
-            label="Código del curso"
-            placeholder="Ej: CS101"
-            value={formData.code || ''}
-            onChangeText={(value) => handleChange('code', value)}
-          />
+        <ThemedInput
+          label="Código del Curso"
+          value={courseCode}
+          onChangeText={setCourseCode}
+          placeholder="Ej: MAT101"
+          style={{ marginBottom: theme.spacing.md }}
+        />
 
-          <ThemedInput
-            label="Semestre"
-            placeholder="Ej: 2025-1"
-            value={formData.semester || ''}
-            onChangeText={(value) => handleChange('semester', value)}
-          />
+        <ThemedInput
+          label="Profesor/Instructor"
+          value={instructor}
+          onChangeText={setInstructor}
+          placeholder="Ej: Dr. Juan Pérez"
+          style={{ marginBottom: theme.spacing.md }}
+        />
 
-          <ThemedInput
-            label="Profesor"
-            placeholder="Nombre del profesor"
-            value={formData.instructor || ''}
-            onChangeText={(value) => handleChange('instructor', value)}
-          />
+        <ThemedInput
+          label="Descripción"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Descripción breve del curso..."
+          multiline
+          numberOfLines={3}
+        />
+      </ThemedCard>
 
-          <ThemedInput
-            label="Créditos"
-            placeholder="3"
-            value={formData.credits?.toString() || ''}
-            onChangeText={(value) => handleChange('credits', value ? parseFloat(value) : undefined)}
-            keyboardType="numeric"
-          />
+      {/* Detalles Académicos */}
+      <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+          <IconSymbol name="graduationcap" size={24} color={theme.colors.primary} />
+          <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, color: theme.colors.primary }}>
+            Detalles Académicos
+          </ThemedText>
+        </View>
 
-          {/* Color Selector */}
-          <View>
-            <ThemedText variant="bodySmall" color="secondary" style={{ marginBottom: theme.spacing.sm }}>
-              Color del curso
-            </ThemedText>
-            <View style={{ 
-              flexDirection: 'row', 
-              flexWrap: 'wrap', 
-              gap: theme.spacing.sm 
-            }}>
-              {courseColors.map((color) => (
-                <ThemedButton
-                  key={color}
-                  title=""
-                  variant={formData.color === color ? "primary" : "outline"}
-                  onPress={() => handleChange('color', color)}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    backgroundColor: color,
-                    borderColor: formData.color === color ? theme.colors.primary : color,
-                    borderWidth: 2,
-                    borderRadius: theme.borderRadius.sm
-                  }}
-                />
-              ))}
-            </View>
-          </View>
-
-          <ThemedInput
-            label="Descripción"
-            placeholder="Detalles sobre el curso..."
-            value={formData.description || ''}
-            onChangeText={(value) => handleChange('description', value)}
-            multiline
-            numberOfLines={3}
-          />
-
-          {/* Syllabus URL with Info Button */}
-          <View>
-            <View style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              marginBottom: theme.spacing.sm 
-            }}>
-              <ThemedText variant="bodySmall" color="secondary" style={{ flex: 1 }}>
-                Enlace del Aula Virtual
-              </ThemedText>
-              <TouchableOpacity
-                onPress={showSyllabusInfo}
-                style={{
-                  backgroundColor: theme.colors.primary,
-                  borderRadius: 12,
-                  width: 24,
-                  height: 24,
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}
-              >
-                <ThemedText 
-                  variant="caption" 
-                  color="primary" 
-                  style={{ fontWeight: 'bold' }}
-                >
-                  ?
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
+        <View style={{ flexDirection: "row", gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
+          <View style={{ flex: 1 }}>
             <ThemedInput
-              placeholder="eCampus, Teams, Classroom..."
-              value={formData.syllabus_url || ''}
-              onChangeText={(value) => handleChange('syllabus_url', value)}
-              keyboardType="url"
-              autoCapitalize="none"
+              label="Créditos"
+              value={credits}
+              onChangeText={setCredits}
+              placeholder="3"
+              keyboardType="numeric"
+            />
+          </View>
+          <View style={{ flex: 2 }}>
+            <ThemedInput
+              label="Semestre/Período"
+              value={semester}
+              onChangeText={setSemester}
+              placeholder="2024-1, Otoño 2024"
             />
           </View>
         </View>
 
-        {/* Action Buttons */}
-        <View style={{ 
-          flexDirection: 'row', 
-          justifyContent: 'space-between',
-          marginTop: theme.spacing.xl,
-          gap: theme.spacing.md
-        }}>
-          <ThemedButton
-            title="Cancelar"
-            variant="outline"
-            onPress={() => router.back()}
-            style={{ flex: 1 }}
-            disabled={isSubmitting}
-          />
-          <ThemedButton
-            title={isSubmitting ? "Creando..." : "Crear Curso"}
-            variant="primary"
-            onPress={handleSubmit}
-            loading={isSubmitting}
-            disabled={isSubmitting}
-            style={{ flex: 1 }}
+        <ThemedInput
+          label="URL del Aula Virtual"
+          value={syllabusUrl}
+          onChangeText={setSyllabusUrl}
+          placeholder="https://classroom.example.com"
+          keyboardType="url"
+          autoCapitalize="none"
+          style={{ marginBottom: theme.spacing.md }}
+        />
+
+        {/* Estado Activo */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingTop: theme.spacing.md,
+            borderTopWidth: 1,
+            borderTopColor: theme.colors.border,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <ThemedText variant="body" style={{ fontWeight: "600" }}>
+              Curso Activo
+            </ThemedText>
+            <ThemedText variant="caption" color="secondary">
+              Los cursos inactivos no aparecerán en listas principales
+            </ThemedText>
+          </View>
+
+          <Switch
+            value={isActive}
+            onValueChange={setIsActive}
+            trackColor={{
+              false: theme.colors.border,
+              true: theme.colors.primary + "40",
+            }}
+            thumbColor={isActive ? theme.colors.primary : theme.colors.secondary}
           />
         </View>
       </ThemedCard>
 
+      {/* Selección de Color */}
+      <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+          <IconSymbol name="paintbrush" size={24} color={theme.colors.primary} />
+          <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, color: theme.colors.primary }}>
+            Color del Curso
+          </ThemedText>
+        </View>
+
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: theme.spacing.sm,
+          }}
+        >
+          {colorOptions.map((option) => (
+            <TouchableOpacity
+              key={option.color}
+              onPress={() => setSelectedColor(option.color)}
+              style={{
+                width: 50,
+                height: 50,
+                borderRadius: theme.borderRadius.md,
+                backgroundColor: option.color,
+                justifyContent: "center",
+                alignItems: "center",
+                borderWidth: selectedColor === option.color ? 3 : 0,
+                borderColor: theme.colors.primary,
+                shadowColor: option.color,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 3,
+              }}
+            >
+              {selectedColor === option.color && <IconSymbol name="checkmark" size={24} color="white" />}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ThemedCard>
+
+      {/* Botones de Acción */}
+      <View style={{ gap: theme.spacing.sm, marginBottom: theme.spacing.xl }}>
+        <ThemedButton
+          title={loading ? "Creando curso..." : "Crear Curso"}
+          variant="primary"
+          size="large"
+          onPress={handleSubmit}
+          disabled={loading}
+          icon={!loading ? <IconSymbol name="plus" size={18} color="white" /> : undefined}
+        />
+
+        <ThemedButton
+          title="Limpiar Formulario"
+          variant="outline"
+          size="large"
+          onPress={resetForm}
+          disabled={loading}
+        />
+      </View>
+
       <AppModal {...modalProps} />
-    </ThemedView>
-  );
+    </ScrollView>
+  )
 }
