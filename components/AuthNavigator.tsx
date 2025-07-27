@@ -12,7 +12,7 @@ export function AuthNavigator({ children }: { children: React.ReactNode }) {
     }
 
     // Rutas de autenticación
-    const isAuthRoute = pathname.startsWith('/(auth)') || pathname.startsWith('/login') || pathname.startsWith('/register');
+    const isAuthRoute = pathname.startsWith('/(auth)') || pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/forgot-password') || pathname.startsWith('/confirm-email') || pathname.startsWith('/update-password');
 
     // Si está autenticado y está en auth, redirigir a tabs
     if (isAuthenticated && isAuthRoute) {
