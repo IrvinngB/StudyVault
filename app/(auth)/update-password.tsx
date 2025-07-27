@@ -31,7 +31,15 @@ export default function UpdatePasswordScreen() {
   }>({ accessToken: null, refreshToken: null });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+
   useEffect(() => {
+    // Revisar el tipo de acción en el deep link
+    if (params?.type === 'signup') {
+      // Si es signup, redirigir al login
+      router.replace('/login' as any);
+      return;
+    }
+    // Si es recovery, continuar con el flujo normal
     validateRecoveryTokens();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
