@@ -1,5 +1,6 @@
 import type { CalendarEvent, CalendarEventFilters, CreateCalendarEventRequest, UpdateCalendarEventRequest } from '@/database/models/calendarTypes';
 import { calendarService } from '@/database/services';
+import { useAuth } from '@/hooks/useAuth';
 import { useCallback, useEffect, useState } from 'react';
 
 // Hook para gestión de calendario - actualizado para usar calendarService
@@ -24,6 +25,9 @@ export interface UseCalendarReturn {
 }
 
 export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarReturn => {
+  // Get authenticated user for notifications
+  const { user } = useAuth();
+  
   // Estado del calendario
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,7 +84,7 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
         
         // Schedule notification for the event using reminder_minutes
         // Note: Notifications are disabled in Expo Go since SDK 53
-        if (eventData.reminder_minutes && eventData.reminder_minutes > 0 && !__DEV__) {
+        if (eventData.reminder_minutes && eventData.reminder_minutes > 0 && !__DEV__ && user?.id) {
           try {
             // Import at the top of the file
             const { requestNotificationPermission, scheduleCalendarNotification, setupAndroidChannel } = await import('@/utils/notifications');
@@ -92,6 +96,7 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
             const hasPermission = await requestNotificationPermission();
             if (hasPermission) {
               await scheduleCalendarNotification({
+                userId: user.id,
                 title: `Recordatorio: ${eventData.title}`,
                 body: eventData.description || 'Evento próximo a comenzar',
                 date: eventData.start_datetime,
@@ -137,7 +142,7 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
         
         // Update notification for the event if reminder_minutes is set
         // Note: Notifications are disabled in Expo Go since SDK 53
-        if (eventData.reminder_minutes !== undefined && eventData.reminder_minutes > 0 && eventData.start_datetime && !__DEV__) {
+        if (eventData.reminder_minutes !== undefined && eventData.reminder_minutes > 0 && eventData.start_datetime && !__DEV__ && user?.id) {
           try {
             // Import at the top of the file
             const { requestNotificationPermission, scheduleCalendarNotification, setupAndroidChannel } = await import('@/utils/notifications');
@@ -149,6 +154,7 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
             const hasPermission = await requestNotificationPermission();
             if (hasPermission) {
               await scheduleCalendarNotification({
+                userId: user.id,
                 title: `Recordatorio: ${response.data.title}`,
                 body: response.data.description || 'Evento próximo a comenzar',
                 date: response.data.start_datetime,
