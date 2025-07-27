@@ -20,6 +20,15 @@ export interface CalendarWithGrades {
   user_id: string
   created_at: string
   updated_at: string
+  task_title?: string
+  task_description?: string
+  // Campos extra del API para compatibilidad
+  title?: string
+  description?: string
+  grade_title?: string
+  grade_description?: string
+  class?: string
+  classcode?: string
 }
 
 export interface GradeByCategory {
@@ -220,12 +229,16 @@ class TasksService {
     const now = new Date()
     const eventDate = new Date(item.end_datetime || item.start_datetime)
 
-    // Use value or grade_value if present for status
-    let status: "pending" | "completed" | "overdue" | "in_progress" = this.determineTaskStatus(item, eventDate, now);
-    if (typeof (item as any).value !== "undefined") {
-      status = (item as any).value === 1 ? "pending" : "completed";
-    } else if (typeof (item as any).grade_value !== "undefined") {
-      status = (item as any).grade_value === 1 ? "pending" : "completed";
+    // Usar value o grade_value para status: 1 = in_progress, 0 = completed
+    let status: "in_progress" | "completed" | "overdue";
+    if (typeof (item as any).value !== "undefined" && (item as any).value !== null) {
+      status = (item as any).value === 1 ? "in_progress" : "completed";
+    } else if (typeof (item as any).grade_value !== "undefined" && (item as any).grade_value !== null) {
+      status = (item as any).grade_value === 1 ? "in_progress" : "completed";
+    } else {
+      // fallback a la lógica previa
+      const calc = this.determineTaskStatus(item, eventDate, now);
+      status = calc === "overdue" ? "overdue" : "in_progress";
     }
 
     return {
@@ -259,28 +272,32 @@ class TasksService {
     const now = new Date()
     const eventDate = new Date(item.end_datetime || item.start_datetime)
 
-    // Use value or grade_value if present for status
-    let status: "pending" | "completed" | "overdue" | "in_progress" = this.determineTaskStatusFromGrades(item, eventDate, now);
-    if (typeof (item as any).value !== "undefined") {
-      status = (item as any).value === 1 ? "pending" : "completed";
-    } else if (typeof (item as any).grade_value !== "undefined") {
-      status = (item as any).grade_value === 1 ? "pending" : "completed";
+    // Usar value o grade_value para status: 1 = in_progress, 0 = completed
+    let status: "in_progress" | "completed" | "overdue";
+    if (typeof (item as any).value !== "undefined" && (item as any).value !== null) {
+      status = (item as any).value === 1 ? "in_progress" : "completed";
+    } else if (typeof (item as any).grade_value !== "undefined" && (item as any).grade_value !== null) {
+      status = (item as any).grade_value === 1 ? "in_progress" : "completed";
+    } else {
+      // fallback a la lógica previa
+      const calc = this.determineTaskStatusFromGrades(item, eventDate, now);
+      status = calc === "overdue" ? "overdue" : "in_progress";
     }
 
     return {
       calendar_event_id: item.calendar_event_id,
-      event_title: item.event_title,
+      event_title: item.event_title || item.title || item.grade_title || "",
       start_datetime: item.start_datetime,
       end_datetime: item.end_datetime,
       event_type: item.event_type,
-      event_description: item.event_description,
+      event_description: item.event_description || item.description || item.grade_description || "",
       location: item.location,
       class_id: item.class_id,
-      class_name: item.class_name,
-      class_code: item.class_code,
+      class_name: item.class_name || item.class || item.class_id || "",
+      class_code: item.class_code || item.classcode || "",
       task_id: item.calendar_event_id,
-      task_title: item.event_title,
-      task_description: item.event_description,
+      task_title: item.task_title || item.title || item.grade_title || item.event_title || "",
+      task_description: item.task_description || item.description || item.grade_description || item.event_description || "",
       due_date: item.end_datetime,
       status,
       completion_percentage: status === "completed" ? 100 : this.calculateCompletionPercentage(eventDate, now),

@@ -44,12 +44,12 @@ export default function TasksScreen() {
   const filteredAndSortedTasks = useMemo(() => {
     let filtered = [...tasks]
 
-    // Aplicar filtro local adicional si es necesario
+    // Solo filtrar por status si no es 'all'
     if (activeFilter !== "all") {
       filtered = filtered.filter((task) => task.status === activeFilter)
     }
 
-    // Aplicar ordenamiento
+    // Ordenar
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "due_date":
@@ -224,62 +224,42 @@ export default function TasksScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshTasks} />}
       >
-        {/* Header */}
-        <ThemedView style={{ marginBottom: theme.spacing.lg }}>
-          <ThemedText variant="h1" style={{ marginBottom: theme.spacing.sm }}>
+        {/* Header Mejorado */}
+        <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+          <ThemedText variant="h1" style={{ textAlign: "center", marginBottom: theme.spacing.xs }}>
             📋 Mis Tareas
           </ThemedText>
-          <ThemedText variant="body" color="secondary">
+          <ThemedText variant="body" color="secondary" style={{ textAlign: "center" }}>
             Gestiona tus tareas, eventos y calificaciones
           </ThemedText>
-        </ThemedView>
+        </ThemedCard>
 
-        {/* Stats Cards */}
+        {/* Stats Cards Mejoradas */}
         {stats && (
-          <ThemedView
-            style={{
-              flexDirection: "row",
-              gap: theme.spacing.sm,
-              marginBottom: theme.spacing.lg,
-              flexWrap: "wrap",
-            }}
-          >
-            <ThemedCard variant="elevated" padding="small" style={{ flex: 1, minWidth: 80 }}>
-              <ThemedText variant="h2" style={{ textAlign: "center", color: theme.colors.primary }}>
-                {stats.total}
-              </ThemedText>
-              <ThemedText variant="caption" color="secondary" style={{ textAlign: "center" }}>
-                Total
-              </ThemedText>
-            </ThemedCard>
-
-            <ThemedCard variant="elevated" padding="small" style={{ flex: 1, minWidth: 80 }}>
-              <ThemedText variant="h2" style={{ textAlign: "center", color: theme.colors.success }}>
-                {stats.completed}
-              </ThemedText>
-              <ThemedText variant="caption" color="secondary" style={{ textAlign: "center" }}>
-                Completadas
-              </ThemedText>
-            </ThemedCard>
-
-            <ThemedCard variant="elevated" padding="small" style={{ flex: 1, minWidth: 80 }}>
-              <ThemedText variant="h2" style={{ textAlign: "center", color: theme.colors.warning }}>
-                {stats.in_progress}
-              </ThemedText>
-              <ThemedText variant="caption" color="secondary" style={{ textAlign: "center" }}>
-                En Progreso
-              </ThemedText>
-            </ThemedCard>
-
-            <ThemedCard variant="elevated" padding="small" style={{ flex: 1, minWidth: 80 }}>
-              <ThemedText variant="h2" style={{ textAlign: "center", color: theme.colors.error }}>
-                {stats.overdue}
-              </ThemedText>
-              <ThemedText variant="caption" color="secondary" style={{ textAlign: "center" }}>
-                Atrasadas
-              </ThemedText>
-            </ThemedCard>
-          </ThemedView>
+          <ThemedCard variant="outlined" padding="medium" style={{ marginBottom: theme.spacing.lg }}>
+            <ThemedView style={{ flexDirection: "row", gap: theme.spacing.md, flexWrap: "wrap", justifyContent: "space-between" }}>
+              <ThemedView style={{ alignItems: "center", flex: 1 }}>
+                <Ionicons name="list" size={28} color={theme.colors.primary} />
+                <ThemedText variant="h2" style={{ color: theme.colors.primary }}>{stats.total}</ThemedText>
+                <ThemedText variant="caption" color="secondary">Total</ThemedText>
+              </ThemedView>
+              <ThemedView style={{ alignItems: "center", flex: 1 }}>
+                <Ionicons name="checkmark-circle" size={28} color={theme.colors.success} />
+                <ThemedText variant="h2" style={{ color: theme.colors.success }}>{stats.completed}</ThemedText>
+                <ThemedText variant="caption" color="secondary">Completadas</ThemedText>
+              </ThemedView>
+              <ThemedView style={{ alignItems: "center", flex: 1 }}>
+                <Ionicons name="play" size={28} color={theme.colors.warning} />
+                <ThemedText variant="h2" style={{ color: theme.colors.warning }}>{stats.in_progress}</ThemedText>
+                <ThemedText variant="caption" color="secondary">En Progreso</ThemedText>
+              </ThemedView>
+              <ThemedView style={{ alignItems: "center", flex: 1 }}>
+                <Ionicons name="alert-circle" size={28} color={theme.colors.error} />
+                <ThemedText variant="h2" style={{ color: theme.colors.error }}>{stats.overdue}</ThemedText>
+                <ThemedText variant="caption" color="secondary">Atrasadas</ThemedText>
+              </ThemedView>
+            </ThemedView>
+          </ThemedCard>
         )}
 
         {/* Filters */}
@@ -394,23 +374,19 @@ export default function TasksScreen() {
                         color={theme.colors.primary}
                         style={{ marginRight: theme.spacing.xs }}
                       />
-                      <ThemedText variant="h3" style={{ flex: 1 }}>
-                        {task.event_title}
+                      <ThemedText variant="h3" style={{ flex: 1 }} numberOfLines={2}>
+                        {/* Always show the title, prefer task_title, fallback to event_title */}
+                        {task.task_title || task.event_title || "(Sin título)"}
                       </ThemedText>
                     </ThemedView>
-
-                    {task.class_name && (
+                    {/* Always show the subject if available */}
+                    {/* Show class_name only if it looks like a name, not a UUID */}
+                    {task.class_name && !/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(task.class_name) && (
                       <ThemedText variant="bodySmall" color="secondary" style={{ marginBottom: theme.spacing.xs }}>
-                        📚 {task.class_name} {task.class_code && `(${task.class_code})`}
+                        📚 {task.class_name} {task.class_code ? `(${task.class_code})` : ""}
                       </ThemedText>
                     )}
-
-                    {task.task_title && task.task_title !== task.event_title && (
-                      <ThemedText variant="body" style={{ marginBottom: theme.spacing.xs }}>
-                        {task.task_title}
-                      </ThemedText>
-                    )}
-
+                    {/* Show description if available */}
                     {task.task_description && (
                       <ThemedText variant="bodySmall" color="secondary" style={{ marginBottom: theme.spacing.xs }}>
                         {task.task_description}
@@ -572,14 +548,7 @@ export default function TasksScreen() {
                     />
                   )}
 
-                  <ThemedButton
-                    title="Eliminar"
-                    variant="ghost"
-                    size="small"
-                    icon={<Ionicons name="trash" size={16} color={theme.colors.error} />}
-                    onPress={() => handleDeleteTask(task)}
-                    style={{ minWidth: 100 }}
-                  />
+                  {/* Eliminar botón de eliminar */}
                 </ThemedView>
               </ThemedCard>
             ))
