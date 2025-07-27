@@ -15,6 +15,7 @@ export interface GradeData {
   graded_at?: string
   created_at: string
   updated_at?: string
+  value?: number
 }
 
 export interface CreateGradeRequest {
@@ -27,6 +28,7 @@ export interface CreateGradeRequest {
   calendar_event_id?: string
   event_type?: string
   graded_at?: string
+  value?: number // 1=activa/incompleta, 0=completada
 }
 
 export interface UpdateGradeRequest extends Partial<CreateGradeRequest> {}
@@ -43,6 +45,8 @@ class GradesService {
    */
   async createGrade(gradeData: CreateGradeRequest): Promise<GradeData> {
     try {
+      // Siempre enviar value: 1 si no está definido
+      const valueToSend = gradeData.value !== undefined && gradeData.value !== null ? gradeData.value : 1;
       const payload = {
         class_id: gradeData.class_id,
         category_id: gradeData.category_id,
@@ -53,6 +57,7 @@ class GradesService {
         ...(gradeData.calendar_event_id && { calendar_event_id: gradeData.calendar_event_id }),
         ...(gradeData.event_type && { event_type: gradeData.event_type }),
         ...(gradeData.graded_at && { graded_at: gradeData.graded_at }),
+        value: valueToSend,
       }
 
       console.log('🟡 GradesService: Enviando payload de creación', payload)

@@ -6,9 +6,9 @@ import { FloatingActionButton } from "@/components/ui/FloatingActionButton"
 import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { EVENT_TYPES_CONFIG } from "@/constants/Calendar"
 import type {
-  CalendarEvent,
-  CreateCalendarEventRequest,
-  UpdateCalendarEventRequest,
+    CalendarEvent,
+    CreateCalendarEventRequest,
+    UpdateCalendarEventRequest,
 } from "@/database/models/calendarTypes"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useClasses } from "@/hooks/useClasses"
@@ -201,6 +201,7 @@ export default function CalendarScreen() {
   }
 
   // Handle event creation
+  // Modificado: retorna el evento creado (con id)
   const handleCreateEvent = async (eventData: CreateCalendarEventRequest) => {
     const result = await createEvent(eventData)
     if (!result) {
@@ -209,6 +210,7 @@ export default function CalendarScreen() {
     // Refrescar eventos para el mes actual después de crear uno nuevo
     const { start, end } = getMonthRange(year, month)
     await fetchEventsForDateRange(start, end)
+    return result;
   }
 
   // Handle event update

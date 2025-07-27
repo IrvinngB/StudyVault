@@ -4,8 +4,10 @@ import { ClassSelector } from "@/components/calendar/ClassSelector"
 import { IconSymbol } from "@/components/ui/IconSymbol"
 import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { EVENT_TYPES_CONFIG, REMINDER_OPTIONS } from "@/constants/Calendar"
-import type { CreateCalendarEventRequest, EventType } from "@/database/models/calendarTypes"
+import type { CalendarEvent, CreateCalendarEventRequest, EventType } from "@/database/models/calendarTypes"
 import type { ClassData } from "@/database/services"
+import { CategoryGradeData, categoryService } from "@/database/services/categoryService"
+import { gradesService } from "@/database/services/gradesService"
 import { useAuth } from "@/hooks/useAuth"
 import { useTheme } from "@/hooks/useTheme"
 import { scheduleCalendarNotification } from "@/utils/notifications"
@@ -19,7 +21,7 @@ import DateTimePickerModal from "react-native-modal-datetime-picker"
 interface CreateEventModalProps {
   visible: boolean
   onClose: () => void
-  onCreateEvent: (eventData: CreateCalendarEventRequest) => Promise<void>
+  onCreateEvent: (eventData: CreateCalendarEventRequest) => Promise<CalendarEvent>
   selectedDate: string // YYYY-MM-DD format
 }
 
@@ -142,6 +144,40 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     onClose()
   }
 
+  // Crea una calificación automática para el evento (si aplica)
+  const createAutoGrade = async (eventId: string | undefined, classId: string, eventTitle: string, eventType: string) => {
+    try {
+      // Obtener categorías de la clase
+      let categories: CategoryGradeData[] = []
+      if (classId) {
+        categories = await categoryService.getCategoriesByClassId(classId)
+      }
+      let categoryId = categories.length > 0 ? categories[0].id : null
+      // Si no hay categoría, crear una por defecto
+      if (!categoryId && classId) {
+        const defaultCategory = await categoryService.createCategory({ class_id: classId, name: "General", percentage: 100 })
+        categoryId = defaultCategory.id
+      }
+      if (!categoryId) return // No se puede crear calificación sin categoría
+      // Crear la calificación con score 0 y max_score 0 por defecto
+      await gradesService.createGrade({
+        class_id: classId,
+        category_id: categoryId,
+        title: eventTitle,
+        score: 0,
+        max_score: 0,
+        ...(eventId && { calendar_event_id: eventId }),
+        event_type: eventType,
+        value: 1 // 1 = incompleta/activa por defecto
+      })
+    } catch (err) {
+      console.error("Error creando calificación automática:", err)
+    }
+  }
+
+
+  // Nota: onCreateEvent no retorna el id del evento creado actualmente. Si se requiere, modificar la función para retornarlo.
+
   const handleSubmit = async () => {
     if (!title.trim()) {
       Alert.alert("Error", "El título es requerido")
@@ -202,7 +238,15 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
       console.log("🚀 FINAL EVENT DATA:", JSON.stringify(eventData, null, 2))
 
-      await onCreateEvent(eventData)
+
+      // Crear el evento y obtener el id (si lo retorna)
+      // Crear el evento (no se puede obtener el id del evento creado por ahora)
+      const createdEvent = await onCreateEvent(eventData)
+
+      // Si el evento NO es de tipo 'class', crear calificación automática
+      if (eventType !== "class" && selectedClass?.id) {
+        await createAutoGrade(createdEvent?.id, selectedClass.id, title.trim(), eventType)
+      }
 
       // Programar notificación si el campo de recordatorio tiene un valor válido Y NO es un evento tipo clase
       if (reminderMinutes > 0 && eventType !== "class") {
