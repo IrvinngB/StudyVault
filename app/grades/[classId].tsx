@@ -1,24 +1,25 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
-import { FlatList, RefreshControl, Alert, View } from "react-native"
+import { ThemedButton, ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useLocalSearchParams } from "expo-router"
-import { ThemedView, ThemedText, ThemedButton, ThemedCard } from "@/components/ui/ThemedComponents"
+import React, { useEffect, useState } from "react"
+import { Alert, FlatList, RefreshControl, View } from "react-native"
 
-import AddCategoryForm from "@/components/grades/Forms/AddCategoryForm"
 import CategoryCard from "@/components/grades/Cards/CategoryCard"
-import GradeScaleSelector from "@/components/grades/GradeScaleSelector"
 import CourseHeaderCard from "@/components/grades/Cards/CourseHeaderCard"
 import GradeSummaryCard from "@/components/grades/Cards/GradeSummaryCard"
+import { CategoryManagerModal } from "@/components/grades/CategoryManagerModal"
+import AddCategoryForm from "@/components/grades/Forms/AddCategoryForm"
+import GradeScaleSelector from "@/components/grades/GradeScaleSelector"
 
-import { classService } from "@/database/services/courseService"
-import { gradesService } from "@/database/services/gradesService"
-import { categoryService } from "@/database/services/categoryService"
 import type { CategoryGradeData } from "@/database/services/categoryService"
+import { categoryService } from "@/database/services/categoryService"
+import { classService } from "@/database/services/courseService"
 import type { GradeData } from "@/database/services/gradesService"
-import { calculateWeightedGrade } from "@/utils/calculateGrade"
+import { gradesService } from "@/database/services/gradesService"
 import { useTheme } from "@/hooks/useTheme"
+import { calculateWeightedGrade } from "@/utils/calculateGrade"
 
 export default function GradesByCategoryScreen() {
   const { classId } = useLocalSearchParams<{ classId: string }>()
@@ -37,6 +38,7 @@ export default function GradesByCategoryScreen() {
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [showCategoryManager, setShowCategoryManager] = useState(false)
 
   useEffect(() => {
     if (classId) loadScale()
@@ -95,6 +97,13 @@ export default function GradesByCategoryScreen() {
   const handleNewCategory = (cat: CategoryGradeData) => {
     setCategories(prev => [...prev, cat])
     setShowForm(false)
+  }
+
+  const handleCategoriesUpdated = (updatedCategories: CategoryGradeData[]) => {
+    setCategories(updatedCategories)
+    // Recalcular promedio con las nuevas categorías
+    const promedio = calculateWeightedGrade(evaluaciones, updatedCategories, defaultMaxScore!)
+    setNotaActual(promedio)
   }
 
   const handleScaleSelect = async (scale: number) => {
@@ -165,15 +174,24 @@ export default function GradesByCategoryScreen() {
                   </ThemedCard>
                 )}
 
-                {!showForm ? (
-                  mostrarBoton && (
+                <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginBottom: theme.spacing.md }}>
+                  <ThemedButton
+                    title="Gestión Inteligente"
+                    variant="primary"
+                    onPress={() => setShowCategoryManager(true)}
+                    style={{ flex: 1 }}
+                  />
+                  {mostrarBoton && (
                     <ThemedButton
-                      title="Agregar nueva categoría"
-                      variant="primary"
+                      title="Nueva Categoría"
+                      variant="outline"
                       onPress={() => setShowForm(true)}
+                      style={{ flex: 1 }}
                     />
-                  )
-                ) : (
+                  )}
+                </View>
+
+                {showForm && (
                   <AddCategoryForm
                     classId={classId}
                     onSuccess={handleNewCategory}
@@ -224,6 +242,14 @@ export default function GradesByCategoryScreen() {
         }
 
         contentContainerStyle={{ padding: 16 }}
+      />
+
+      {/* Modal de gestión inteligente de categorías */}
+      <CategoryManagerModal
+        visible={showCategoryManager}
+        classId={classId}
+        onClose={() => setShowCategoryManager(false)}
+        onCategoriesUpdated={handleCategoriesUpdated}
       />
     </ThemedView>
   )
