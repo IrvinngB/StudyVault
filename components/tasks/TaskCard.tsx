@@ -197,21 +197,6 @@ export function TaskCard({ task, onToggleCompletion }: TaskCardProps) {
                 {formatDate(task.due_date || task.start_datetime)}
               </ThemedText>
             </ThemedView>
-
-            <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
-              <Ionicons name="time" size={14} color={theme.colors.primary} />
-              <ThemedText
-                variant="caption"
-                color="primary"
-                style={{
-                  fontSize: 12,
-                  marginLeft: 4,
-                  opacity: isCompleted ? 0.6 : 1,
-                }}
-              >
-                {getEstimatedTime()}
-              </ThemedText>
-            </ThemedView>
           </ThemedView>
         </ThemedView>
       </ThemedView>

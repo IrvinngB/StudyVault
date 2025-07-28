@@ -15,7 +15,7 @@ interface TasksListProps {
 export function TasksList({ tasks, loading, onToggleTaskCompletion, activeTab }: TasksListProps) {
   const { theme } = useTheme()
 
-  // Filter tasks based on active tab
+  // Filtrar por tab
   const filteredTasks = tasks.filter((task) => {
     if (activeTab === "exams") {
       return task.event_type === "exam" || task.event_type === "quiz"
@@ -23,7 +23,13 @@ export function TasksList({ tasks, loading, onToggleTaskCompletion, activeTab }:
     return task.event_type !== "exam" && task.event_type !== "quiz"
   })
 
-  const pendingTasks = filteredTasks.filter((task) => task.status !== "completed")
+  // Ordenar: pendientes primero, completadas al final
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    if (a.status === "completed" && b.status !== "completed") return 1
+    if (a.status !== "completed" && b.status === "completed") return -1
+    // Si ambos son iguales, ordenar por fecha
+    return new Date(a.due_date || a.start_datetime).getTime() - new Date(b.due_date || b.start_datetime).getTime()
+  })
 
   if (loading) {
     return (
@@ -46,11 +52,11 @@ export function TasksList({ tasks, loading, onToggleTaskCompletion, activeTab }:
           marginBottom: theme.spacing.md,
         }}
       >
-        Pendientes ({pendingTasks.length})
+        Tareas ({sortedTasks.length})
       </ThemedText>
 
       {/* Tasks List */}
-      {pendingTasks.length === 0 ? (
+      {sortedTasks.length === 0 ? (
         <ThemedView
           variant="surface"
           style={{
@@ -69,11 +75,11 @@ export function TasksList({ tasks, loading, onToggleTaskCompletion, activeTab }:
               fontSize: 16,
             }}
           >
-            {activeTab === "exams" ? "No tienes exámenes pendientes" : "¡Todas las tareas completadas!"}
+            {activeTab === "exams" ? "No tienes exámenes" : "No tienes tareas"}
           </ThemedText>
         </ThemedView>
       ) : (
-        pendingTasks.map((task, index) => (
+        sortedTasks.map((task, index) => (
           <TaskCard
             key={task.task_id || task.calendar_event_id || index}
             task={task}

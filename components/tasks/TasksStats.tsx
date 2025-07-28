@@ -30,13 +30,6 @@ export function TasksStatsComponent({ stats, estimatedHours = 12 }: TasksStatsPr
       label: "Completadas",
       backgroundColor: theme.isDark ? theme.colors.surface : "#F0FFF4",
     },
-    {
-      icon: "time",
-      iconColor: theme.colors.info,
-      value: `${estimatedHours}h`,
-      label: "Estimadas",
-      backgroundColor: theme.isDark ? theme.colors.surface : "#F0F8FF",
-    },
   ]
 
   return (

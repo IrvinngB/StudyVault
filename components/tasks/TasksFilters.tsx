@@ -4,7 +4,7 @@ import { ThemedButton, ThemedView } from "@/components/ui/ThemedComponents"
 import { useTheme } from "@/hooks/useTheme"
 import { TextInput } from "react-native"
 
-type FilterType = "all" | "pending" | "in_progress" | "completed" | "overdue"
+type FilterType = "all" | "pending" | "completed" | "in_progress" | "overdue"
 type SortType = "due_date" | "priority" | "class" | "completion"
 
 interface TasksFiltersProps {
@@ -47,6 +47,7 @@ export function TasksFilters({
           marginBottom: theme.spacing.md,
           color: theme.colors.text,
         }}
+        placeholderTextColor={theme.colors.textMuted}
       />
 
       {/* Filter Buttons */}

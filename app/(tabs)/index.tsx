@@ -5,6 +5,7 @@ import { ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedCompon
 import { AVAILABLE_AVATARS } from "@/database/models/userTypes"
 import { useGlobalModal } from "@/hooks/ModalProvider"
 import { useAuth } from "@/hooks/useAuth"
+import { useClasses } from "@/hooks/useClasses"
 import { useTasks } from "@/hooks/useTasks"
 import { useTheme } from "@/hooks/useTheme"
 import { useUserProfile } from "@/hooks/useUserProfile"
@@ -19,16 +20,7 @@ const { width } = Dimensions.get("window")
 interface DailyStats {
   tasksCompleted: number
   totalTasks: number
-  studyHours: number
-  focusPercentage: number
   streak: number
-}
-
-interface WeeklyProgress {
-  studyGoal: number // hours
-  studyAchieved: number
-  tasksGoal: number
-  tasksCompleted: number
 }
 
 export default function HomeScreen() {
@@ -36,30 +28,18 @@ export default function HomeScreen() {
   const { signOut, user } = useAuth()
   const { showConfirm } = useGlobalModal()
   const { tasks } = useTasks()
+  const { classes } = useClasses()
   const insets = useSafeAreaInsets()
   const { profile } = useUserProfile()
 
   const [dailyStats, setDailyStats] = useState<DailyStats>({
     tasksCompleted: 0,
     totalTasks: 0,
-    studyHours: 0,
-    focusPercentage: 0,
     streak: 0,
   })
 
-  const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress>({
-    studyGoal: 35,
-    studyAchieved: 28,
-    tasksGoal: 15,
-    tasksCompleted: 12,
-  })
-
-  const [showStreakAchievement, setShowStreakAchievement] = useState(false)
-
   useEffect(() => {
     calculateDailyStats()
-    calculateWeeklyProgress()
-    checkStreakAchievements()
   }, [tasks])
 
   const calculateDailyStats = () => {
@@ -77,15 +57,9 @@ export default function HomeScreen() {
     // Calculate streak - days without overdue tasks
     const streak = calculateStreak()
 
-    // Simulate study hours and focus (these would come from real tracking)
-    const studyHours = Math.random() * 2 + 3 // 3-5 hours
-    const focusPercentage = Math.round(Math.random() * 15 + 80) // 80-95%
-
     setDailyStats({
       tasksCompleted: completedTasks.length,
       totalTasks: todayTasks.length,
-      studyHours: Math.round(studyHours * 10) / 10,
-      focusPercentage,
       streak,
     })
   }
@@ -122,40 +96,6 @@ export default function HomeScreen() {
     }
 
     return streak
-  }
-
-  const calculateWeeklyProgress = () => {
-    const today = new Date()
-    const weekStart = new Date(today)
-    weekStart.setDate(today.getDate() - today.getDay()) // Start of week
-
-    const weekTasks = tasks.filter((task) => {
-      const taskDate = new Date(task.due_date || task.start_datetime)
-      return taskDate >= weekStart && taskDate <= today
-    })
-
-    const completedWeekTasks = weekTasks.filter((task) => task.status === "completed")
-
-    // Simulate study hours achieved this week
-    const studyAchieved = Math.round((Math.random() * 10 + 25) * 10) / 10 // 25-35 hours
-
-    setWeeklyProgress({
-      studyGoal: 35,
-      studyAchieved,
-      tasksGoal: 15,
-      tasksCompleted: completedWeekTasks.length,
-    })
-  }
-
-  const checkStreakAchievements = () => {
-    const streak = calculateStreak()
-    const milestones = [7, 14, 30, 60, 100]
-
-    // Check if user just hit a milestone
-    if (milestones.includes(streak)) {
-      setShowStreakAchievement(true)
-      setTimeout(() => setShowStreakAchievement(false), 5000)
-    }
   }
 
   const getGreeting = () => {
@@ -199,12 +139,27 @@ export default function HomeScreen() {
     )
   }
 
+  // Get upcoming tasks with proper class names
   const upcomingTasks = tasks
-    .filter((task) => task.status !== "completed")
+    .filter((task) => {
+      // Si value=1 es activa, value=0 es completada/inactiva
+      if (typeof task.value !== "undefined") {
+        return task.value === 1
+      }
+      return task.status !== "completed"
+    })
     .sort(
       (a, b) => new Date(a.due_date || a.start_datetime).getTime() - new Date(b.due_date || b.start_datetime).getTime(),
     )
     .slice(0, 3)
+    .map((task) => {
+      // Find the class name from classes array
+      const taskClass = classes.find((cls) => cls.id === task.class_id)
+      return {
+        ...task,
+        class_name: taskClass?.name || "Sin materia",
+      }
+    })
 
   const navigateTo = (route: string) => {
     try {
@@ -318,37 +273,10 @@ export default function HomeScreen() {
                 <IconSymbol name="checkmark.circle" size={24} color={theme.colors.success} />
               </View>
               <ThemedText variant="caption" color="secondary" style={{ marginBottom: 4 }}>
-                Tareas
+                Tareas Hoy
               </ThemedText>
               <ThemedText variant="h2" style={{ fontWeight: "700" }}>
                 {dailyStats.tasksCompleted}/{dailyStats.totalTasks}
-              </ThemedText>
-            </ThemedCard>
-
-            {/* Study Hours */}
-            <ThemedCard
-              variant="outlined"
-              padding="medium"
-              style={{
-                width: (width - theme.spacing.md * 2 - theme.spacing.sm) / 2,
-                alignItems: "center",
-              }}
-            >
-              <View
-                style={{
-                  backgroundColor: theme.colors.info + "20",
-                  padding: theme.spacing.sm,
-                  borderRadius: theme.borderRadius.full,
-                  marginBottom: theme.spacing.sm,
-                }}
-              >
-                <IconSymbol name="clock" size={24} color={theme.colors.info} />
-              </View>
-              <ThemedText variant="caption" color="secondary" style={{ marginBottom: 4 }}>
-                Horas hoy
-              </ThemedText>
-              <ThemedText variant="h2" style={{ fontWeight: "700" }}>
-                {dailyStats.studyHours}h
               </ThemedText>
             </ThemedCard>
 
@@ -378,153 +306,7 @@ export default function HomeScreen() {
                 {dailyStats.streak} días
               </ThemedText>
             </ThemedCard>
-
-            {/* Focus */}
-            <ThemedCard
-              variant="outlined"
-              padding="medium"
-              style={{
-                width: (width - theme.spacing.md * 2 - theme.spacing.sm) / 2,
-                alignItems: "center",
-              }}
-            >
-              <View
-                style={{
-                  backgroundColor: theme.colors.accent + "20",
-                  padding: theme.spacing.sm,
-                  borderRadius: theme.borderRadius.full,
-                  marginBottom: theme.spacing.sm,
-                }}
-              >
-                <IconSymbol name="target" size={24} color={theme.colors.accent} />
-              </View>
-              <ThemedText variant="caption" color="secondary" style={{ marginBottom: 4 }}>
-                Enfoque
-              </ThemedText>
-              <ThemedText variant="h2" style={{ fontWeight: "700" }}>
-                {dailyStats.focusPercentage}%
-              </ThemedText>
-            </ThemedCard>
           </ThemedView>
-
-          {/* Weekly Progress */}
-          <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
-            <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
-              <IconSymbol name="chart.line.uptrend.xyaxis" size={24} color={theme.colors.primary} />
-              <ThemedText
-                variant="h2"
-                style={{
-                  marginLeft: theme.spacing.sm,
-                  fontWeight: "700",
-                }}
-              >
-                Progreso Semanal
-              </ThemedText>
-            </ThemedView>
-
-            {/* Study Goal */}
-            <ThemedView style={{ marginBottom: theme.spacing.md }}>
-              <ThemedView
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: theme.spacing.xs,
-                }}
-              >
-                <ThemedText variant="body">Meta de estudio</ThemedText>
-                <ThemedText variant="body" style={{ fontWeight: "600" }}>
-                  {weeklyProgress.studyAchieved}/{weeklyProgress.studyGoal} horas
-                </ThemedText>
-              </ThemedView>
-              <View
-                style={{
-                  height: 8,
-                  backgroundColor: theme.colors.border,
-                  borderRadius: 4,
-                  overflow: "hidden",
-                }}
-              >
-                <View
-                  style={{
-                    height: "100%",
-                    width: `${Math.min(100, (weeklyProgress.studyAchieved / weeklyProgress.studyGoal) * 100)}%`,
-                    backgroundColor: theme.colors.primary,
-                    borderRadius: 4,
-                  }}
-                />
-              </View>
-            </ThemedView>
-
-            {/* Tasks Goal */}
-            <ThemedView>
-              <ThemedView
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: theme.spacing.xs,
-                }}
-              >
-                <ThemedText variant="body">Tareas completadas</ThemedText>
-                <ThemedText variant="body" style={{ fontWeight: "600" }}>
-                  {weeklyProgress.tasksCompleted}/{weeklyProgress.tasksGoal}
-                </ThemedText>
-              </ThemedView>
-              <View
-                style={{
-                  height: 8,
-                  backgroundColor: theme.colors.border,
-                  borderRadius: 4,
-                  overflow: "hidden",
-                }}
-              >
-                <View
-                  style={{
-                    height: "100%",
-                    width: `${Math.min(100, (weeklyProgress.tasksCompleted / weeklyProgress.tasksGoal) * 100)}%`,
-                    backgroundColor: theme.colors.success,
-                    borderRadius: 4,
-                  }}
-                />
-              </View>
-            </ThemedView>
-          </ThemedCard>
-
-          {/* Streak Achievement */}
-          {showStreakAchievement && (
-            <ThemedCard
-              variant="elevated"
-              padding="large"
-              style={{
-                backgroundColor: theme.colors.accent + "20",
-                borderLeftWidth: 4,
-                borderLeftColor: theme.colors.accent,
-                marginBottom: theme.spacing.lg,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <View
-                  style={{
-                    backgroundColor: theme.colors.accent + "30",
-                    padding: theme.spacing.md,
-                    borderRadius: theme.borderRadius.full,
-                    marginRight: theme.spacing.md,
-                  }}
-                >
-                  <IconSymbol name="trophy" size={28} color={theme.colors.accent} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <ThemedText variant="h3" style={{ fontWeight: "700", marginBottom: 4 }}>
-                    ¡Logro Desbloqueado!
-                  </ThemedText>
-                  <ThemedText variant="body" color="secondary">
-                    Completaste {dailyStats.streak} días consecutivos de estudio
-                  </ThemedText>
-                </View>
-              </View>
-            </ThemedCard>
-          )}
 
           {/* Upcoming Tasks */}
           <ThemedCard variant="elevated" padding="large">
@@ -617,7 +399,7 @@ export default function HomeScreen() {
                             {task.task_title || task.event_title}
                           </ThemedText>
                           <ThemedText variant="caption" color="secondary">
-                            {task.class_name || "Sin materia"}
+                            {task.class_name}
                           </ThemedText>
                         </ThemedView>
                         <ThemedView style={{ alignItems: "flex-end" }}>

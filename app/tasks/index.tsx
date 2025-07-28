@@ -1,12 +1,13 @@
 "use client"
 
+import { TasksFilters } from "@/components/tasks/TasksFilters"
 import { TasksHeader } from "@/components/tasks/TasksHeader"
 import { TasksList } from "@/components/tasks/TasksList"
-import { TasksSearch } from "@/components/tasks/TasksSearch"
 import { TasksStatsComponent } from "@/components/tasks/TasksStats"
 import { TasksTabs } from "@/components/tasks/TasksTabs"
 import { ThemedView } from "@/components/ui/ThemedComponents"
 import type { TaskWithEvent, TasksFilters as TasksFiltersType } from "@/database/services/tasksService"
+import { useClasses } from "@/hooks/useClasses"
 import { useTasks } from "@/hooks/useTasks"
 import { useTheme } from "@/hooks/useTheme"
 import { useEffect, useMemo, useState } from "react"
@@ -16,18 +17,41 @@ export default function TasksScreen() {
   const { theme } = useTheme()
   const [searchText, setSearchText] = useState("")
   const [activeTab, setActiveTab] = useState<"tasks" | "exams">("tasks")
+  const [activeFilter, setActiveFilter] = useState<"all" | "pending" | "completed" | "in_progress" | "overdue">("all")
+  const [sortBy, setSortBy] = useState<"due_date" | "priority" | "class" | "completion">("due_date")
 
   // Configurar filtros para la API - solo tareas pendientes por defecto
   const apiFilters: TasksFiltersType = useMemo(() => {
+    // Si quieres que el filtro afecte la API, descomenta:
+    // return activeFilter === "all" ? {} : { status: activeFilter }
     return {}
   }, [])
 
   const { tasks, stats, loading, refreshing, error, refreshTasks, updateTaskStatus, createTask, fetchTasks } =
     useTasks(apiFilters)
+  
+  // Obtener las clases para mapear los nombres
+  const { classes } = useClasses()
 
-  // Filtrar tareas localmente por búsqueda
+  // Convertir class_id a class_name en las tareas
+  const tasksWithClassNames = useMemo(() => {
+    return tasks.map((task) => {
+      const taskClass = classes.find((cls) => cls.id === task.class_id)
+      return {
+        ...task,
+        class_name: taskClass?.name || task.class_name || "Sin materia"
+      }
+    })
+  }, [tasks, classes])
+
+  // Filtrar tareas localmente por búsqueda y filtro
   const filteredTasks = useMemo(() => {
-    let filtered = [...tasks]
+    let filtered = [...tasksWithClassNames]
+
+    // Filtrar por estado
+    if (activeFilter !== "all") {
+      filtered = filtered.filter((task) => task.status === activeFilter)
+    }
 
     // Filtrar por texto de búsqueda
     if (searchText.trim()) {
@@ -46,7 +70,7 @@ export default function TasksScreen() {
     })
 
     return filtered
-  }, [tasks, searchText])
+  }, [tasksWithClassNames, searchText, activeFilter])
 
   // Refrescar datos al cargar
   useEffect(() => {
@@ -85,8 +109,12 @@ export default function TasksScreen() {
     setSearchText(text)
   }
 
-  const handleFilterPress = () => {
-    Alert.alert("Filtros", "Funcionalidad de filtros próximamente")
+  const handleFilterChange = (filter: "all" | "pending" | "completed" | "in_progress" | "overdue") => {
+    setActiveFilter(filter)
+  }
+
+  const handleSortChange = (sort: "due_date" | "priority" | "class" | "completion") => {
+    setSortBy(sort)
   }
 
   const handleTabChange = (tab: "tasks" | "exams") => {
@@ -115,7 +143,14 @@ export default function TasksScreen() {
       >
         <TasksHeader onCreateTask={handleCreateTask} />
 
-        <TasksSearch searchText={searchText} onSearchChange={handleSearchChange} onFilterPress={handleFilterPress} />
+        <TasksFilters
+          activeFilter={activeFilter}
+          sortBy={sortBy}
+          searchText={searchText}
+          onFilterChange={handleFilterChange}
+          onSortChange={handleSortChange}
+          onSearchChange={handleSearchChange}
+        />
 
         <TasksStatsComponent stats={stats} estimatedHours={12} />
 

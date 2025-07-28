@@ -467,6 +467,80 @@ export default function UnifiedSettingsScreen() {
               Cerrar Sesión
             </ThemedText>
           </TouchableOpacity>
+          {/* Otras opciones de configuración */}
+          <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+            <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+              <IconSymbol name="questionmark.circle" size={24} color={theme.colors.primary} />
+              <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
+                Más opciones
+              </ThemedText>
+            </ThemedView>
+            <ThemedView style={{ gap: theme.spacing.sm }}>
+              <TouchableOpacity
+                onPress={() => router.push("/settings/help")}
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  paddingVertical: theme.spacing.md,
+                  borderRadius: theme.borderRadius.md,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
+                <ThemedText variant="button" style={{ color: theme.colors.primary, fontWeight: "600" }}>
+                  Ayuda
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push("/settings/PersonalInfoScreen")}
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  paddingVertical: theme.spacing.md,
+                  borderRadius: theme.borderRadius.md,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
+                <ThemedText variant="button" style={{ color: theme.colors.primary, fontWeight: "600" }}>
+                  Información Personal
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push("/settings/Privacy")}
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  paddingVertical: theme.spacing.md,
+                  borderRadius: theme.borderRadius.md,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
+                <ThemedText variant="button" style={{ color: theme.colors.primary, fontWeight: "600" }}>
+                  Privacidad
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push("/settings/profile")}
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  paddingVertical: theme.spacing.md,
+                  borderRadius: theme.borderRadius.md,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                }}
+              >
+                <ThemedText variant="button" style={{ color: theme.colors.primary, fontWeight: "600" }}>
+                  Perfil avanzado
+                </ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          </ThemedCard>
         </ScrollView>
       </ThemedView>
     </KeyboardAvoidingView>
