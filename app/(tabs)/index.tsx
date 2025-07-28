@@ -2,14 +2,16 @@
 
 import { IconSymbol } from "@/components/ui/IconSymbol"
 import { ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
+import { AVAILABLE_AVATARS } from "@/database/models/userTypes"
 import { useGlobalModal } from "@/hooks/ModalProvider"
 import { useAuth } from "@/hooks/useAuth"
 import { useTasks } from "@/hooks/useTasks"
 import { useTheme } from "@/hooks/useTheme"
+import { useUserProfile } from "@/hooks/useUserProfile"
 import { clearCredentialsIfNeeded } from "@/utils/biometricAuth"
 import { router } from "expo-router"
 import { useEffect, useState } from "react"
-import { Dimensions, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native"
+import { Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 const { width } = Dimensions.get("window")
@@ -35,6 +37,7 @@ export default function HomeScreen() {
   const { showConfirm } = useGlobalModal()
   const { tasks } = useTasks()
   const insets = useSafeAreaInsets()
+  const { profile } = useUserProfile()
 
   const [dailyStats, setDailyStats] = useState<DailyStats>({
     tasksCompleted: 0,
@@ -162,8 +165,19 @@ export default function HomeScreen() {
     return "¡Buenas noches"
   }
 
-  const userName = user?.email?.split("@")[0] || "Estudiante"
+  const userName = profile?.full_name || user?.email?.split("@")[0] || "Estudiante"
   const userInitials = userName.substring(0, 2).toUpperCase()
+
+  // Get avatar source
+  const getAvatarSource = () => {
+    if (profile?.avatar_url) {
+      const avatar = AVAILABLE_AVATARS.find((a) => a.id === profile.avatar_url)
+      return avatar?.path
+    }
+    return null
+  }
+
+  const avatarSource = getAvatarSource()
 
   const handleLogout = () => {
     showConfirm(
@@ -242,35 +256,34 @@ export default function HomeScreen() {
                 <IconSymbol name="bell" size={24} color={theme.colors.textSecondary} />
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={handleLogout}
+                onPress={() => navigateTo("/settings/unified")}
                 style={{
                   width: 44,
                   height: 44,
                   borderRadius: 22,
-                  backgroundColor: theme.colors.primary,
+                  backgroundColor: avatarSource ? "transparent" : theme.colors.primary,
                   alignItems: "center",
                   justifyContent: "center",
-                  marginRight: 8,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  overflow: "hidden",
                 }}
               >
-                <ThemedText variant="button" style={{ color: "white", fontWeight: "600" }}>
-                  {userInitials}
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleLogout}
-                style={{
-                  backgroundColor: theme.colors.error,
-                  paddingHorizontal: theme.spacing.md,
-                  paddingVertical: theme.spacing.sm,
-                  borderRadius: theme.borderRadius.md,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <ThemedText variant="body" style={{ color: "white", fontWeight: "600" }}>
-                  Cerrar sesión
-                </ThemedText>
+                {avatarSource ? (
+                  <Image
+                    source={avatarSource}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                    }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <ThemedText variant="button" style={{ color: "white", fontWeight: "600" }}>
+                    {userInitials}
+                  </ThemedText>
+                )}
               </TouchableOpacity>
             </ThemedView>
           </ThemedView>
@@ -344,27 +357,25 @@ export default function HomeScreen() {
               variant="outlined"
               padding="medium"
               style={{
-              width: (width - theme.spacing.md * 2 - theme.spacing.sm) / 2,
-              alignItems: "center",
+                width: (width - theme.spacing.md * 2 - theme.spacing.sm) / 2,
+                alignItems: "center",
               }}
             >
               <View
-              style={{
-                backgroundColor: "#FFD580", // color cálido de fondo
-                padding: theme.spacing.sm,
-                borderRadius: theme.borderRadius.full,
-                marginBottom: theme.spacing.sm,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+                style={{
+                  backgroundColor: theme.colors.warning + "20",
+                  padding: theme.spacing.sm,
+                  borderRadius: theme.borderRadius.full,
+                  marginBottom: theme.spacing.sm,
+                }}
               >
-              <IconSymbol name="flame" size={28} color="#FF9900" />
+                <IconSymbol name="flame" size={24} color={theme.colors.warning} />
               </View>
               <ThemedText variant="caption" color="secondary" style={{ marginBottom: 4 }}>
-              Racha
+                Racha
               </ThemedText>
               <ThemedText variant="h2" style={{ fontWeight: "700" }}>
-              {dailyStats.streak} días
+                {dailyStats.streak} días
               </ThemedText>
             </ThemedCard>
 

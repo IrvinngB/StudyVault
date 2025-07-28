@@ -31,7 +31,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   selectedDate,
 }) => {
   const { theme } = useTheme()
-  const { user } = useAuth();
+  const { user } = useAuth()
   const { createAutoGradeForEvent } = useAutoCategory()
   const [loading, setLoading] = useState(false)
   const [use24HourFormat, setUse24HourFormat] = useState(false)
@@ -188,9 +188,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         event_type: eventType,
         event_category: currentEventConfig?.category || "general_event",
         class_id: selectedClass?.id || undefined,
-        location: currentEventConfig?.supportsClassroom 
-          ? (classroom.trim() || undefined) // Para eventos con aula, guardar el classroom en location
-          : (location.trim() || undefined), // Para otros eventos, usar location normal
+        location: currentEventConfig?.supportsClassroom
+          ? classroom.trim() || undefined // Para eventos con aula, guardar el classroom en location
+          : location.trim() || undefined, // Para otros eventos, usar location normal
         reminder_minutes: reminderMinutes,
         is_recurring: currentEventConfig?.supportsRecurrence ? isRecurring : false,
         recurrence_pattern: isRecurring
@@ -202,8 +202,24 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
           : undefined,
       }
 
-      console.log("🚀 FINAL EVENT DATA:", JSON.stringify(eventData, null, 2))
+      // Para eventos de tipo 'class', configurar recurrencia basada en el curso
+      if (eventType === "class" && selectedClass?.id && isRecurring) {
+        eventData.recurrence_pattern = {
+          type: "weekly",
+          interval: 1,
+          days_of_week: [dayOfWeek],
+          class_based: true, // Indicar que la recurrencia depende del curso
+        }
+      } else if (isRecurring) {
+        eventData.recurrence_pattern = {
+          type: "weekly",
+          interval: 1,
+          days_of_week: [dayOfWeek],
+          class_based: false,
+        }
+      }
 
+      console.log("🚀 FINAL EVENT DATA:", JSON.stringify(eventData, null, 2))
 
       // Crear el evento y obtener el id (si lo retorna)
       // Crear el evento (no se puede obtener el id del evento creado por ahora)
@@ -224,7 +240,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
           day,
           startTime.getHours(),
           startTime.getMinutes(),
-          startTime.getSeconds()
+          startTime.getSeconds(),
         )
 
         // Verificar que el evento esté en el futuro
@@ -239,7 +255,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             date: localEventDateTime, // Usar fecha local en lugar de UTC
             minutosAntes: reminderMinutes,
             type: "calendar",
-          };
+          }
 
           console.log("📅 Datos de notificación:", {
             fechaSeleccionada: selectedDate,
@@ -247,23 +263,23 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             eventoLocal: localEventDateTime.toLocaleString(),
             minutosAntes: reminderMinutes,
             horaNotificacion: new Date(localEventDateTime.getTime() - reminderMinutes * 60000).toLocaleString(),
-            ahora: now.toLocaleString()
-          });
+            ahora: now.toLocaleString(),
+          })
 
           try {
-            await scheduleCalendarNotification(notificationData);
-            console.log("✅ Notificación programada exitosamente");
+            await scheduleCalendarNotification(notificationData)
+            console.log("✅ Notificación programada exitosamente")
           } catch (error) {
-            console.error("❌ Error al programar la notificación:", error);
+            console.error("❌ Error al programar la notificación:", error)
             // No mostrar alerta al usuario cuando falla la notificación,
             // ya que el evento se creó correctamente
-            console.log("⚠️ No se pudo crear la notificación, pero el evento se creó correctamente");
+            console.log("⚠️ No se pudo crear la notificación, pero el evento se creó correctamente")
           }
         }
       } else if (eventType === "class") {
-        console.log("📚 No se programó notificación porque es un evento tipo clase.");
+        console.log("📚 No se programó notificación porque es un evento tipo clase.")
       } else if (reminderMinutes <= 0) {
-        console.log("⏰ No se programó notificación porque el campo de recordatorio está vacío o es 0.");
+        console.log("⏰ No se programó notificación porque el campo de recordatorio está vacío o es 0.")
       }
 
       // Cerrar modal automáticamente al completar exitosamente
@@ -548,7 +564,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                       </View>
                       <ThemedText variant="body" style={{ color: theme.colors.textMuted, marginTop: 4, fontSize: 12 }}>
                         {eventType === "class"
-                          ? "Esta clase se repetirá cada semana el mismo día y hora"
+                          ? "Esta clase se repetirá cada semana mientras el curso esté activo"
                           : "Este evento se repetirá automáticamente según el patrón configurado"}
                       </ThemedText>
                     </View>

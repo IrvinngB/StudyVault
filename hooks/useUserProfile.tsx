@@ -1,13 +1,15 @@
+"use client"
+
 import type { UserDevice, UserProfile, UserProfileUpdate } from "@/database/models/userTypes"
 import { UserDeviceService } from "@/database/services/userDeviceService"
 import { UserProfileService } from "@/database/services/userProfileService"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const profileService = UserProfileService.getInstance()
 
   // Cargar perfil del usuario
@@ -16,7 +18,7 @@ export function useUserProfile() {
     setError(null)
     try {
       const result = await profileService.getCurrentUserProfile()
-      console.log("📥 Profile data received:", result);
+      console.log("📥 Profile data received:", result)
       setProfile(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error loading profile")
@@ -26,38 +28,53 @@ export function useUserProfile() {
   }, [profileService])
 
   // Actualizar perfil
-  const updateProfile = useCallback(async (data: UserProfileUpdate): Promise<UserProfile | null> => {
-    try {
-      const result = await profileService.updateUserProfile(data)
-      if (result) {
-        setProfile(result)
+  const updateProfile = useCallback(
+    async (data: UserProfileUpdate): Promise<UserProfile | null> => {
+      setLoading(true)
+      setError(null)
+      try {
+        const result = await profileService.updateUserProfile(data)
+        if (result) {
+          setProfile(result)
+          console.log("✅ Profile updated successfully:", result)
+        }
+        return result
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error updating profile")
+        return null
+      } finally {
+        setLoading(false)
       }
-      return result
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error updating profile")
-      return null
-    }
-  }, [profileService])
+    },
+    [profileService],
+  )
 
   // Actualización parcial
-  const patchProfile = useCallback(async (data: UserProfileUpdate): Promise<UserProfile | null> => {
-    try {
-      const result = await profileService.patchUserProfile(data)
-      if (result) {
-        setProfile(result)
+  const patchProfile = useCallback(
+    async (data: UserProfileUpdate): Promise<UserProfile | null> => {
+      setLoading(true)
+      setError(null)
+      try {
+        const result = await profileService.patchUserProfile(data)
+        if (result) {
+          setProfile(result)
+          console.log("✅ Profile patched successfully:", result)
+        }
+        return result
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error patching profile")
+        return null
+      } finally {
+        setLoading(false)
       }
-      return result
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error patching profile")
-      return null
-    }
-  }, [profileService])
+    },
+    [profileService],
+  )
 
-  // Opcionalmente cargar perfil al montar el componente
-  // Comentado para evitar errores 404 automáticos
-  // useEffect(() => {
-  //   loadProfile()
-  // }, [loadProfile])
+  // Cargar perfil automáticamente al montar el hook
+  useEffect(() => {
+    loadProfile()
+  }, [loadProfile])
 
   return {
     profile,
@@ -74,7 +91,7 @@ export function useUserDevices() {
   const [currentDevice, setCurrentDevice] = useState<UserDevice | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   const deviceService = UserDeviceService.getInstance()
 
   // Cargar dispositivos del usuario
@@ -84,10 +101,10 @@ export function useUserDevices() {
     try {
       const result = await deviceService.getUserDevices()
       setDevices(result)
-      
+
       // Buscar el dispositivo actual
       const currentDeviceId = deviceService.getCurrentDeviceId()
-      const current = result.find(device => device.device_id === currentDeviceId)
+      const current = result.find((device) => device.device_id === currentDeviceId)
       setCurrentDevice(current || null)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error loading devices")
@@ -127,24 +144,27 @@ export function useUserDevices() {
   }, [deviceService, loadDevices])
 
   // Desactivar dispositivo
-  const deactivateDevice = useCallback(async (deviceId: string): Promise<boolean> => {
-    try {
-      const success = await deviceService.deactivateDevice(deviceId)
-      if (success) {
-        // Actualizar la lista de dispositivos
-        await loadDevices()
+  const deactivateDevice = useCallback(
+    async (deviceId: string): Promise<boolean> => {
+      try {
+        const success = await deviceService.deactivateDevice(deviceId)
+        if (success) {
+          // Actualizar la lista de dispositivos
+          await loadDevices()
+        }
+        return success
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error deactivating device")
+        return false
       }
-      return success
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error deactivating device")
-      return false
-    }
-  }, [deviceService, loadDevices])
+    },
+    [deviceService, loadDevices],
+  )
 
   // Obtener conteo de dispositivos activos
-  const activeDevicesCount = devices.filter(device => device.is_active).length
+  const activeDevicesCount = devices.filter((device) => device.is_active).length
 
-  // Opcionalmente cargar dispositivos al montar el componente  
+  // Opcionalmente cargar dispositivos al montar el componente
   // Comentado para evitar errores 404 automáticos
   // useEffect(() => {
   //   loadDevices()

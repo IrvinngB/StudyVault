@@ -3,28 +3,29 @@
  */
 
 // Tipos de eventos disponibles
-export type EventType = 
-  | 'class' 
-  | 'tarea' 
-  | 'laboratorio' 
-  | 'quiz' 
-  | 'parcial' 
-  | 'proyecto' 
-  | 'examen_final' 
-  | 'charla' 
-  | 'dia_libre' 
-  | 'recordatorio'
+export type EventType =
+  | "class"
+  | "tarea"
+  | "laboratorio"
+  | "quiz"
+  | "parcial"
+  | "proyecto"
+  | "examen_final"
+  | "charla"
+  | "dia_libre"
+  | "recordatorio"
 
 // Categorías principales de eventos
-export type EventCategory = 'class' | 'grade_event' | 'general_event'
+export type EventCategory = "class" | "grade_event" | "general_event"
 
 // Patrón de recurrencia
 export interface RecurrencePattern {
-  type: 'weekly' | 'daily' | 'monthly'
+  type: "weekly" | "daily" | "monthly"
   interval: number // cada cuántos días/semanas/meses
   days_of_week?: number[] // para weekly: 0=domingo, 1=lunes, etc.
   end_date?: string // fecha límite para la recurrencia
   count?: number // número de ocurrencias
+  class_based?: boolean // true si la recurrencia depende del estado del curso
 }
 
 // Estructura principal del evento
