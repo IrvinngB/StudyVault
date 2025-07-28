@@ -10,25 +10,36 @@ export function BackButton() {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
+  // Rutas donde no mostrar el botón de retroceso
+  const hideBackButtonRoutes = [
+    "/",
+    "/(tabs)",
+    "/(tabs)/index",
+    "/login",
+    "/register",
+    ...pathname.startsWith("/(auth)") ? [pathname] : []
+  ];
 
-  // Mejor condición para ocultar el botón en '/', '/(tabs)', '/(tabs)/index', y cualquier ruta de (auth)
-  if (
-    pathname === "/" ||
-    pathname === "/(tabs)" ||
-    pathname === "/(tabs)/index" ||
-    pathname.startsWith("/(auth)") ||
-    pathname === "/login" ||
-    pathname === "/register"
-  ) {
+  // Si es una ruta donde no debe aparecer el botón
+  if (hideBackButtonRoutes.includes(pathname)) {
+    // Solo para la pantalla principal de tabs, añadimos un espacio seguro
+    if (pathname === "/(tabs)/index") {
+      return (
+        <View style={{
+          paddingTop: insets.top,
+          backgroundColor: theme.colors.background,
+        }} />
+      );
+    }
     return null;
   }
 
   return (
     <View style={{
-      paddingTop: insets.top + 8, // Espacio extra para no superponerse
+      paddingTop: insets.top + 8,
       paddingLeft: 16,
-      backgroundColor: theme.colors.background, // Fondo para que no se superponga
-      position: 'relative', // No absolute para que ocupe su espacio
+      backgroundColor: theme.colors.background,
+      position: 'relative',
       zIndex: 100,
     }}> 
       <TouchableOpacity 

@@ -303,7 +303,7 @@ export default function EnhancedCourseCard({ course }: EnhancedCourseCardProps) 
             }}
           >
             <ThemedText variant="body" color="secondary">
-              Progreso del curso
+              Porcentaje de tareas completadas:
             </ThemedText>
             <ThemedText variant="body" style={{ fontWeight: "600" }}>
               {courseProgress}%
@@ -346,14 +346,6 @@ export default function EnhancedCourseCard({ course }: EnhancedCourseCardProps) 
             </ThemedText>
           </View>
 
-          <View style={{ alignItems: "center" }}>
-            <ThemedText variant="h3" style={{ fontWeight: "600" }}>
-              {notesCount}
-            </ThemedText>
-            <ThemedText variant="caption" color="secondary">
-              Notas
-            </ThemedText>
-          </View>
 
           <TouchableOpacity
             onPress={() => {

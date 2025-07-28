@@ -6,12 +6,12 @@ import { AVAILABLE_AVATARS } from "@/database/models/userTypes"
 import { useGlobalModal } from "@/hooks/ModalProvider"
 import { useAuth } from "@/hooks/useAuth"
 import { useClasses } from "@/hooks/useClasses"
+import { useStreakSystem } from "@/hooks/useStreakSystem"
 import { useTasks } from "@/hooks/useTasks"
 import { useTheme } from "@/hooks/useTheme"
 import { useUserProfile } from "@/hooks/useUserProfile"
 import { clearCredentialsIfNeeded } from "@/utils/biometricAuth"
 import { router } from "expo-router"
-import { useEffect, useState } from "react"
 import { Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
@@ -32,70 +32,29 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets()
   const { profile } = useUserProfile()
 
-  const [dailyStats, setDailyStats] = useState<DailyStats>({
-    tasksCompleted: 0,
-    totalTasks: 0,
-    streak: 0,
-  })
+  // Nuevo sistema de rachas
+  const {
+    streakData,
+    streakStatus,
+    motivation,
+    nextMilestone,
+    achievedMilestones,
+    recentActivities,
+    refreshStreak
+  } = useStreakSystem(tasks, profile)
 
-  useEffect(() => {
-    calculateDailyStats()
-  }, [tasks])
-
-  const calculateDailyStats = () => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const todayTasks = tasks.filter((task) => {
+  // Stats para hoy
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayActivity = recentActivities.find(a => a.date === today.toISOString().split('T')[0])
+  const dailyStats = {
+    tasksCompleted: todayActivity?.tasksCompleted || 0,
+    totalTasks: tasks.filter((task) => {
       const taskDate = new Date(task.due_date || task.start_datetime)
       taskDate.setHours(0, 0, 0, 0)
       return taskDate.getTime() === today.getTime()
-    })
-
-    const completedTasks = todayTasks.filter((task) => task.status === "completed")
-
-    // Calculate streak - days without overdue tasks
-    const streak = calculateStreak()
-
-    setDailyStats({
-      tasksCompleted: completedTasks.length,
-      totalTasks: todayTasks.length,
-      streak,
-    })
-  }
-
-  const calculateStreak = (): number => {
-    // Calculate consecutive days without overdue tasks
-    const today = new Date()
-    let streak = 0
-
-    for (let i = 0; i < 30; i++) {
-      // Check last 30 days
-      const checkDate = new Date(today)
-      checkDate.setDate(today.getDate() - i)
-      checkDate.setHours(23, 59, 59, 999)
-
-      const dayTasks = tasks.filter((task) => {
-        const taskDue = new Date(task.due_date || task.start_datetime)
-        return taskDue <= checkDate && taskDue >= new Date(checkDate.getTime() - 24 * 60 * 60 * 1000)
-      })
-
-      const hasOverdueTasks = dayTasks.some(
-        (task) =>
-          task.status === "overdue" ||
-          (task.status !== "completed" && new Date(task.due_date || task.start_datetime) < new Date()),
-      )
-
-      if (hasOverdueTasks && i > 0) {
-        break
-      }
-
-      if (dayTasks.length > 0 && !hasOverdueTasks) {
-        streak++
-      }
-    }
-
-    return streak
+    }).length,
+    streak: streakData.current
   }
 
   const getGreeting = () => {
@@ -142,10 +101,7 @@ export default function HomeScreen() {
   // Get upcoming tasks with proper class names
   const upcomingTasks = tasks
     .filter((task) => {
-      // Si value=1 es activa, value=0 es completada/inactiva
-      if (typeof task.value !== "undefined") {
-        return task.value === 1
-      }
+      // Filtra tareas que no están completadas
       return task.status !== "completed"
     })
     .sort(
@@ -171,15 +127,16 @@ export default function HomeScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+       <View style={{ paddingTop: insets.top, backgroundColor: theme.colors.background }} />
       <ThemedView variant="background" style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
             paddingHorizontal: theme.spacing.md,
-            paddingTop: theme.spacing.md,
             paddingBottom: insets.bottom + 100,
           }}
           showsVerticalScrollIndicator={false}
+          scrollIndicatorInsets={{ top: insets.top }}
         >
           {/* Header */}
           <ThemedView
@@ -280,7 +237,7 @@ export default function HomeScreen() {
               </ThemedText>
             </ThemedCard>
 
-            {/* Streak */}
+            {/* Streak - Nuevo sistema */}
             <ThemedCard
               variant="outlined"
               padding="medium"
@@ -291,20 +248,28 @@ export default function HomeScreen() {
             >
               <View
                 style={{
-                  backgroundColor: theme.colors.warning + "20",
+                  backgroundColor: streakStatus.color + "20",
                   padding: theme.spacing.sm,
                   borderRadius: theme.borderRadius.full,
                   marginBottom: theme.spacing.sm,
                 }}
               >
-                <IconSymbol name="flame" size={24} color={theme.colors.warning} />
+                <IconSymbol name="flame" size={24} color={streakStatus.color} />
               </View>
               <ThemedText variant="caption" color="secondary" style={{ marginBottom: 4 }}>
                 Racha
               </ThemedText>
-              <ThemedText variant="h2" style={{ fontWeight: "700" }}>
-                {dailyStats.streak} días
+              <ThemedText variant="h2" style={{ fontWeight: "700", color: streakStatus.color }}>
+                {streakData.current} días
               </ThemedText>
+              <ThemedText variant="body" color="secondary" style={{ marginTop: 2, textAlign: 'center' }}>
+                {motivation}
+              </ThemedText>
+              {nextMilestone && (
+                <ThemedText variant="caption" color="primary" style={{ marginTop: 2, textAlign: 'center' }}>
+                  Próximo logro: {nextMilestone} días
+                </ThemedText>
+              )}
             </ThemedCard>
           </ThemedView>
 

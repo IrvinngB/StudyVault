@@ -55,6 +55,14 @@ export function TaskCard({ task, onToggleCompletion }: TaskCardProps) {
     return `En ${diffDays} días`
   }
 
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return "Sin fecha"
+    const date = new Date(dateString)
+    const day = date.toLocaleDateString()
+    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return `${day} · ${time}`
+  }
+
   const getEstimatedTime = () => {
     // Simulamos tiempo estimado basado en el tipo de tarea
     if (task.event_type === "exam") return "3 horas"
@@ -85,7 +93,19 @@ export function TaskCard({ task, onToggleCompletion }: TaskCardProps) {
       <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
         {/* Checkbox */}
         <TouchableOpacity
-          onPress={() => onToggleCompletion(task)}
+          onPress={() => {
+            console.log('Checkbox pressed for task:', task);
+            // Si no tiene task_id pero tiene grade_id, lo pasamos como task_id y value: 0
+            if (!task.task_id && task.grade_id) {
+              const updatedTask = { ...task, task_id: task.grade_id, value: 0 };
+              onToggleCompletion(updatedTask);
+            } else if (task.grade_id) {
+              const updatedTask = { ...task, value: 0 };
+              onToggleCompletion(updatedTask);
+            } else {
+              onToggleCompletion(task);
+            }
+          }}
           style={{
             width: 24,
             height: 24,
@@ -175,26 +195,16 @@ export function TaskCard({ task, onToggleCompletion }: TaskCardProps) {
             </ThemedText>
           )}
 
-          {/* Date and Time */}
-          <ThemedView
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: theme.spacing.md,
-            }}
-          >
+          {/* Fecha y hora de inicio */}
+          <ThemedView style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md }}>
             <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
               <Ionicons name="calendar" size={14} color={theme.colors.primary} />
               <ThemedText
                 variant="caption"
                 color="primary"
-                style={{
-                  fontSize: 12,
-                  marginLeft: 4,
-                  opacity: isCompleted ? 0.6 : 1,
-                }}
+                style={{ fontSize: 12, marginLeft: 4, opacity: isCompleted ? 0.6 : 1 }}
               >
-                {formatDate(task.due_date || task.start_datetime)}
+                {formatDateTime(task.start_datetime)}
               </ThemedText>
             </ThemedView>
           </ThemedView>

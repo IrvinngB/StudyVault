@@ -48,9 +48,19 @@ export default function TasksScreen() {
   const filteredTasks = useMemo(() => {
     let filtered = [...tasksWithClassNames]
 
-    // Filtrar por estado
+    // Filtrar por estado o atrasadas
     if (activeFilter !== "all") {
-      filtered = filtered.filter((task) => task.status === activeFilter)
+      if (activeFilter === "overdue") {
+        const now = new Date()
+        filtered = filtered.filter(
+          (task) => {
+            const dueDate = new Date(task.due_date || task.start_datetime)
+            return task.status !== "completed" && dueDate < now
+          }
+        )
+      } else {
+        filtered = filtered.filter((task) => task.status === activeFilter)
+      }
     }
 
     // Filtrar por texto de búsqueda

@@ -15,12 +15,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { key: "home", label: "Inicio", icon: "home", route: "/" },
-  { key: "courses", label: "Clases", icon: "book", route: "/courses" },
-  { key: "tasks", label: "Tareas", icon: "checkmark-square", route: "/tasks" },
+  { key: "home", label: "Inicio", icon: "house.fill", route: "/" },
+  { key: "courses", label: "Clases", icon: "book.closed.fill", route: "/courses" },
+  { key: "tasks", label: "Tareas", icon: "checklist", route: "/tasks" },
   { key: "calendar", label: "Calendario", icon: "calendar", route: "/calendar" },
-  { key: "notes", label: "Notas", icon: "note", route: "/notes" },
-  { key: "settings", label: "Ajustes", icon: "settings", route: "/settings" },
+  { key: "notes", label: "Notas", icon: "note.text", route: "/notes" },
+  { key: "settings", label: "Ajustes", icon: "gear", route: "/settings" },
 ]
 
 export default function BottomNavBar() {

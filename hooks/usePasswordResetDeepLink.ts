@@ -7,39 +7,97 @@ export function usePasswordResetDeepLink() {
     const handleDeepLink = (url: string) => {
       console.log('📱 Deep link recibido:', url);
 
-      // Parsear la URL para extraer path y query params
       try {
-        const parsedUrl = new URL(url);
-        const pathname = parsedUrl.pathname; // e.g. /auth/reset-password
-        const params = parsedUrl.searchParams;
-        const token = params.get('token');
-        const type = params.get('type');
+        // Para URLs de tu app (studyvault://)
+        if (url.startsWith('studyvault://')) {
+          console.log('🔍 Procesando URL de la app:', url);
 
-        // Reset password
-        if (pathname.includes('reset-password') && type === 'recovery' && token) {
-          console.log('� Navegando a reset password con token:', token);
-          router.push({
-            pathname: '/(auth)/update-password',
-            params: { token }
-          } as any);
-          return;
+          // Remover el protocolo para parsear
+          const urlWithoutProtocol = url.replace('studyvault://', 'https://temp.com/');
+          const parsedUrl = new URL(urlWithoutProtocol);
+          const pathname = parsedUrl.pathname;
+          const params = parsedUrl.searchParams;
+
+          console.log('🔍 Pathname:', pathname);
+          console.log('🔍 Search params:', Object.fromEntries(params.entries()));
+
+          // Confirm email
+          if (pathname.includes('confirm-email')) {
+            console.log('📧 Navegando a confirm email');
+            router.replace('/(auth)/confirm-email' as any);
+            return;
+          }
+
+          // Reset password  
+          if (pathname.includes('reset-password')) {
+            console.log('🔑 Navegando a reset password');
+            router.replace('/(auth)/update-password' as any);
+            return;
+          }
         }
 
-        // Confirm email
-        if (pathname.includes('confirm-email') && type === 'signup' && token) {
-          console.log('📧 Navegando a confirm email con token:', token);
-          router.push({
-            pathname: '/(auth)/confirm-email',
-            params: { token }
-          } as any);
-          return;
+        // Para URLs de Supabase
+        else if (url.includes('supabase.co')) {
+          console.log('🔍 URL de Supabase detectada:', url);
+          const parsedUrl = new URL(url);
+          const params = parsedUrl.searchParams;
+          const token = params.get('token');
+          const type = params.get('type');
+          const redirectTo = params.get('redirect_to');
+
+          console.log('🔍 Token:', token ? 'presente' : 'ausente');
+          console.log('🔍 Type:', type);
+          console.log('🔍 Redirect to:', redirectTo);
+
+          // Si hay redirect_to y token, navega a la ruta indicada
+          if (redirectTo && token) {
+            let route = '';
+            if (redirectTo.startsWith('studyvault://')) {
+              route = redirectTo.replace('studyvault://', '').replace(/^\/+/, '');
+              if (route === 'confirm-email') {
+                router.replace({
+                  pathname: '/(auth)/confirm-email',
+                  params: { token }
+                } as any);
+                return;
+              }
+              if (route === 'reset-password') {
+                router.replace({
+                  pathname: '/(auth)/update-password',
+                  params: { token }
+                } as any);
+                return;
+              }
+            }
+          }
+
+          // Procesar según el tipo (fallback)
+          if (type === 'signup' && token) {
+            console.log('📧 Email signup confirmation');
+            router.replace({
+              pathname: '/(auth)/confirm-email',
+              params: { token }
+            } as any);
+            return;
+          }
+
+          if (type === 'recovery' && token) {
+            console.log('🔑 Password recovery');
+            router.replace({
+              pathname: '/(auth)/update-password',
+              params: { token }
+            } as any);
+            return;
+          }
         }
 
-        // Fallback: si no hay token o no coincide el tipo, ir al login
-        router.push('/(auth)/login' as any);
+        // Si no coincide con ningún patrón, ir al login
+        console.log('⚠️ URL no reconocida, redirigiendo a login');
+        router.replace('/(auth)/login' as any);
+
       } catch (e) {
-        console.error('Error al parsear deep link:', e);
-        router.push('/(auth)/login' as any);
+        console.error('❌ Error al parsear deep link:', e);
+        router.replace('/(auth)/login' as any);
       }
     };
 
@@ -52,7 +110,7 @@ export function usePasswordResetDeepLink() {
           handleDeepLink(initialUrl);
         }
       } catch (error) {
-        console.error('Error al obtener URL inicial:', error);
+        console.error('❌ Error al obtener URL inicial:', error);
       }
     };
 

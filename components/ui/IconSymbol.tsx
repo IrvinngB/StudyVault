@@ -26,6 +26,8 @@ const MAPPING = {
   calendar: "calendar-today",
   "person.crop.circle": "account-circle",
   "person.crop.circle.fill": "account-circle",
+  "gearshape.fill": "settings",
+  
 
   // Stats icons
   "clock.fill": "schedule",
@@ -48,8 +50,6 @@ const MAPPING = {
   "xmark.circle": "cancel",
   "xmark.circle.fill": "cancel",
   gear: "settings",
-  gearshape: "settings",
-  "gearshape.fill": "settings",
   magnifyingglass: "search",
   bell: "notifications",
   "bell.fill": "notifications",
@@ -89,6 +89,9 @@ const MAPPING = {
   "bookmark.fill": "bookmark",
   flag: "flag",
   "flag.fill": "flag",
+
+  // Icono de racha
+  flame: "local-fire-department",
 
   // New icons for course detail
   bolt: "flash-on",

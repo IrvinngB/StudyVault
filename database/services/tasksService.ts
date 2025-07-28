@@ -519,25 +519,11 @@ class TasksService {
         const task = tasks.find((t) => t.task_id === request.task_id)
 
         if (task && task.grade_id) {
-          // Probar diferentes rutas para el endpoint de completar
-          const possibleRoutes = [
-            `/tasks/${task.grade_id}/complete`,
-            `/grades/${task.grade_id}/complete`,
-            `/api/tasks/${task.grade_id}/complete`,
-            `/api/grades/${task.grade_id}/complete`,
-            `/${task.grade_id}/complete`,
-          ]
-
-          for (const route of possibleRoutes) {
-            try {
-              await apiClient.patch(route)
-              console.log(`Task completed successfully with route: ${route}`)
-              return
-            } catch (error) {
-              console.log(`Failed to complete task with route ${route}:`, error)
-              continue
-            }
-          }
+          // Actualizar el campo value de la calificación a 0 (completada) usando gradesService
+          const { gradesService } = await import("@/database/services/gradesService")
+          await gradesService.patchGrade(task.grade_id, { value: 0 })
+          console.log(`Grade ${task.grade_id} value actualizado a 0 (completada) usando gradesService`)
+          return
         }
       }
 
@@ -548,17 +534,6 @@ class TasksService {
     }
   }
 
-  /**
-   * Crear nueva tarea
-   */
-  async createTask(request: CreateTaskRequest): Promise<TaskWithEvent> {
-    try {
-      throw new Error("Create task endpoint not implemented in backend")
-    } catch (error) {
-      console.error("Error creating task:", error)
-      throw error
-    }
-  }
 
   /**
    * Eliminar tarea

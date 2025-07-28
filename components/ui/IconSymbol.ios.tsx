@@ -14,6 +14,14 @@ export function IconSymbol({
   style?: StyleProp<ViewStyle>;
   weight?: SymbolWeight;
 }) {
+  // Nombres SF Symbols usados en el proyecto y navbar:
+  // home: "house.fill"
+  // book: "book.closed.fill"
+  // checkmark-square: "checklist"
+  // calendar: "calendar"
+  // note: "note.text"
+  // settings: "gear"
+  // flame: "flame"
   return (
     <SymbolView
       weight={weight}

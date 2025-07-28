@@ -3,6 +3,7 @@
 import { ThemedButton, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { useTheme } from "@/hooks/useTheme"
 import { Ionicons } from "@expo/vector-icons"
+import { router } from "expo-router"
 
 interface TasksHeaderProps {
   onCreateTask: () => void
@@ -34,7 +35,10 @@ export function TasksHeader({ onCreateTask }: TasksHeaderProps) {
           title="Nueva"
           variant="secondary"
           size="medium"
-          onPress={onCreateTask}
+          onPress={() => {
+            console.log("Botón Nueva presionado, navegando a /calendar")
+            router.push("/calendar")
+          }}
           icon={<Ionicons name="add" size={18} color="white" />}
           style={{
             paddingHorizontal: theme.spacing.lg,
