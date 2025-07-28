@@ -4,82 +4,92 @@ import { IconSymbol } from "@/components/ui/IconSymbol"
 import { ThemedText } from "@/components/ui/ThemedComponents"
 import { useTheme } from "@/hooks/useTheme"
 import { usePathname, useRouter } from "expo-router"
-import { Platform, SafeAreaView, StyleSheet, TouchableOpacity, View } from "react-native"
+import { TouchableOpacity, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 interface NavItem {
-  route: string
-  icon: string
-  activeIcon: string
+  key: string
   label: string
-  badge?: number
+  icon: string
+  route: string
 }
 
 const navItems: NavItem[] = [
-  {
-    route: "/",
-    icon: "house",
-    activeIcon: "house.fill",
-    label: "Inicio",
-  },
-  {
-    route: "/calendar",
-    icon: "calendar",
-    activeIcon: "calendar",
-    label: "Calendario",
-  },
-  {
-    route: "/settings/unified",
-    icon: "gear",
-    activeIcon: "gear.fill",
-    label: "Ajustes",
-  },
+  { key: "home", label: "Inicio", icon: "home", route: "/" },
+  { key: "courses", label: "Clases", icon: "book", route: "/courses" },
+  { key: "tasks", label: "Tareas", icon: "checkmark-square", route: "/tasks" },
+  { key: "calendar", label: "Calendario", icon: "calendar", route: "/calendar" },
+  { key: "notes", label: "Notas", icon: "note", route: "/notes" },
+  { key: "settings", label: "Ajustes", icon: "settings", route: "/settings" },
 ]
 
-export function BottomNavBar() {
+export default function BottomNavBar() {
   const { theme } = useTheme()
   const router = useRouter()
   const pathname = usePathname()
+  const insets = useSafeAreaInsets()
 
   const isActive = (route: string) => {
     if (route === "/") {
-      return pathname === "/" || pathname === "/index"
+      return pathname === "/" || pathname === "/(tabs)"
     }
     return pathname.startsWith(route)
   }
 
-  const handleNavigation = (route: string) => {
+  const handlePress = (route: string) => {
     router.push(route as any)
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-      <View style={[styles.navbar, { backgroundColor: theme.colors.surface }]}>
+    <View
+      style={{
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: theme.colors.background,
+        borderTopWidth: 1,
+        borderTopColor: theme.colors.border,
+        paddingBottom: insets.bottom,
+        paddingTop: 12,
+        paddingHorizontal: 8,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-around",
+          alignItems: "center",
+        }}
+      >
         {navItems.map((item) => {
           const active = isActive(item.route)
           return (
             <TouchableOpacity
-              key={item.route}
-              style={styles.navItem}
-              onPress={() => handleNavigation(item.route)}
-              activeOpacity={0.7}
+              key={item.key}
+              onPress={() => handlePress(item.route)}
+              style={{
+                flex: 1,
+                alignItems: "center",
+                paddingVertical: 8,
+                paddingHorizontal: 4,
+                borderRadius: 12,
+                backgroundColor: active ? theme.colors.text : "transparent",
+              }}
             >
-              <View style={styles.iconContainer}>
-                <IconSymbol
-                  name={active ? (item.activeIcon as any) : (item.icon as any)}
-                  size={24}
-                  color={active ? theme.colors.primary : theme.colors.textMuted}
-                />
-                {item.badge && item.badge > 0 && (
-                  <View style={[styles.badge, { backgroundColor: theme.colors.error }]}>
-                    <ThemedText variant="caption" style={styles.badgeText}>
-                      {item.badge > 99 ? "99+" : item.badge.toString()}
-                    </ThemedText>
-                  </View>
-                )}
-              </View>
+              <IconSymbol
+                name={item.icon as any}
+                size={22}
+                color={active ? theme.colors.background : theme.colors.textMuted}
+                style={{ marginBottom: 4 }}
+              />
               <ThemedText
                 variant="caption"
-                style={[styles.navLabel, { color: active ? theme.colors.primary : theme.colors.textMuted }]}
+                style={{
+                  fontSize: 11,
+                  fontWeight: active ? "600" : "500",
+                  color: active ? theme.colors.background : theme.colors.textMuted,
+                }}
               >
                 {item.label}
               </ThemedText>
@@ -87,62 +97,6 @@ export function BottomNavBar() {
           )
         })}
       </View>
-    </SafeAreaView>
+    </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
-  },
-  navbar: {
-    flexDirection: "row",
-    paddingTop: 8,
-    paddingBottom: Platform.OS === "ios" ? 0 : 8,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.1)",
-  },
-  navItem: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  iconContainer: {
-    position: "relative",
-    marginBottom: 4,
-  },
-  navLabel: {
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  badge: {
-    position: "absolute",
-    top: -6,
-    right: -8,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    color: "white",
-    fontSize: 10,
-    fontWeight: "600",
-  },
-})

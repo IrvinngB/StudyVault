@@ -1,4 +1,4 @@
-import { BottomNavBar } from '@/components/ui/BottomNavBar';
+import BottomNavBar from '@/components/ui/BottomNavBar';
 import { ThemedView } from '@/components/ui/ThemedComponents';
 import { Stack } from 'expo-router';
 

@@ -3,14 +3,24 @@
 import NoteCard from "@/components/notes/NotesPreviewCard"
 import { IconSymbol } from "@/components/ui/IconSymbol"
 import { ThemedButton, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
+import { classService } from "@/database/services/courseService"
 import type { NoteData, UpdateNoteRequest } from "@/database/services/notesService"
 import { useModal } from "@/hooks/modals"
 import { useNotes } from "@/hooks/useNotes"
 import { useCommonStyles, useTheme } from "@/hooks/useTheme"
 import { useFocusEffect, useRouter } from "expo-router"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { ActivityIndicator, FlatList, RefreshControl, TextInput, TouchableOpacity, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+
+type TabType = "todas" | "favoritas" | "materias"
+
+interface SubjectGroup {
+  id: string
+  name: string
+  color: string
+  noteCount: number
+}
 
 export default function NotesIndexScreen() {
   const { theme } = useTheme()
@@ -21,8 +31,8 @@ export default function NotesIndexScreen() {
   const { notes, loading, error, refreshNotes, updateNote } = useNotes()
 
   const [searchText, setSearchText] = useState("")
-  const [showSearch, setShowSearch] = useState(false)
-  const [filterFavorites, setFilterFavorites] = useState(false)
+  const [activeTab, setActiveTab] = useState<TabType>("todas")
+  const [subjects, setSubjects] = useState<SubjectGroup[]>([])
 
   useFocusEffect(
     useCallback(() => {
@@ -30,21 +40,82 @@ export default function NotesIndexScreen() {
     }, [refreshNotes]),
   )
 
-  // Aplicar filtros
-  let filteredNotes = notes
+  // Load subjects and group notes
+  useEffect(() => {
+    const loadSubjects = async () => {
+      try {
+        const classes = await classService.getAllClasses()
+        const subjectGroups: SubjectGroup[] = []
 
-  if (filterFavorites) {
-    filteredNotes = filteredNotes.filter((note) => note.is_favorite)
-  }
+        // Get unique subjects from notes
+        const subjectMap = new Map<string, { name: string; count: number }>()
 
-  if (searchText.trim()) {
-    filteredNotes = filteredNotes.filter(
-      (note) =>
-        note.title.toLowerCase().includes(searchText.toLowerCase()) ||
-        note.content.toLowerCase().includes(searchText.toLowerCase()) ||
-        (note.ai_summary && note.ai_summary.toLowerCase().includes(searchText.toLowerCase())) ||
-        note.tags.some((tag) => tag.toLowerCase().includes(searchText.toLowerCase())),
-    )
+        for (const note of notes) {
+          if (note.class_id) {
+            const classData = classes.find((c) => c.id === note.class_id)
+            if (classData) {
+              const existing = subjectMap.get(note.class_id)
+              subjectMap.set(note.class_id, {
+                name: classData.name,
+                count: (existing?.count || 0) + 1,
+              })
+            }
+          }
+        }
+
+        // Convert to array with colors
+        const colors = [
+          theme.colors.primary,
+          theme.colors.success,
+          theme.colors.warning,
+          theme.colors.info,
+          theme.colors.accent,
+          theme.colors.secondary,
+        ]
+
+        let colorIndex = 0
+        subjectMap.forEach((data, classId) => {
+          subjectGroups.push({
+            id: classId,
+            name: data.name,
+            color: colors[colorIndex % colors.length],
+            noteCount: data.count,
+          })
+          colorIndex++
+        })
+
+        setSubjects(subjectGroups)
+      } catch (error) {
+        console.error("Error loading subjects:", error)
+      }
+    }
+
+    if (notes.length > 0) {
+      loadSubjects()
+    }
+  }, [notes, theme.colors])
+
+  // Filter notes based on active tab and search
+  const getFilteredNotes = () => {
+    let filteredNotes = notes
+
+    // Apply tab filter
+    if (activeTab === "favoritas") {
+      filteredNotes = filteredNotes.filter((note) => note.is_favorite)
+    }
+
+    // Apply search filter
+    if (searchText.trim()) {
+      filteredNotes = filteredNotes.filter(
+        (note) =>
+          note.title.toLowerCase().includes(searchText.toLowerCase()) ||
+          note.content.toLowerCase().includes(searchText.toLowerCase()) ||
+          (note.ai_summary && note.ai_summary.toLowerCase().includes(searchText.toLowerCase())) ||
+          note.tags.some((tag) => tag.toLowerCase().includes(searchText.toLowerCase())),
+      )
+    }
+
+    return filteredNotes
   }
 
   const handleNotePress = useCallback(
@@ -90,105 +161,65 @@ export default function NotesIndexScreen() {
     [notes, updateNote, showSuccess, showError, refreshNotes],
   )
 
+  const handleSubjectPress = (subjectId: string) => {
+    // Navigate to subject-specific notes view
+    router.push(`/notes/subject/${subjectId}`)
+  }
+
   const renderHeader = () => (
-    <View style={{ paddingHorizontal: theme.spacing.md, paddingTop: 80, paddingBottom: theme.spacing.xs }}>
-      {/* Title */}
-      <ThemedText variant="h1" style={{ fontWeight: "700", marginBottom: theme.spacing.lg }}>
-        Mis Notas
-      </ThemedText>
-
-      {/* Stats */}
-      <View style={{ flexDirection: "row", gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
-        <View
-          style={{
-            flex: 1,
-            padding: theme.spacing.md,
-            borderRadius: theme.borderRadius.md,
-            backgroundColor: theme.colors.surface,
-          }}
-        >
-          <ThemedText variant="h2" style={{ fontWeight: "700", color: theme.colors.primary }}>
-            {notes.length}
-          </ThemedText>
-          <ThemedText variant="caption" color="secondary">
-            Total de notas
-          </ThemedText>
-        </View>
-        <View
-          style={{
-            flex: 1,
-            padding: theme.spacing.md,
-            borderRadius: theme.borderRadius.md,
-            backgroundColor: theme.colors.surface,
-          }}
-        >
-          <ThemedText variant="h2" style={{ fontWeight: "700", color: theme.colors.error }}>
-            {notes.filter((n) => n.is_favorite).length}
-          </ThemedText>
-          <ThemedText variant="caption" color="secondary">
-            Favoritas
-          </ThemedText>
-        </View>
-      </View>
-
-      {/* Actions */}
+    <View style={{ paddingHorizontal: theme.spacing.md, paddingTop: 60, paddingBottom: theme.spacing.md }}>
+      {/* Title and New Button */}
       <View
         style={{
           flexDirection: "row",
-          alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: theme.spacing.md,
+          alignItems: "flex-start",
+          marginBottom: theme.spacing.lg,
         }}
       >
-        <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
-          <TouchableOpacity
-            onPress={() => setShowSearch(!showSearch)}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: showSearch ? theme.colors.primary : theme.colors.surface,
-            }}
-          >
-            <IconSymbol name="magnifyingglass" size={20} color={showSearch ? "white" : theme.colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setFilterFavorites(!filterFavorites)}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: filterFavorites ? theme.colors.error : theme.colors.surface,
-            }}
-          >
-            <IconSymbol name="heart.fill" size={20} color={filterFavorites ? "white" : theme.colors.error} />
-          </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <ThemedText variant="h1" style={{ fontWeight: "800", fontSize: 32, marginBottom: 4 }}>
+            Notas
+          </ThemedText>
+          <ThemedText variant="body" color="secondary">
+            Tu biblioteca de conocimiento
+          </ThemedText>
         </View>
-        <ThemedButton
-          title="Nueva Nota"
-          variant="primary"
-          icon={<IconSymbol name="plus" size={18} color="white" />}
+        <TouchableOpacity
           onPress={() => router.push("/notes/create")}
-          style={{ paddingHorizontal: theme.spacing.lg }}
-        />
+          style={{
+            backgroundColor: theme.colors.text,
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+            borderRadius: 25,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <IconSymbol name="plus" size={16} color={theme.colors.background} />
+          <ThemedText style={{ color: theme.colors.background, fontWeight: "600" }}>Nueva</ThemedText>
+        </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
-      {showSearch && (
+      <View
+        style={{
+          flexDirection: "row",
+          gap: theme.spacing.sm,
+          marginBottom: theme.spacing.lg,
+        }}
+      >
         <View
           style={{
+            flex: 1,
             flexDirection: "row",
             alignItems: "center",
             paddingHorizontal: theme.spacing.md,
             paddingVertical: theme.spacing.sm,
-            borderRadius: theme.borderRadius.md,
-            marginBottom: theme.spacing.sm,
-            gap: theme.spacing.sm,
+            borderRadius: 12,
             backgroundColor: theme.colors.surface,
+            gap: theme.spacing.sm,
           }}
         >
           <IconSymbol name="magnifyingglass" size={20} color={theme.colors.textMuted} />
@@ -203,7 +234,6 @@ export default function NotesIndexScreen() {
             placeholderTextColor={theme.colors.textMuted}
             value={searchText}
             onChangeText={setSearchText}
-            autoFocus={showSearch}
           />
           {searchText.length > 0 && (
             <TouchableOpacity onPress={() => setSearchText("")}>
@@ -211,19 +241,171 @@ export default function NotesIndexScreen() {
             </TouchableOpacity>
           )}
         </View>
-      )}
+        <TouchableOpacity
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: theme.colors.surface,
+          }}
+        >
+          <IconSymbol name="line.3.horizontal.decrease" size={20} color={theme.colors.text} />
+        </TouchableOpacity>
+      </View>
 
-      {/* Filter Info */}
-      {(searchText.trim() || filterFavorites) && (
-        <View style={{ marginBottom: theme.spacing.sm }}>
+      {/* Stats Cards */}
+      <View
+        style={{
+          flexDirection: "row",
+          gap: theme.spacing.sm,
+          marginBottom: theme.spacing.lg,
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            padding: theme.spacing.md,
+            borderRadius: 16,
+            backgroundColor: theme.colors.surface,
+            alignItems: "center",
+          }}
+        >
+          <IconSymbol name="doc.text" size={24} color={theme.colors.primary} />
+          <ThemedText variant="h2" style={{ fontWeight: "700", marginTop: 4 }}>
+            {notes.length}
+          </ThemedText>
           <ThemedText variant="caption" color="secondary">
-            {filteredNotes.length} nota{filteredNotes.length !== 1 ? "s" : ""}
-            {searchText.trim() && ` para "${searchText}"`}
-            {filterFavorites && " favoritas"}
+            Notas
           </ThemedText>
         </View>
-      )}
+        <View
+          style={{
+            flex: 1,
+            padding: theme.spacing.md,
+            borderRadius: 16,
+            backgroundColor: theme.colors.surface,
+            alignItems: "center",
+          }}
+        >
+          <IconSymbol name="star.fill" size={24} color={theme.colors.warning} />
+          <ThemedText variant="h2" style={{ fontWeight: "700", marginTop: 4 }}>
+            {notes.filter((n) => n.is_favorite).length}
+          </ThemedText>
+          <ThemedText variant="caption" color="secondary">
+            Favoritas
+          </ThemedText>
+        </View>
+        <View
+          style={{
+            flex: 1,
+            padding: theme.spacing.md,
+            borderRadius: 16,
+            backgroundColor: theme.colors.surface,
+            alignItems: "center",
+          }}
+        >
+          <IconSymbol name="book.closed" size={24} color={theme.colors.success} />
+          <ThemedText variant="h2" style={{ fontWeight: "700", marginTop: 4 }}>
+            {subjects.length}
+          </ThemedText>
+          <ThemedText variant="caption" color="secondary">
+            Materias
+          </ThemedText>
+        </View>
+      </View>
+
+      {/* Tab Navigation */}
+      <View
+        style={{
+          flexDirection: "row",
+          backgroundColor: theme.colors.surface,
+          borderRadius: 12,
+          padding: 4,
+          marginBottom: theme.spacing.lg,
+        }}
+      >
+        {[
+          { key: "todas", label: "Todas" },
+          { key: "favoritas", label: "Favoritas" },
+          { key: "materias", label: "Materias" },
+        ].map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            onPress={() => setActiveTab(tab.key as TabType)}
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              borderRadius: 8,
+              backgroundColor: activeTab === tab.key ? theme.colors.background : "transparent",
+              alignItems: "center",
+            }}
+          >
+            <ThemedText
+              variant="body"
+              style={{
+                fontWeight: activeTab === tab.key ? "600" : "500",
+                color: activeTab === tab.key ? theme.colors.text : theme.colors.textMuted,
+              }}
+            >
+              {tab.label}
+            </ThemedText>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
+  )
+
+  const renderSubjectItem = ({ item }: { item: SubjectGroup }) => (
+    <TouchableOpacity
+      onPress={() => handleSubjectPress(item.id)}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: theme.spacing.lg,
+        paddingHorizontal: theme.spacing.md,
+        marginHorizontal: theme.spacing.md,
+        marginBottom: theme.spacing.sm,
+        backgroundColor: theme.colors.surface,
+        borderRadius: 16,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+        <View
+          style={{
+            width: 12,
+            height: 40,
+            borderRadius: 6,
+            backgroundColor: item.color,
+            marginRight: theme.spacing.md,
+          }}
+        />
+        <View style={{ flex: 1 }}>
+          <ThemedText variant="h3" style={{ fontWeight: "600", marginBottom: 2 }}>
+            {item.name}
+          </ThemedText>
+          <ThemedText variant="caption" color="secondary">
+            {item.noteCount} notas
+          </ThemedText>
+        </View>
+      </View>
+      <TouchableOpacity
+        onPress={() => handleSubjectPress(item.id)}
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 8,
+          borderRadius: 20,
+          backgroundColor: theme.colors.background,
+        }}
+      >
+        <ThemedText variant="caption" style={{ fontWeight: "500" }}>
+          Ver todas
+        </ThemedText>
+      </TouchableOpacity>
+    </TouchableOpacity>
   )
 
   const renderEmptyState = () => (
@@ -246,24 +428,24 @@ export default function NotesIndexScreen() {
         }}
       >
         <IconSymbol
-          name={searchText.trim() || filterFavorites ? "magnifyingglass" : "note.text"}
+          name={searchText.trim() || activeTab === "favoritas" ? "magnifyingglass" : "note.text"}
           size={48}
           color={theme.colors.textMuted}
         />
       </View>
       <ThemedText variant="h3" style={{ textAlign: "center", marginBottom: theme.spacing.xs, fontWeight: "600" }}>
-        {searchText.trim() || filterFavorites ? "Sin resultados" : "Sin notas"}
+        {searchText.trim() || activeTab === "favoritas" ? "Sin resultados" : "Sin notas"}
       </ThemedText>
       <ThemedText
         variant="body"
         color="secondary"
         style={{ textAlign: "center", lineHeight: 20, marginBottom: theme.spacing.lg }}
       >
-        {searchText.trim() || filterFavorites
-          ? "Intenta con otros términos de búsqueda o filtros"
+        {searchText.trim() || activeTab === "favoritas"
+          ? "Intenta con otros términos de búsqueda"
           : "Crea tu primera nota para comenzar"}
       </ThemedText>
-      {!searchText.trim() && !filterFavorites && (
+      {!searchText.trim() && activeTab === "todas" && (
         <ThemedButton
           title="Crear Primera Nota"
           variant="primary"
@@ -320,33 +502,50 @@ export default function NotesIndexScreen() {
     )
   }
 
+  const filteredNotes = getFilteredNotes()
+
   return (
     <SafeAreaView style={commonStyles.container}>
       <ThemedView variant="background" style={commonStyles.container}>
-        <FlatList
-          data={filteredNotes}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderHeader}
-          renderItem={({ item: note }) => (
-            <NoteCard
-              note={note}
-              onPress={handleNotePress}
-              onEdit={handleEditNote}
-              isFavorite={note.is_favorite}
-              onFavoriteToggle={() => handleFavoriteToggle(note.id)}
-              compact={false}
-            />
-          )}
-          ListEmptyComponent={renderEmptyState}
-          contentContainerStyle={[
-            { paddingHorizontal: theme.spacing.md, paddingBottom: 100 },
-            filteredNotes.length === 0 && { flex: 1 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={refreshNotes} tintColor={theme.colors.primary} />
-          }
-        />
+        {activeTab === "materias" ? (
+          <FlatList
+            data={subjects}
+            keyExtractor={(item) => item.id}
+            ListHeaderComponent={renderHeader}
+            renderItem={renderSubjectItem}
+            ListEmptyComponent={renderEmptyState}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={loading} onRefresh={refreshNotes} tintColor={theme.colors.primary} />
+            }
+          />
+        ) : (
+          <FlatList
+            data={filteredNotes}
+            keyExtractor={(item) => item.id}
+            ListHeaderComponent={renderHeader}
+            renderItem={({ item: note }) => (
+              <NoteCard
+                note={note}
+                onPress={handleNotePress}
+                onEdit={handleEditNote}
+                isFavorite={note.is_favorite}
+                onFavoriteToggle={() => handleFavoriteToggle(note.id)}
+                compact={false}
+              />
+            )}
+            ListEmptyComponent={renderEmptyState}
+            contentContainerStyle={[
+              { paddingHorizontal: theme.spacing.md, paddingBottom: 100 },
+              filteredNotes.length === 0 && { flex: 1 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={loading} onRefresh={refreshNotes} tintColor={theme.colors.primary} />
+            }
+          />
+        )}
       </ThemedView>
     </SafeAreaView>
   )
