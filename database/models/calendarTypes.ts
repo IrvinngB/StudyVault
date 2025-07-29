@@ -11,6 +11,8 @@ export type EventType =
   | "parcial"
   | "proyecto"
   | "examen_final"
+  | "practica"
+  | "investigacion"
   | "charla"
   | "dia_libre"
   | "recordatorio"

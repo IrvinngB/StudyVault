@@ -1,17 +1,24 @@
 "use client"
 
 import { IconSymbol } from "@/components/ui/IconSymbol"
-import { ThemedButton, ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
+import { ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { useTheme } from "@/hooks/useTheme"
 import { router } from "expo-router"
 import { useState } from "react"
-import { Alert, Linking, ScrollView, TouchableOpacity, View } from "react-native"
+import { Linking, ScrollView, TouchableOpacity, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 interface FAQItem {
   question: string
   answer: string
   icon: string
+}
+
+interface ContactMethod {
+  name: string
+  description: string
+  icon: string
+  action: () => void
   color: string
 }
 
@@ -20,357 +27,294 @@ export default function HelpScreen() {
   const insets = useSafeAreaInsets()
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null)
 
-  const faqData: FAQItem[] = [
+  const faqItems: FAQItem[] = [
     {
-      question: "¿Cómo creo mi primera materia?",
-      answer:
-        "Ve a la sección 'Cursos' desde el menú principal, toca el botón '+' y completa la información básica como nombre, código y color. ¡Es súper fácil!",
-      icon: "book.closed",
-      color: theme.colors.primary,
+      question: "¿Cómo crear una tarea automáticamente?",
+      answer: "Al crear un evento en el calendario que no sea de tipo 'clase' y seleccionar una materia, se creará automáticamente una tarea vinculada. La tarea aparecerá en la pantalla de calificaciones para que puedas agregar tu nota.",
+      icon: "plus.circle"
     },
     {
-      question: "¿Puedo sincronizar mis datos?",
-      answer:
-        "Sí, todos tus datos se sincronizan automáticamente en la nube. Puedes acceder a tu información desde cualquier dispositivo donde tengas Study Vault instalado.",
-      icon: "icloud",
-      color: theme.colors.info,
+      question: "¿Cómo funciona el sistema de rachas?",
+      answer: "El sistema de rachas cuenta los días consecutivos en los que completas al menos una tarea. Mantén tu racha activa completando tareas diariamente para desbloquear logros y mantener tu motivación.",
+      icon: "flame"
     },
     {
-      question: "¿Cómo organizo mis tareas?",
-      answer:
-        "En la sección 'Tareas' puedes crear, editar y marcar como completadas tus actividades. También puedes asignarlas a materias específicas y establecer fechas límite.",
-      icon: "checklist",
-      color: theme.colors.secondary,
+      question: "¿Puedo cambiar mi avatar?",
+      answer: "Sí, ve a Configuración > Perfil y toca en tu avatar actual. Se abrirá un selector con diferentes opciones de avatares para personalizar tu perfil.",
+      icon: "person.circle"
     },
     {
-      question: "¿Puedo exportar mis notas?",
-      answer:
-        "Actualmente estamos trabajando en esta función. Pronto podrás exportar tus notas en diferentes formatos como PDF y texto plano.",
-      icon: "square.and.arrow.up",
-      color: theme.colors.warning,
+      question: "¿Cómo agregar una nueva materia?",
+      answer: "Ve a la pantalla de Materias y toca el botón '+ Agregar'. Completa el nombre de la materia y guarda. Luego podrás crear categorías y calificaciones para esa materia.",
+      icon: "plus.square"
     },
     {
-      question: "¿La app funciona sin internet?",
-      answer:
-        "¡Por supuesto! Study Vault funciona completamente offline. Tus datos se sincronizarán automáticamente cuando tengas conexión a internet.",
-      icon: "wifi.slash",
-      color: theme.colors.accent,
+      question: "¿Cómo funcionan las notificaciones?",
+      answer: "Las notificaciones se configuran al crear eventos en el calendario. Puedes establecer recordatorios de 5 minutos hasta 1 día antes del evento. Las notificaciones aparecerán en tu dispositivo.",
+      icon: "bell"
     },
     {
-      question: "¿Cómo activo las notificaciones?",
-      answer:
-        "Ve a Configuración > Perfil y activa el switch de notificaciones. También puedes configurar recordatorios específicos al crear eventos en el calendario.",
-      icon: "bell",
-      color: theme.colors.success,
-    },
+      question: "¿Puedo exportar mis datos?",
+      answer: "Actualmente no hay función de exportación, pero estamos trabajando en implementar esta funcionalidad para que puedas respaldar tus datos.",
+      icon: "square.and.arrow.up"
+    }
   ]
 
-  const contactOptions = [
+  const contactMethods: ContactMethod[] = [
     {
-      title: "Enviar email",
-      subtitle: "soporte@studyvault.com",
+      name: "Email de Soporte",
+      description: "Envía un email directo al equipo de desarrollo",
       icon: "envelope",
       color: theme.colors.primary,
-      action: () => Linking.openURL("mailto:soporte@studyvault.com"),
+      action: () => Linking.openURL("mailto:soporte@studyvault.app?subject=Soporte StudyVault")
     },
     {
-      title: "Chat en vivo",
-      subtitle: "Respuesta inmediata",
-      icon: "message",
-      color: theme.colors.success,
-      action: () => Alert.alert("Próximamente", "El chat en vivo estará disponible pronto"),
-    },
-    {
-      title: "Centro de ayuda",
-      subtitle: "Guías y tutoriales",
-      icon: "questionmark.circle",
-      color: theme.colors.info,
-      action: () => Alert.alert("Próximamente", "El centro de ayuda estará disponible pronto"),
-    },
-    {
-      title: "Reportar un bug",
-      subtitle: "Ayúdanos a mejorar",
+      name: "GitHub Issues",
+      description: "Reporta bugs o solicita nuevas funciones",
       icon: "exclamationmark.triangle",
       color: theme.colors.warning,
-      action: () => Linking.openURL("mailto:bugs@studyvault.com?subject=Reporte de Bug"),
+      action: () => Linking.openURL("https://github.com/studyvault-app/issues")
     },
+    {
+      name: "Documentación",
+      description: "Accede a la documentación completa",
+      icon: "book",
+      color: theme.colors.info,
+      action: () => Linking.openURL("https://docs.studyvault.app")
+    }
   ]
 
-  const toggleFAQ = (index: number) => {
-    setExpandedFAQ(expandedFAQ === index ? null : index)
-  }
+  const quickGuides = [
+    {
+      title: "Primeros Pasos",
+      description: "Configura tu perfil y agrega tus primeras materias",
+      icon: "star",
+      action: () => router.push("/settings")
+    },
+    {
+      title: "Crear Eventos",
+      description: "Aprende a crear eventos y tareas automáticas",
+      icon: "calendar.plus",
+      action: () => router.push("/calendar")
+    },
+    {
+      title: "Gestionar Calificaciones",
+      description: "Organiza tus calificaciones por categorías",
+      icon: "chart.bar",
+      action: () => router.push("/grades" as any)
+    }
+  ]
 
   return (
     <ThemedView variant="background" style={{ flex: 1 }}>
+      <View style={{ paddingTop: insets.top, backgroundColor: theme.colors.background }} />
       <ScrollView
         contentContainerStyle={{
-          padding: theme.spacing.md,
-          paddingTop: insets.top + theme.spacing.md,
-          paddingBottom: insets.bottom + theme.spacing.xl,
+          padding: theme.spacing.lg,
+          paddingBottom: insets.bottom + 100,
         }}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <ThemedView style={{ marginBottom: theme.spacing.xl }}>
-          <ThemedView
+        <ThemedView
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: theme.spacing.xl,
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => router.back()}
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: theme.spacing.md,
+              backgroundColor: theme.colors.surface,
+              padding: theme.spacing.sm,
+              borderRadius: theme.borderRadius.full,
+              marginRight: theme.spacing.md,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
             }}
           >
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={{
-                backgroundColor: theme.colors.surface,
-                padding: theme.spacing.sm,
-                borderRadius: theme.borderRadius.full,
-                marginRight: theme.spacing.md,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-              }}
-            >
-              <IconSymbol name="chevron.left" size={20} color={theme.colors.text} />
-            </TouchableOpacity>
-            <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
-                style={{
-                  backgroundColor: theme.colors.secondary + "20",
-                  padding: theme.spacing.sm,
-                  borderRadius: theme.borderRadius.full,
-                  marginRight: theme.spacing.sm,
-                }}
-              >
-                <IconSymbol name="questionmark.circle.fill" size={24} color={theme.colors.secondary} />
-              </View>
-              <ThemedText variant="h1" style={{ fontSize: 28, fontWeight: "800" }}>
-                Ayuda y Soporte
-              </ThemedText>
-            </ThemedView>
-          </ThemedView>
-          <ThemedText variant="body" color="secondary" style={{ fontSize: 16 }}>
-            Encuentra respuestas rápidas o contáctanos directamente
+            <IconSymbol name="chevron.left" size={20} color={theme.colors.text} />
+          </TouchableOpacity>
+          <View
+            style={{
+              backgroundColor: theme.colors.info + "20",
+              padding: theme.spacing.sm,
+              borderRadius: theme.borderRadius.full,
+              marginRight: theme.spacing.sm,
+            }}
+          >
+            <IconSymbol name="questionmark.circle" size={24} color={theme.colors.info} />
+          </View>
+          <ThemedText variant="h1" style={{ fontSize: 28, fontWeight: "800" }}>
+            Ayuda y Soporte
           </ThemedText>
         </ThemedView>
 
-        {/* Búsqueda rápida */}
-        <ThemedCard
-          variant="elevated"
-          padding="large"
-          style={{
-            marginBottom: theme.spacing.lg,
-            backgroundColor: theme.colors.primary + "10",
-            borderLeftWidth: 4,
-            borderLeftColor: theme.colors.primary,
-          }}
-        >
-          <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
-            <View
-              style={{
-                backgroundColor: theme.colors.primary + "20",
-                padding: theme.spacing.md,
-                borderRadius: theme.borderRadius.full,
-                marginRight: theme.spacing.md,
-              }}
-            >
-              <IconSymbol name="lightbulb" size={28} color={theme.colors.primary} />
-            </View>
-            <ThemedView style={{ flex: 1 }}>
-              <ThemedText variant="h3" style={{ marginBottom: theme.spacing.xs, color: theme.colors.primary }}>
-                ¿Necesitas ayuda rápida?
-              </ThemedText>
-              <ThemedText variant="body" color="secondary" style={{ lineHeight: 20 }}>
-                Revisa nuestras preguntas frecuentes o contáctanos directamente
-              </ThemedText>
-            </ThemedView>
-          </ThemedView>
-        </ThemedCard>
-
-        {/* Preguntas Frecuentes */}
+        {/* Quick Guides */}
         <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
-          <ThemedView
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: theme.spacing.lg,
-            }}
-          >
-            <View
-              style={{
-                backgroundColor: theme.colors.primary + "20",
-                padding: theme.spacing.sm,
-                borderRadius: theme.borderRadius.full,
-                marginRight: theme.spacing.md,
-              }}
-            >
-              <IconSymbol name="questionmark" size={24} color={theme.colors.primary} />
-            </View>
-            <ThemedText variant="h2" style={{ fontWeight: "700" }}>
-              Preguntas Frecuentes
+          <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+            <IconSymbol name="star" size={24} color={theme.colors.primary} />
+            <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
+              Guías Rápidas
             </ThemedText>
           </ThemedView>
-
-          <ThemedView style={{ gap: theme.spacing.sm }}>
-            {faqData.map((faq, index) => (
+          
+          <ThemedView style={{ gap: theme.spacing.md }}>
+            {quickGuides.map((guide, index) => (
               <TouchableOpacity
                 key={index}
-                onPress={() => toggleFAQ(index)}
+                onPress={guide.action}
                 style={{
-                  backgroundColor: theme.colors.background,
-                  borderRadius: theme.borderRadius.lg,
-                  padding: theme.spacing.lg,
-                  borderWidth: 2,
-                  borderColor: expandedFAQ === index ? faq.color : theme.colors.border,
-                  ...theme.shadows.small,
+                  backgroundColor: theme.colors.surface,
+                  padding: theme.spacing.md,
+                  borderRadius: theme.borderRadius.md,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  flexDirection: "row",
+                  alignItems: "center",
                 }}
               >
-                <ThemedView
+                <View
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
+                    backgroundColor: theme.colors.primary + "20",
+                    padding: theme.spacing.sm,
+                    borderRadius: theme.borderRadius.full,
+                    marginRight: theme.spacing.md,
                   }}
                 >
-                  <ThemedView style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
-                    <View
-                      style={{
-                        backgroundColor: faq.color + "20",
-                        padding: theme.spacing.sm,
-                        borderRadius: theme.borderRadius.sm,
-                        marginRight: theme.spacing.md,
-                      }}
-                    >
-                      <IconSymbol name={faq.icon as any} size={20} color={faq.color} />
-                    </View>
-                    <ThemedText variant="body" style={{ flex: 1, fontWeight: "600", fontSize: 16 }}>
-                      {faq.question}
-                    </ThemedText>
-                  </ThemedView>
-                  <IconSymbol
-                    name={expandedFAQ === index ? "chevron.up" : "chevron.down"}
-                    size={20}
-                    color={theme.colors.textMuted}
-                  />
+                  <IconSymbol name={guide.icon as any} size={20} color={theme.colors.primary} />
+                </View>
+                <ThemedView style={{ flex: 1 }}>
+                  <ThemedText variant="button" style={{ fontWeight: "600", marginBottom: 4 }}>
+                    {guide.title}
+                  </ThemedText>
+                  <ThemedText variant="caption" color="secondary">
+                    {guide.description}
+                  </ThemedText>
                 </ThemedView>
-
-                {expandedFAQ === index && (
-                  <ThemedView style={{ marginTop: theme.spacing.lg, paddingLeft: theme.spacing.xl }}>
-                    <ThemedText variant="body" color="secondary" style={{ lineHeight: 24, fontSize: 15 }}>
-                      {faq.answer}
-                    </ThemedText>
-                  </ThemedView>
-                )}
+                <IconSymbol name="chevron.right" size={16} color={theme.colors.textMuted} />
               </TouchableOpacity>
             ))}
           </ThemedView>
         </ThemedCard>
 
-        {/* Opciones de Contacto */}
+        {/* FAQ Section */}
         <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
-          <ThemedView
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: theme.spacing.lg,
-            }}
-          >
-            <View
-              style={{
-                backgroundColor: theme.colors.success + "20",
-                padding: theme.spacing.sm,
-                borderRadius: theme.borderRadius.full,
-                marginRight: theme.spacing.md,
-              }}
-            >
-              <IconSymbol name="phone" size={24} color={theme.colors.success} />
-            </View>
-            <ThemedText variant="h2" style={{ fontWeight: "700" }}>
-              Opciones de Contacto
+          <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+            <IconSymbol name="questionmark.circle" size={24} color={theme.colors.primary} />
+            <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
+              Preguntas Frecuentes
             </ThemedText>
           </ThemedView>
-
+          
           <ThemedView style={{ gap: theme.spacing.sm }}>
-            {contactOptions.map((option, index) => (
+            {faqItems.map((item, index) => (
               <TouchableOpacity
                 key={index}
-                onPress={option.action}
+                onPress={() => setExpandedFAQ(expandedFAQ === index ? null : index)}
                 style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  paddingVertical: theme.spacing.lg,
-                  paddingHorizontal: theme.spacing.md,
-                  backgroundColor: theme.colors.background,
-                  borderRadius: theme.borderRadius.lg,
+                  backgroundColor: theme.colors.surface,
+                  padding: theme.spacing.md,
+                  borderRadius: theme.borderRadius.md,
                   borderWidth: 1,
                   borderColor: theme.colors.border,
                 }}
               >
-                <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
+                <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
                   <View
                     style={{
-                      backgroundColor: option.color + "20",
-                      padding: theme.spacing.md,
-                      borderRadius: theme.borderRadius.sm,
-                      marginRight: theme.spacing.lg,
+                      backgroundColor: theme.colors.primary + "20",
+                      padding: theme.spacing.sm,
+                      borderRadius: theme.borderRadius.full,
+                      marginRight: theme.spacing.md,
+                      marginTop: 2,
                     }}
                   >
-                    <IconSymbol name={option.icon as any} size={24} color={option.color} />
+                    <IconSymbol name={item.icon as any} size={16} color={theme.colors.primary} />
                   </View>
-                  <ThemedView>
-                    <ThemedText variant="body" style={{ fontWeight: "600", fontSize: 16 }}>
-                      {option.title}
+                  <ThemedView style={{ flex: 1 }}>
+                    <ThemedText variant="button" style={{ fontWeight: "600", marginBottom: 8 }}>
+                      {item.question}
                     </ThemedText>
-                    <ThemedText variant="caption" color="secondary" style={{ fontSize: 14 }}>
-                      {option.subtitle}
-                    </ThemedText>
+                    {expandedFAQ === index && (
+                      <ThemedText variant="body" color="secondary" style={{ lineHeight: 20 }}>
+                        {item.answer}
+                      </ThemedText>
+                    )}
                   </ThemedView>
+                  <IconSymbol 
+                    name={expandedFAQ === index ? "chevron.up" : "chevron.down"} 
+                    size={16} 
+                    color={theme.colors.textMuted} 
+                    style={{ marginTop: 2 }}
+                  />
                 </ThemedView>
-                <IconSymbol name="chevron.right" size={20} color={theme.colors.textMuted} />
               </TouchableOpacity>
             ))}
           </ThemedView>
         </ThemedCard>
 
-        {/* Información Adicional */}
-        <ThemedCard
-          variant="elevated"
-          padding="large"
-          style={{
-            backgroundColor: theme.colors.info + "10",
-            borderLeftWidth: 4,
-            borderLeftColor: theme.colors.info,
-          }}
-        >
-          <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
-            <View
-              style={{
-                backgroundColor: theme.colors.info + "20",
-                padding: theme.spacing.md,
-                borderRadius: theme.borderRadius.full,
-                marginRight: theme.spacing.lg,
-              }}
-            >
-              <IconSymbol name="heart.fill" size={28} color={theme.colors.info} />
-            </View>
-            <ThemedView style={{ flex: 1 }}>
-              <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm, color: theme.colors.info }}>
-                Estamos aquí para ayudarte
-              </ThemedText>
-              <ThemedText variant="body" color="secondary" style={{ lineHeight: 22, marginBottom: theme.spacing.md }}>
-                Nuestro equipo de soporte está disponible para resolver cualquier duda. Normalmente respondemos en menos
-                de 24 horas.
-              </ThemedText>
-              <ThemedButton
-                title="Contactar Soporte"
-                variant="outline"
-                icon={<IconSymbol name="envelope" size={16} color={theme.colors.info} />}
-                onPress={() => Linking.openURL("mailto:soporte@studyvault.com")}
+        {/* Contact Section */}
+        <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+          <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+            <IconSymbol name="envelope" size={24} color={theme.colors.primary} />
+            <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
+              Contacto y Soporte
+            </ThemedText>
+          </ThemedView>
+          
+          <ThemedView style={{ gap: theme.spacing.md }}>
+            {contactMethods.map((method, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={method.action}
                 style={{
-                  borderColor: theme.colors.info,
+                  backgroundColor: theme.colors.surface,
+                  padding: theme.spacing.md,
+                  borderRadius: theme.borderRadius.md,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  flexDirection: "row",
+                  alignItems: "center",
                 }}
-              />
-            </ThemedView>
+              >
+                <View
+                  style={{
+                    backgroundColor: method.color + "20",
+                    padding: theme.spacing.sm,
+                    borderRadius: theme.borderRadius.full,
+                    marginRight: theme.spacing.md,
+                  }}
+                >
+                  <IconSymbol name={method.icon as any} size={20} color={method.color} />
+                </View>
+                <ThemedView style={{ flex: 1 }}>
+                  <ThemedText variant="button" style={{ fontWeight: "600", marginBottom: 4 }}>
+                    {method.name}
+                  </ThemedText>
+                  <ThemedText variant="caption" color="secondary">
+                    {method.description}
+                  </ThemedText>
+                </ThemedView>
+                <IconSymbol name="arrow.up.right" size={16} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            ))}
+          </ThemedView>
+        </ThemedCard>
+
+        {/* App Info */}
+        <ThemedCard variant="outlined" padding="medium">
+          <ThemedView style={{ alignItems: "center" }}>
+            <ThemedText variant="h3" style={{ fontWeight: "700", marginBottom: theme.spacing.sm }}>
+              StudyVault
+            </ThemedText>
+            <ThemedText variant="caption" color="secondary" style={{ textAlign: "center", marginBottom: theme.spacing.sm }}>
+              Versión 1.0.0
+            </ThemedText>
+            <ThemedText variant="caption" color="secondary" style={{ textAlign: "center" }}>
+              Desarrollado con ❤️ por el equipo de StudyVault
+            </ThemedText>
           </ThemedView>
         </ThemedCard>
       </ScrollView>

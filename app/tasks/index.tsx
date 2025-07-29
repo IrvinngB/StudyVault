@@ -109,7 +109,7 @@ export default function TasksScreen() {
         // Por ahora, creamos una tarea con título por defecto
         // En el futuro, esto debería abrir un modal con un formulario
         await createTask("Nueva tarea")
-      },
+          },
     })
   }
 

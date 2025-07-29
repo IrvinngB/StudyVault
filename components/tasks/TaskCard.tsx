@@ -109,13 +109,13 @@ export function TaskCard({ task, onToggleCompletion }: TaskCardProps) {
               cancelText: "Cancelar",
               onConfirm: () => {
                 // Si no tiene task_id pero tiene grade_id, usamos grade_id directamente
-                if (!task.task_id && task.grade_id) {
+            if (!task.task_id && task.grade_id) {
                   onToggleCompletion({ ...task, task_id: task.grade_id });
-                } else if (task.grade_id) {
+            } else if (task.grade_id) {
                   onToggleCompletion(task);
-                } else {
-                  onToggleCompletion(task);
-                }
+            } else {
+              onToggleCompletion(task);
+            }
               },
             });
           }}

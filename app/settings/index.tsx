@@ -10,7 +10,7 @@ import { useUserProfile } from "@/hooks/useUserProfile"
 import { clearCredentialsIfNeeded } from "@/utils/biometricAuth"
 import { router } from "expo-router"
 import { useCallback, useEffect, useState } from "react"
-import { Alert, Animated, Dimensions, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from "react-native"
+import { Alert, Animated, Dimensions, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Switch, TextInput, TouchableOpacity, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export default function UnifiedSettingsScreen() {
@@ -544,6 +544,133 @@ export default function UnifiedSettingsScreen() {
                 </ThemedText>
               </ThemedView>
               <ThemeSelector />
+            </ThemedCard>
+
+            {/* Notifications */}
+            <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+              <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+                <IconSymbol name="bell" size={24} color={theme.colors.primary} />
+                <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
+                  Notificaciones
+                </ThemedText>
+              </ThemedView>
+              
+              <ThemedView style={{ gap: theme.spacing.sm }}>
+                <ThemedView
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    padding: theme.spacing.md,
+                    borderRadius: theme.borderRadius.md,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    flexDirection: "row",
+                    alignItems: "center",
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: theme.colors.primary + "20",
+                      padding: theme.spacing.sm,
+                      borderRadius: theme.borderRadius.full,
+                      marginRight: theme.spacing.md,
+                    }}
+                  >
+                    <IconSymbol name="bell" size={20} color={theme.colors.primary} />
+                  </View>
+                  <ThemedView style={{ flex: 1 }}>
+                    <ThemedText variant="button" style={{ fontWeight: "600", marginBottom: 4 }}>
+                      Notificaciones del Sistema
+                    </ThemedText>
+                    <ThemedText variant="caption" color="secondary">
+                      Habilita o deshabilita todas las notificaciones de la app
+                    </ThemedText>
+                  </ThemedView>
+                  <Switch
+                    value={true}
+                    onValueChange={() => {}}
+                    trackColor={{ false: theme.colors.border, true: theme.colors.primary + "40" }}
+                    thumbColor={theme.colors.primary}
+                  />
+                </ThemedView>
+              </ThemedView>
+            </ThemedCard>
+
+            {/* Help & Support */}
+            <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+              <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+                <IconSymbol name="questionmark.circle" size={24} color={theme.colors.primary} />
+                <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
+                  Ayuda y Soporte
+                </ThemedText>
+              </ThemedView>
+              
+              <ThemedView style={{ gap: theme.spacing.sm }}>
+                <TouchableOpacity
+                  onPress={() => router.push("/settings/help")}
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    padding: theme.spacing.md,
+                    borderRadius: theme.borderRadius.md,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    flexDirection: "row",
+                    alignItems: "center",
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: theme.colors.info + "20",
+                      padding: theme.spacing.sm,
+                      borderRadius: theme.borderRadius.full,
+                      marginRight: theme.spacing.md,
+                    }}
+                  >
+                    <IconSymbol name="questionmark.circle" size={20} color={theme.colors.info} />
+                  </View>
+                  <ThemedView style={{ flex: 1 }}>
+                    <ThemedText variant="button" style={{ fontWeight: "600", marginBottom: 4 }}>
+                      Centro de Ayuda
+                    </ThemedText>
+                    <ThemedText variant="caption" color="secondary">
+                      Preguntas frecuentes, guías y contacto
+                    </ThemedText>
+                  </ThemedView>
+                  <IconSymbol name="chevron.right" size={16} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => router.push("/settings/privacy")}
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    padding: theme.spacing.md,
+                    borderRadius: theme.borderRadius.md,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    flexDirection: "row",
+                    alignItems: "center",
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: theme.colors.warning + "20",
+                      padding: theme.spacing.sm,
+                      borderRadius: theme.borderRadius.full,
+                      marginRight: theme.spacing.md,
+                    }}
+                  >
+                    <IconSymbol name="lock.shield" size={20} color={theme.colors.warning} />
+                  </View>
+                  <ThemedView style={{ flex: 1 }}>
+                    <ThemedText variant="button" style={{ fontWeight: "600", marginBottom: 4 }}>
+                      Privacidad y Seguridad
+                    </ThemedText>
+                    <ThemedText variant="caption" color="secondary">
+                      Configuración de privacidad y gestión de datos
+                    </ThemedText>
+                  </ThemedView>
+                  <IconSymbol name="chevron.right" size={16} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+              </ThemedView>
             </ThemedCard>
 
             {/* Account Card - Easter Egg Trigger */}

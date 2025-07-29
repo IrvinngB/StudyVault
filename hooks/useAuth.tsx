@@ -144,10 +144,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const result = await authService.signUp(email, password, userData)
 
-      if (result.success && result.data) {
-        console.log("✅ Registro exitoso")
-        setSession(result.data)
-        setUser(result.data.user)
+      if (result.success) {
+        console.log("✅ Registro exitoso - NO estableciendo sesión automáticamente")
+        // NO establecer sesión automáticamente para que el usuario confirme su email primero
       } else {
         console.log("❌ Error en registro:", result.error)
       }

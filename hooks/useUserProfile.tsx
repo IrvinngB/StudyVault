@@ -3,17 +3,25 @@
 import type { UserDevice, UserProfile, UserProfileUpdate } from "@/database/models/userTypes"
 import { UserDeviceService } from "@/database/services/userDeviceService"
 import { UserProfileService } from "@/database/services/userProfileService"
+import { useAuth } from "@/hooks/useAuth"
 import { useCallback, useEffect, useState } from "react"
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { isAuthenticated, user } = useAuth()
 
   const profileService = UserProfileService.getInstance()
 
   // Cargar perfil del usuario
   const loadProfile = useCallback(async () => {
+    if (!isAuthenticated) {
+      console.log("🔒 Usuario no autenticado, no cargando perfil")
+      setProfile(null)
+      return
+    }
+
     setLoading(true)
     setError(null)
     try {
@@ -21,11 +29,12 @@ export function useUserProfile() {
       console.log("📥 Profile data received:", result)
       setProfile(result)
     } catch (err) {
+      console.error("❌ Error loading profile:", err)
       setError(err instanceof Error ? err.message : "Error loading profile")
     } finally {
       setLoading(false)
     }
-  }, [profileService])
+  }, [profileService, isAuthenticated])
 
   // Actualizar perfil
   const updateProfile = useCallback(
@@ -71,10 +80,14 @@ export function useUserProfile() {
     [profileService],
   )
 
-  // Cargar perfil automáticamente al montar el hook
+  // Cargar perfil automáticamente cuando cambie el estado de autenticación
   useEffect(() => {
-    loadProfile()
-  }, [loadProfile])
+    if (isAuthenticated) {
+      loadProfile()
+    } else {
+      setProfile(null)
+    }
+  }, [loadProfile, isAuthenticated])
 
   return {
     profile,

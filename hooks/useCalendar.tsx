@@ -97,9 +97,12 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
     setError(null)
 
     try {
+      console.log("🔄 Creando evento de calendario:", eventData.title)
       const response = await calendarService.createEvent(eventData)
 
       if (response.success && response.data) {
+        console.log("✅ Evento creado exitosamente:", response.data.id)
+        
         // Add new event to the current list
         setEvents((prevEvents) => [...prevEvents, response.data!])
 
@@ -139,10 +142,12 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
 
         return response.data
       } else {
+        console.error("❌ Error en respuesta del servidor:", response.error)
         setError(response.error || "Error al crear evento")
         return null
       }
     } catch (err: any) {
+      console.error("❌ Error inesperado al crear evento:", err)
       setError(err.message || "Error inesperado al crear evento")
       return null
     } finally {

@@ -43,6 +43,21 @@ export const EVENT_TYPE_CATEGORY_MAPPING: Record<string, CategoryMapping> = {
     percentage: 25,
     description: 'Examen final del curso'
   },
+  'practica': {
+    name: 'Prácticas',
+    percentage: 15,
+    description: 'Ejercicios prácticos y talleres'
+  },
+  'investigacion': {
+    name: 'Investigación',
+    percentage: 25,
+    description: 'Trabajos de investigación y análisis'
+  },
+  'charla': {
+    name: 'Charlas',
+    percentage: 10,
+    description: 'Presentaciones y exposiciones orales'
+  },
   // Fallback para eventos sin mapeo específico
   'general': {
     name: 'General',
@@ -62,7 +77,10 @@ export const getCategoryMappingForEventType = (eventType: string): CategoryMappi
  * Verifica si un tipo de evento debe generar automáticamente una calificación
  */
 export const shouldCreateGradeForEventType = (eventType: string): boolean => {
-  const gradeEventTypes = ['tarea', 'laboratorio', 'quiz', 'parcial', 'proyecto', 'examen_final']
+  const gradeEventTypes = [
+    'tarea', 'laboratorio', 'quiz', 'parcial', 'proyecto', 'examen_final',
+    'practica', 'investigacion', 'charla'
+  ]
   return gradeEventTypes.includes(eventType)
 }
 

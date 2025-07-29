@@ -7,8 +7,9 @@ import { EVENT_TYPES_CONFIG, REMINDER_OPTIONS } from "@/constants/Calendar"
 import type { CalendarEvent, CreateCalendarEventRequest, EventType } from "@/database/models/calendarTypes"
 import type { ClassData } from "@/database/services"
 import { useAuth } from "@/hooks/useAuth"
-import { useAutoCategory } from "@/hooks/useAutoCategory"
 import { useTheme } from "@/hooks/useTheme"
+import { categoryService } from "@/database/services/categoryService"
+import { gradesService } from "@/database/services/gradesService"
 import { scheduleCalendarNotification } from "@/utils/notifications"
 import { convertLocalToUTC, formatTimeWithPreferences, getTimezoneInfo } from "@/utils/timezoneHelpers"
 import { Ionicons } from "@expo/vector-icons"
@@ -32,7 +33,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 }) => {
   const { theme } = useTheme()
   const { user } = useAuth()
-  const { createAutoGradeForEvent } = useAutoCategory()
   const [loading, setLoading] = useState(false)
   const [use24HourFormat, setUse24HourFormat] = useState(false)
 
@@ -117,6 +117,47 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       console.error("Error converting local time to UTC:", error)
       // Fallback: usar la fecha original
       return new Date().toISOString()
+    }
+  }
+
+  // Crea una calificación automática para el evento (si aplica)
+  const createAutoGrade = async (eventId: string | undefined, classId: string, eventTitle: string, eventType: string) => {
+    try {
+      // Obtener categorías de la clase
+      let categories: any[] = []
+      if (classId) {
+        categories = await categoryService.getCategoriesByClassId(classId)
+      }
+
+      let categoryId = categories.length > 0 ? categories[0].id : null
+
+      // Si no hay categoría, crear una por defecto
+      if (!categoryId && classId) {
+        const defaultCategory = await categoryService.createCategory({ 
+          class_id: classId, 
+          name: "General", 
+          percentage: 100 
+        })
+        categoryId = defaultCategory.id
+      }
+
+      if (!categoryId) return // No se puede crear calificación sin categoría
+
+      // Crear la calificación con score 0 y max_score 0 por defecto
+      await gradesService.createGrade({
+        class_id: classId,
+        category_id: categoryId,
+        title: eventTitle,
+        score: 0,
+        max_score: 0,
+        ...(eventId && { calendar_event_id: eventId }),
+        event_type: eventType,
+        value: 1 // 1 = incompleta/activa por defecto
+      })
+
+      console.log("✅ Calificación automática creada exitosamente")
+    } catch (err) {
+      console.error("Error creando calificación automática:", err)
     }
   }
 
@@ -224,10 +265,11 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
       // Crear el evento y obtener el id (si lo retorna)
       const createdEvent = await onCreateEvent(eventData)
+      console.log("✅ Evento creado:", createdEvent?.id)
 
       // Si el evento NO es de tipo 'class', crear calificación automática
       if (eventType !== "class" && selectedClass?.id) {
-        await createAutoGradeForEvent(createdEvent?.id, selectedClass.id, title.trim(), eventType)
+        await createAutoGrade(createdEvent?.id, selectedClass.id, title.trim(), eventType)
       }
 
       // CAMBIO PRINCIPAL: Solo programar notificación si el usuario especificó un recordatorio
@@ -500,6 +542,49 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                   placeholder="Seleccionar clase"
                   required={true}
                 />
+              </View>
+            )}
+
+            {/* Class Selection - Opcional para otros eventos */}
+            {!currentEventConfig?.requiresClass && (
+              <View style={styles.section}>
+                <ThemedText variant="h3" style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                  Clase 
+                </ThemedText>
+                <ClassSelector
+                  selectedClassId={selectedClass?.id}
+                  onSelectClass={setSelectedClass}
+                  placeholder="Seleccionar clase para crear tarea"
+                  required={false}
+                />
+              </View>
+            )}
+
+            {/* Info sobre creación automática de tareas */}
+            {selectedClass && eventType !== "class" && (
+              <View style={styles.section}>
+                <View
+                  style={{
+                    padding: 12,
+                    backgroundColor: theme.colors.info + "10",
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: theme.colors.info + "30",
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                    <IconSymbol name="info.circle" size={16} color={theme.colors.info} />
+                    <ThemedText
+                      variant="body"
+                      style={{ color: theme.colors.info, fontSize: 13, fontWeight: "500", marginLeft: 8 }}
+                    >
+                      Tarea automática
+                    </ThemedText>
+                  </View>
+                  <ThemedText variant="body" style={{ color: theme.colors.textMuted, marginTop: 4, fontSize: 12 }}>
+                    Se creará automáticamente una calificación en la categoría correspondiente
+                  </ThemedText>
+                </View>
               </View>
             )}
 

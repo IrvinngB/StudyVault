@@ -3,6 +3,7 @@
 import * as Linking from "expo-linking"
 import { router } from "expo-router"
 import { useEffect } from "react"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 
 export function usePasswordResetDeepLink() {
   useEffect(() => {
@@ -25,7 +26,7 @@ export function usePasswordResetDeepLink() {
       handleDeepLink(event.url)
     }
 
-    const handleDeepLink = (url: string) => {
+    const handleDeepLink = async (url: string) => {
       try {
         // Ignore development URLs and local IPs
         if (
@@ -48,23 +49,28 @@ export function usePasswordResetDeepLink() {
         console.log("🔗 URL parseada:", parsedUrl)
 
         // Handle password reset URLs
-        if (parsedUrl.path?.includes("update-password") || parsedUrl.queryParams?.type === "recovery") {
+        if (parsedUrl.path?.includes("reset-password") || parsedUrl.queryParams?.type === "recovery") {
           console.log("🔑 Detectado enlace de recuperación de contraseña")
 
           const accessToken = parsedUrl.queryParams?.access_token as string
           const refreshToken = parsedUrl.queryParams?.refresh_token as string
 
           if (accessToken && refreshToken) {
-            console.log("✅ Tokens encontrados, navegando a update-password")
-            router.push({
-              pathname: "/(auth)/update-password",
-              params: {
-                access_token: accessToken,
-                refresh_token: refreshToken,
-              },
-            })
+            console.log("✅ Tokens encontrados, guardando en AsyncStorage y navegando a update-password")
+            
+            // Guardar tokens temporalmente en AsyncStorage
+            try {
+              await AsyncStorage.setItem('temp_access_token', accessToken)
+              await AsyncStorage.setItem('temp_refresh_token', refreshToken)
+              console.log("💾 Tokens guardados en AsyncStorage")
+            } catch (error) {
+              console.error("❌ Error guardando tokens:", error)
+            }
+            
+            router.push("/(auth)/update-password")
           } else {
             console.log("❌ Tokens no encontrados en URL de recuperación")
+            router.push("/(auth)/forgot-password")
           }
           return
         }

@@ -26,7 +26,7 @@ interface DailyStats {
 export default function HomeScreen() {
   const { theme } = useTheme()
   const { signOut, user } = useAuth()
-  const { showConfirm } = useGlobalModal()
+  const { showConfirm, showModal } = useGlobalModal()
   const { tasks } = useTasks()
   const { classes } = useClasses()
   const insets = useSafeAreaInsets()
@@ -168,7 +168,22 @@ export default function HomeScreen() {
                 <IconSymbol name="bell" size={24} color={theme.colors.textSecondary} />
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => navigateTo("/settings/unified")}
+                onPress={() => {
+                  if (profile) {
+                    const avatar = AVAILABLE_AVATARS.find((a) => a.id === profile.avatar_url)
+                    const avatarName = avatar?.name || "No seleccionado"
+                    showModal({
+                      type: "info",
+                      title: "Perfil de Usuario",
+                      message: `Nombre: ${profile.full_name || "No especificado"}\nEmail: ${profile.email || user?.email || "No especificado"}\nAvatar: ${avatarName}`,
+                      confirmText: "Ir a Ajustes",
+                      cancelText: "Cerrar",
+                      onConfirm: () => navigateTo("/settings"),
+                    })
+                  } else {
+                    navigateTo("/settings")
+                  }
+                }}
                 style={{
                   width: 44,
                   height: 44,
