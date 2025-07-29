@@ -56,6 +56,13 @@ export default function HelpScreen() {
       icon: "wifi.slash",
       color: theme.colors.accent,
     },
+    {
+      question: "¿Cómo activo las notificaciones?",
+      answer:
+        "Ve a Configuración > Perfil y activa el switch de notificaciones. También puedes configurar recordatorios específicos al crear eventos en el calendario.",
+      icon: "bell",
+      color: theme.colors.success,
+    },
   ]
 
   const contactOptions = [
@@ -79,6 +86,13 @@ export default function HelpScreen() {
       icon: "questionmark.circle",
       color: theme.colors.info,
       action: () => Alert.alert("Próximamente", "El centro de ayuda estará disponible pronto"),
+    },
+    {
+      title: "Reportar un bug",
+      subtitle: "Ayúdanos a mejorar",
+      icon: "exclamationmark.triangle",
+      color: theme.colors.warning,
+      action: () => Linking.openURL("mailto:bugs@studyvault.com?subject=Reporte de Bug"),
     },
   ]
 
@@ -134,31 +148,66 @@ export default function HelpScreen() {
               </ThemedText>
             </ThemedView>
           </ThemedView>
-          <ThemedText variant="body" color="secondary">
-            Encuentra respuestas rápidas o contáctanos
+          <ThemedText variant="body" color="secondary" style={{ fontSize: 16 }}>
+            Encuentra respuestas rápidas o contáctanos directamente
           </ThemedText>
         </ThemedView>
 
+        {/* Búsqueda rápida */}
+        <ThemedCard
+          variant="elevated"
+          padding="large"
+          style={{
+            marginBottom: theme.spacing.lg,
+            backgroundColor: theme.colors.primary + "10",
+            borderLeftWidth: 4,
+            borderLeftColor: theme.colors.primary,
+          }}
+        >
+          <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
+            <View
+              style={{
+                backgroundColor: theme.colors.primary + "20",
+                padding: theme.spacing.md,
+                borderRadius: theme.borderRadius.full,
+                marginRight: theme.spacing.md,
+              }}
+            >
+              <IconSymbol name="lightbulb" size={28} color={theme.colors.primary} />
+            </View>
+            <ThemedView style={{ flex: 1 }}>
+              <ThemedText variant="h3" style={{ marginBottom: theme.spacing.xs, color: theme.colors.primary }}>
+                ¿Necesitas ayuda rápida?
+              </ThemedText>
+              <ThemedText variant="body" color="secondary" style={{ lineHeight: 20 }}>
+                Revisa nuestras preguntas frecuentes o contáctanos directamente
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
+        </ThemedCard>
+
         {/* Preguntas Frecuentes */}
-        <ThemedCard variant="elevated" padding="medium" style={{ marginBottom: theme.spacing.lg }}>
+        <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
           <ThemedView
             style={{
               flexDirection: "row",
               alignItems: "center",
-              marginBottom: theme.spacing.md,
+              marginBottom: theme.spacing.lg,
             }}
           >
             <View
               style={{
                 backgroundColor: theme.colors.primary + "20",
-                padding: theme.spacing.xs,
+                padding: theme.spacing.sm,
                 borderRadius: theme.borderRadius.full,
-                marginRight: theme.spacing.sm,
+                marginRight: theme.spacing.md,
               }}
             >
-              <IconSymbol name="questionmark" size={20} color={theme.colors.primary} />
+              <IconSymbol name="questionmark" size={24} color={theme.colors.primary} />
             </View>
-            <ThemedText variant="h2">Preguntas Frecuentes</ThemedText>
+            <ThemedText variant="h2" style={{ fontWeight: "700" }}>
+              Preguntas Frecuentes
+            </ThemedText>
           </ThemedView>
 
           <ThemedView style={{ gap: theme.spacing.sm }}>
@@ -168,10 +217,11 @@ export default function HelpScreen() {
                 onPress={() => toggleFAQ(index)}
                 style={{
                   backgroundColor: theme.colors.background,
-                  borderRadius: theme.borderRadius.md,
-                  padding: theme.spacing.md,
-                  borderWidth: 1,
+                  borderRadius: theme.borderRadius.lg,
+                  padding: theme.spacing.lg,
+                  borderWidth: 2,
                   borderColor: expandedFAQ === index ? faq.color : theme.colors.border,
+                  ...theme.shadows.small,
                 }}
               >
                 <ThemedView
@@ -185,27 +235,27 @@ export default function HelpScreen() {
                     <View
                       style={{
                         backgroundColor: faq.color + "20",
-                        padding: theme.spacing.xs,
+                        padding: theme.spacing.sm,
                         borderRadius: theme.borderRadius.sm,
-                        marginRight: theme.spacing.sm,
+                        marginRight: theme.spacing.md,
                       }}
                     >
-                      <IconSymbol name={faq.icon as any} size={16} color={faq.color} />
+                      <IconSymbol name={faq.icon as any} size={20} color={faq.color} />
                     </View>
-                    <ThemedText variant="body" style={{ flex: 1, fontWeight: "600" }}>
+                    <ThemedText variant="body" style={{ flex: 1, fontWeight: "600", fontSize: 16 }}>
                       {faq.question}
                     </ThemedText>
                   </ThemedView>
                   <IconSymbol
                     name={expandedFAQ === index ? "chevron.up" : "chevron.down"}
-                    size={16}
+                    size={20}
                     color={theme.colors.textMuted}
                   />
                 </ThemedView>
 
                 {expandedFAQ === index && (
-                  <ThemedView style={{ marginTop: theme.spacing.md, paddingLeft: theme.spacing.lg }}>
-                    <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
+                  <ThemedView style={{ marginTop: theme.spacing.lg, paddingLeft: theme.spacing.xl }}>
+                    <ThemedText variant="body" color="secondary" style={{ lineHeight: 24, fontSize: 15 }}>
                       {faq.answer}
                     </ThemedText>
                   </ThemedView>
@@ -216,25 +266,27 @@ export default function HelpScreen() {
         </ThemedCard>
 
         {/* Opciones de Contacto */}
-        <ThemedCard variant="elevated" padding="medium" style={{ marginBottom: theme.spacing.lg }}>
+        <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
           <ThemedView
             style={{
               flexDirection: "row",
               alignItems: "center",
-              marginBottom: theme.spacing.md,
+              marginBottom: theme.spacing.lg,
             }}
           >
             <View
               style={{
                 backgroundColor: theme.colors.success + "20",
-                padding: theme.spacing.xs,
+                padding: theme.spacing.sm,
                 borderRadius: theme.borderRadius.full,
-                marginRight: theme.spacing.sm,
+                marginRight: theme.spacing.md,
               }}
             >
-              <IconSymbol name="phone" size={20} color={theme.colors.success} />
+              <IconSymbol name="phone" size={24} color={theme.colors.success} />
             </View>
-            <ThemedText variant="h2">Contacto</ThemedText>
+            <ThemedText variant="h2" style={{ fontWeight: "700" }}>
+              Opciones de Contacto
+            </ThemedText>
           </ThemedView>
 
           <ThemedView style={{ gap: theme.spacing.sm }}>
@@ -246,33 +298,35 @@ export default function HelpScreen() {
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  paddingVertical: theme.spacing.md,
-                  paddingHorizontal: theme.spacing.sm,
+                  paddingVertical: theme.spacing.lg,
+                  paddingHorizontal: theme.spacing.md,
                   backgroundColor: theme.colors.background,
-                  borderRadius: theme.borderRadius.md,
+                  borderRadius: theme.borderRadius.lg,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
                 }}
               >
                 <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
                   <View
                     style={{
                       backgroundColor: option.color + "20",
-                      padding: theme.spacing.sm,
+                      padding: theme.spacing.md,
                       borderRadius: theme.borderRadius.sm,
-                      marginRight: theme.spacing.md,
+                      marginRight: theme.spacing.lg,
                     }}
                   >
-                    <IconSymbol name={option.icon as any} size={20} color={option.color} />
+                    <IconSymbol name={option.icon as any} size={24} color={option.color} />
                   </View>
                   <ThemedView>
-                    <ThemedText variant="body" style={{ fontWeight: "600" }}>
+                    <ThemedText variant="body" style={{ fontWeight: "600", fontSize: 16 }}>
                       {option.title}
                     </ThemedText>
-                    <ThemedText variant="caption" color="secondary">
+                    <ThemedText variant="caption" color="secondary" style={{ fontSize: 14 }}>
                       {option.subtitle}
                     </ThemedText>
                   </ThemedView>
                 </ThemedView>
-                <IconSymbol name="chevron.right" size={16} color={theme.colors.textMuted} />
+                <IconSymbol name="chevron.right" size={20} color={theme.colors.textMuted} />
               </TouchableOpacity>
             ))}
           </ThemedView>
@@ -281,7 +335,7 @@ export default function HelpScreen() {
         {/* Información Adicional */}
         <ThemedCard
           variant="elevated"
-          padding="medium"
+          padding="large"
           style={{
             backgroundColor: theme.colors.info + "10",
             borderLeftWidth: 4,
@@ -292,25 +346,29 @@ export default function HelpScreen() {
             <View
               style={{
                 backgroundColor: theme.colors.info + "20",
-                padding: theme.spacing.sm,
+                padding: theme.spacing.md,
                 borderRadius: theme.borderRadius.full,
-                marginRight: theme.spacing.md,
+                marginRight: theme.spacing.lg,
               }}
             >
-              <IconSymbol name="lightbulb" size={24} color={theme.colors.info} />
+              <IconSymbol name="heart.fill" size={28} color={theme.colors.info} />
             </View>
             <ThemedView style={{ flex: 1 }}>
-              <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
-                ¿Necesitas ayuda inmediata?
+              <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm, color: theme.colors.info }}>
+                Estamos aquí para ayudarte
               </ThemedText>
               <ThemedText variant="body" color="secondary" style={{ lineHeight: 22, marginBottom: theme.spacing.md }}>
-                Nuestro equipo de soporte está aquí para ayudarte. Normalmente respondemos en menos de 24 horas.
+                Nuestro equipo de soporte está disponible para resolver cualquier duda. Normalmente respondemos en menos
+                de 24 horas.
               </ThemedText>
               <ThemedButton
-                title="Enviar consulta"
+                title="Contactar Soporte"
                 variant="outline"
                 icon={<IconSymbol name="envelope" size={16} color={theme.colors.info} />}
                 onPress={() => Linking.openURL("mailto:soporte@studyvault.com")}
+                style={{
+                  borderColor: theme.colors.info,
+                }}
               />
             </ThemedView>
           </ThemedView>

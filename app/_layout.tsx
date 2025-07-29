@@ -15,12 +15,12 @@ import { BackButton } from "@/components/ui/BackButton"
 import { ModalProvider } from "@/hooks/ModalProvider"
 import { AuthProvider } from "@/hooks/useAuth"
 import { useColorScheme } from "@/hooks/useColorScheme"
-import { ThemeProvider as CustomThemeProvider } from "@/hooks/useTheme"
 import { usePasswordResetDeepLink } from "@/hooks/usePasswordResetDeepLink"
+import { ThemeProvider as CustomThemeProvider } from "@/hooks/useTheme"
 
 function AppContent() {
   // Initialize deep link handling
-  usePasswordResetDeepLink();
+  usePasswordResetDeepLink()
 
   return (
     <View style={{ flex: 1 }}>
@@ -35,7 +35,7 @@ function AppContent() {
         <Stack.Screen name="+not-found" options={{ headerShown: false }} />
       </Stack>
     </View>
-  );
+  )
 }
 
 export default function RootLayout() {

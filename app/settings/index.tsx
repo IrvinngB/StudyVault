@@ -9,8 +9,8 @@ import { useTheme } from "@/hooks/useTheme"
 import { useUserProfile } from "@/hooks/useUserProfile"
 import { clearCredentialsIfNeeded } from "@/utils/biometricAuth"
 import { router } from "expo-router"
-import { useEffect, useState } from "react"
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Switch, TextInput, TouchableOpacity } from "react-native"
+import { useCallback, useEffect, useState } from "react"
+import { Alert, Animated, Dimensions, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, TextInput, TouchableOpacity, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export default function UnifiedSettingsScreen() {
@@ -18,6 +18,7 @@ export default function UnifiedSettingsScreen() {
   const { user, signOut } = useAuth()
   const { profile, updateProfile, loading } = useUserProfile()
   const insets = useSafeAreaInsets()
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window')
 
   // Form state
   const [fullName, setFullName] = useState("")
@@ -26,12 +27,76 @@ export default function UnifiedSettingsScreen() {
   const [career, setCareer] = useState("")
   const [semester, setSemester] = useState("")
   const [selectedAvatar, setSelectedAvatar] = useState<string>("")
+  
+  // Easter Egg Local State
+  const [showEasterEgg, setShowEasterEgg] = useState(false)
+  const [tapCount, setTapCount] = useState(0)
+  
+  // Animation values
+  const [fadeAnim] = useState(new Animated.Value(0))
+  const [scaleAnim] = useState(new Animated.Value(0.8))
 
-  // Settings state
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-  const [studyReminders, setStudyReminders] = useState(true)
-  const [gradeNotifications, setGradeNotifications] = useState(true)
-  const [calendarReminders, setCalendarReminders] = useState(true)
+  // Developers data - local to this screen
+  const developers = [
+    {
+      name: "Alison Vargas",
+      role: "Project Manager",
+      avatar: "👩‍💼",
+      linkedin: "https://linkedin.com/in/alisonvargas-pm"
+    },
+    {
+      name: "Jean Solano", 
+      role: "Frontend Developer",
+      avatar: "👨‍💻",
+      linkedin: "https://www.linkedin.com/in/jean-luis-solano-ng-319727377/"
+    },
+    {
+      name: "Ivan Nuñez",
+      role: "Frontend Developer", 
+      avatar: "👨‍🎨",
+      linkedin: "https://www.linkedin.com/in/ivan-nu%C3%B1ez-694197271?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app "
+    },
+    {
+      name: "Irvin Benitez",
+      role: "FullStack Developer",
+      avatar: "👨‍🔧", 
+      linkedin: "https://www.linkedin.com/in/irvin-benitez-11313231b/"
+    }
+  ]
+
+
+
+  // Easter Egg Modal Animation Effects
+  useEffect(() => {
+    if (showEasterEgg) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start()
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start()
+    }
+  }, [showEasterEgg, fadeAnim, scaleAnim])
 
   // Load profile data
   useEffect(() => {
@@ -45,14 +110,6 @@ export default function UnifiedSettingsScreen() {
       setUniversity(preferences.university || "")
       setCareer(preferences.career || "")
       setSemester(preferences.semester ? preferences.semester.toString() : "")
-
-      // Load notification settings
-      if (profile.notification_settings) {
-        setNotificationsEnabled(profile.notification_settings.push_notifications ?? true)
-        setStudyReminders(profile.notification_settings.study_session_reminders ?? true)
-        setGradeNotifications(profile.notification_settings.grade_notifications ?? true)
-        setCalendarReminders(profile.notification_settings.calendar_reminders ?? true)
-      }
     }
   }, [profile])
 
@@ -61,12 +118,6 @@ export default function UnifiedSettingsScreen() {
       const updateData = {
         full_name: fullName.trim() || undefined,
         avatar_url: selectedAvatar || undefined,
-        notification_settings: {
-          push_notifications: notificationsEnabled,
-          study_session_reminders: studyReminders,
-          grade_notifications: gradeNotifications,
-          calendar_reminders: calendarReminders,
-        },
         preferences: {
           bio: bio.trim() || undefined,
           university: university.trim() || undefined,
@@ -107,442 +158,471 @@ export default function UnifiedSettingsScreen() {
     ])
   }
 
-  const userName = user?.email?.split("@")[0] || "Usuario"
+  // Easter Egg Logic - Local Implementation
+  const handleSettingsCardTap = useCallback(() => {
+    const newCount = tapCount + 1
+    setTapCount(newCount)
+    
+    if (newCount >= 10) {
+      setShowEasterEgg(true)
+      setTapCount(0) // Reset counter after activation
+    }
+  }, [tapCount])
 
-  return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ThemedView variant="background" style={{ flex: 1 }}>
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingHorizontal: theme.spacing.md,
-            paddingTop: theme.spacing.md,
-            paddingBottom: insets.bottom + 100,
+  const handleCloseEasterEgg = useCallback(() => {
+    setShowEasterEgg(false)
+    setTapCount(0) // Reset counter when closing
+  }, [])
+
+
+
+  // Easter Egg Modal Component
+  const EasterEggModalLocal = () => (
+    <Modal
+      visible={showEasterEgg}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={handleCloseEasterEgg}
+    >
+      <Animated.View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: theme.spacing.lg,
+          opacity: fadeAnim,
+        }}
+      >
+        <Animated.View
+          style={{
+            backgroundColor: theme.colors.surface,
+            borderRadius: theme.borderRadius.xl,
+            padding: theme.spacing.xl,
+            maxWidth: screenWidth * 0.9,
+            maxHeight: screenHeight * 0.8,
+            width: '100%',
+            transform: [{ scale: scaleAnim }],
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.3,
+            shadowRadius: 20,
+            elevation: 10,
           }}
-          showsVerticalScrollIndicator={false}
         >
           {/* Header */}
-          <ThemedView style={{ marginBottom: theme.spacing.lg }}>
-            <ThemedText variant="h1" style={{ fontSize: 28, fontWeight: "800", marginBottom: theme.spacing.xs }}>
-              Configuración
+          <ThemedView style={{ alignItems: 'center', marginBottom: theme.spacing.xl }}>
+            <View style={{
+              backgroundColor: theme.colors.primary + '20',
+              borderRadius: theme.borderRadius.full,
+              padding: theme.spacing.lg,
+              marginBottom: theme.spacing.md,
+            }}>
+              <IconSymbol name="star.fill" size={48} color={theme.colors.primary} />
+            </View>
+            <ThemedText variant="h1" style={{ 
+              fontSize: 28, 
+              fontWeight: '800', 
+              color: theme.colors.primary,
+              textAlign: 'center',
+              marginBottom: theme.spacing.sm 
+            }}>
+              Easter Egg
             </ThemedText>
-            <ThemedText variant="body" color="secondary" style={{ fontSize: 16 }}>
-              Personaliza tu experiencia de estudio
+            <ThemedText variant="body" color="secondary" style={{ textAlign: 'center' }}>
+              ¡Gracias por usar StudyVault! Conoce al increíble equipo que hizo esto posible.
             </ThemedText>
           </ThemedView>
 
-          {/* Profile Section */}
-          <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
-            <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.lg }}>
-              <IconSymbol name="person.circle" size={24} color={theme.colors.primary} />
-              <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
-                Perfil
-              </ThemedText>
-            </ThemedView>
-
-            {/* Avatar Selection */}
-            <ThemedView style={{ alignItems: "center", marginBottom: theme.spacing.lg }}>
-              <AvatarSelector selectedAvatar={selectedAvatar} onAvatarSelect={setSelectedAvatar} size={80} />
-              <ThemedText variant="body" color="secondary" style={{ marginTop: theme.spacing.sm, textAlign: "center" }}>
-                Toca para cambiar tu avatar
-              </ThemedText>
-            </ThemedView>
-
-            {/* Profile Form */}
-            <ThemedView style={{ gap: theme.spacing.md }}>
-              <ThemedView>
-                <ThemedText variant="body" style={{ marginBottom: theme.spacing.xs, fontWeight: "600" }}>
-                  Nombre completo
-                </ThemedText>
-                <TextInput
-                  style={{
-                    backgroundColor: theme.colors.surface,
-                    borderWidth: 1,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.borderRadius.md,
-                    paddingHorizontal: theme.spacing.md,
-                    paddingVertical: theme.spacing.sm,
-                    color: theme.colors.text,
-                    fontSize: 16,
-                  }}
-                  value={fullName}
-                  onChangeText={setFullName}
-                  placeholder="Tu nombre completo"
-                  placeholderTextColor={theme.colors.textMuted}
-                />
-              </ThemedView>
-
-              <ThemedView>
-                <ThemedText variant="body" style={{ marginBottom: theme.spacing.xs, fontWeight: "600" }}>
-                  Biografía
-                </ThemedText>
-                <TextInput
-                  style={{
-                    backgroundColor: theme.colors.surface,
-                    borderWidth: 1,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.borderRadius.md,
-                    paddingHorizontal: theme.spacing.md,
-                    paddingVertical: theme.spacing.sm,
-                    color: theme.colors.text,
-                    fontSize: 16,
-                    height: 80,
-                    textAlignVertical: "top",
-                  }}
-                  value={bio}
-                  onChangeText={setBio}
-                  placeholder="Cuéntanos sobre ti..."
-                  placeholderTextColor={theme.colors.textMuted}
-                  multiline
-                  numberOfLines={3}
-                />
-              </ThemedView>
-
-              <ThemedView style={{ flexDirection: "row", gap: theme.spacing.md }}>
-                <ThemedView style={{ flex: 1 }}>
-                  <ThemedText variant="body" style={{ marginBottom: theme.spacing.xs, fontWeight: "600" }}>
-                    Universidad
-                  </ThemedText>
-                  <TextInput
+          {/* Developers List */}
+          <ScrollView 
+            style={{ maxHeight: screenHeight * 0.4 }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: theme.spacing.sm }}
+          >
+            {developers.map((dev, index) => (
+                                <TouchableOpacity
+                    key={index}
+                    onPress={() => Linking.openURL(dev.linkedin)}
                     style={{
-                      backgroundColor: theme.colors.surface,
+                      backgroundColor: theme.colors.background,
+                      borderRadius: theme.borderRadius.lg,
+                      padding: theme.spacing.lg,
+                      marginBottom: theme.spacing.md,
                       borderWidth: 1,
                       borderColor: theme.colors.border,
-                      borderRadius: theme.borderRadius.md,
-                      paddingHorizontal: theme.spacing.md,
-                      paddingVertical: theme.spacing.sm,
-                      color: theme.colors.text,
-                      fontSize: 16,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 2,
                     }}
-                    value={university}
-                    onChangeText={setUniversity}
-                    placeholder="Tu universidad"
-                    placeholderTextColor={theme.colors.textMuted}
+                    activeOpacity={0.7}
+                  >
+                <ThemedView style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{
+                    backgroundColor: theme.colors.primary + '20',
+                    borderRadius: theme.borderRadius.full,
+                    width: 60,
+                    height: 60,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: theme.spacing.md,
+                  }}>
+                    <ThemedText style={{ fontSize: 28 }}>{dev.avatar}</ThemedText>
+                  </View>
+                  
+                  <ThemedView style={{ flex: 1 }}>
+                    <ThemedText variant="h3" style={{ 
+                      fontWeight: '700',
+                      marginBottom: 4,
+                      color: theme.colors.text 
+                    }}>
+                      {dev.name}
+                    </ThemedText>
+                    <ThemedText variant="body" color="secondary" style={{ 
+                      fontSize: 14,
+                      lineHeight: 20 
+                    }}>
+                      {dev.role}
+                    </ThemedText>
+                  </ThemedView>
+                  
+                  <IconSymbol 
+                    name="arrow.up.right" 
+                    size={20} 
+                    color={theme.colors.primary} 
+                    style={{ opacity: 0.7 }}
                   />
                 </ThemedView>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-                <ThemedView style={{ flex: 1 }}>
-                  <ThemedText variant="body" style={{ marginBottom: theme.spacing.xs, fontWeight: "600" }}>
-                    Semestre
-                  </ThemedText>
-                  <TextInput
-                    style={{
-                      backgroundColor: theme.colors.surface,
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      borderRadius: theme.borderRadius.md,
-                      paddingHorizontal: theme.spacing.md,
-                      paddingVertical: theme.spacing.sm,
-                      color: theme.colors.text,
-                      fontSize: 16,
-                    }}
-                    value={semester}
-                    onChangeText={setSemester}
-                    placeholder="Ej: 5"
-                    placeholderTextColor={theme.colors.textMuted}
-                    keyboardType="numeric"
-                  />
-                </ThemedView>
-              </ThemedView>
-
-              <ThemedView>
-                <ThemedText variant="body" style={{ marginBottom: theme.spacing.xs, fontWeight: "600" }}>
-                  Carrera
-                </ThemedText>
-                <TextInput
-                  style={{
-                    backgroundColor: theme.colors.surface,
-                    borderWidth: 1,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.borderRadius.md,
-                    paddingHorizontal: theme.spacing.md,
-                    paddingVertical: theme.spacing.sm,
-                    color: theme.colors.text,
-                    fontSize: 16,
-                  }}
-                  value={career}
-                  onChangeText={setCareer}
-                  placeholder="Tu carrera"
-                  placeholderTextColor={theme.colors.textMuted}
-                />
-              </ThemedView>
-            </ThemedView>
-          </ThemedCard>
-
-          {/* Theme Section */}
-          <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
-            <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
-              <IconSymbol name="paintbrush" size={24} color={theme.colors.primary} />
-              <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
-                Apariencia
-              </ThemedText>
-            </ThemedView>
-
-            <ThemeSelector />
-          </ThemedCard>
-
-          {/* Notifications Section */}
-          <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
-            <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
-              <IconSymbol name="bell" size={24} color={theme.colors.primary} />
-              <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
-                Notificaciones
-              </ThemedText>
-            </ThemedView>
-
-            <ThemedView style={{ gap: theme.spacing.md }}>
-              <ThemedView
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  paddingVertical: theme.spacing.xs,
-                }}
-              >
-                <ThemedView style={{ flex: 1 }}>
-                  <ThemedText variant="body" style={{ fontWeight: "600" }}>
-                    Notificaciones push
-                  </ThemedText>
-                  <ThemedText variant="caption" color="secondary">
-                    Recibir notificaciones en tu dispositivo
-                  </ThemedText>
-                </ThemedView>
-                <Switch
-                  value={notificationsEnabled}
-                  onValueChange={setNotificationsEnabled}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.primary + "40" }}
-                  thumbColor={notificationsEnabled ? theme.colors.primary : theme.colors.textMuted}
-                />
-              </ThemedView>
-
-              <ThemedView
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  paddingVertical: theme.spacing.xs,
-                }}
-              >
-                <ThemedView style={{ flex: 1 }}>
-                  <ThemedText variant="body" style={{ fontWeight: "600" }}>
-                    Recordatorios de estudio
-                  </ThemedText>
-                  <ThemedText variant="caption" color="secondary">
-                    Recordatorios para sesiones de estudio
-                  </ThemedText>
-                </ThemedView>
-                <Switch
-                  value={studyReminders}
-                  onValueChange={setStudyReminders}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.primary + "40" }}
-                  thumbColor={studyReminders ? theme.colors.primary : theme.colors.textMuted}
-                />
-              </ThemedView>
-
-              <ThemedView
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  paddingVertical: theme.spacing.xs,
-                }}
-              >
-                <ThemedView style={{ flex: 1 }}>
-                  <ThemedText variant="body" style={{ fontWeight: "600" }}>
-                    Notificaciones de calificaciones
-                  </ThemedText>
-                  <ThemedText variant="caption" color="secondary">
-                    Alertas sobre nuevas calificaciones
-                  </ThemedText>
-                </ThemedView>
-                <Switch
-                  value={gradeNotifications}
-                  onValueChange={setGradeNotifications}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.primary + "40" }}
-                  thumbColor={gradeNotifications ? theme.colors.primary : theme.colors.textMuted}
-                />
-              </ThemedView>
-
-              <ThemedView
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  paddingVertical: theme.spacing.xs,
-                }}
-              >
-                <ThemedView style={{ flex: 1 }}>
-                  <ThemedText variant="body" style={{ fontWeight: "600" }}>
-                    Recordatorios de calendario
-                  </ThemedText>
-                  <ThemedText variant="caption" color="secondary">
-                    Alertas para eventos del calendario
-                  </ThemedText>
-                </ThemedView>
-                <Switch
-                  value={calendarReminders}
-                  onValueChange={setCalendarReminders}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.primary + "40" }}
-                  thumbColor={calendarReminders ? theme.colors.primary : theme.colors.textMuted}
-                />
-              </ThemedView>
-            </ThemedView>
-          </ThemedCard>
-
-          {/* Save Button */}
+          {/* Close Button */}
           <TouchableOpacity
-            onPress={handleSaveProfile}
-            disabled={loading}
+            onPress={handleCloseEasterEgg}
             style={{
               backgroundColor: theme.colors.primary,
+              borderRadius: theme.borderRadius.lg,
               paddingVertical: theme.spacing.md,
-              borderRadius: theme.borderRadius.md,
-              alignItems: "center",
-              marginBottom: theme.spacing.lg,
-              opacity: loading ? 0.6 : 1,
+              paddingHorizontal: theme.spacing.xl,
+              alignItems: 'center',
+              marginTop: theme.spacing.lg,
+              shadowColor: theme.colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 4,
             }}
+            activeOpacity={0.8}
           >
-            <ThemedText variant="button" style={{ color: "white", fontWeight: "600" }}>
-              {loading ? "Guardando..." : "Guardar Cambios"}
+            <ThemedText variant="button" style={{ 
+              color: 'white', 
+              fontWeight: '600',
+              fontSize: 16 
+            }}>
+              ¡Gracias por descubrirnos! ⭐
             </ThemedText>
           </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  )
 
-          {/* Account Section */}
-          <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
-            <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
-              <IconSymbol name="gear" size={24} color={theme.colors.primary} />
-              <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
-                Cuenta
+  const userName = user?.email?.split("@")[0] || "Usuario"
+
+  return (
+    <>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <View style={{ paddingTop: insets.top, backgroundColor: theme.colors.background }} />
+        <ThemedView variant="background" style={{ flex: 1 }}>
+          <ScrollView
+            contentContainerStyle={{
+              padding: theme.spacing.lg,
+              paddingBottom: insets.bottom + 100,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header */}
+            <ThemedView
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: theme.spacing.xl,
+              }}
+            >
+              <TouchableOpacity
+                onPress={() => router.back()}
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  padding: theme.spacing.sm,
+                  borderRadius: theme.borderRadius.full,
+                  marginRight: theme.spacing.md,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                }}
+              >
+                <IconSymbol name="chevron.left" size={20} color={theme.colors.text} />
+              </TouchableOpacity>
+              <View
+                style={{
+                  backgroundColor: theme.colors.primary + "20",
+                  padding: theme.spacing.sm,
+                  borderRadius: theme.borderRadius.full,
+                  marginRight: theme.spacing.sm,
+                }}
+              >
+                <IconSymbol name="gear" size={24} color={theme.colors.primary} />
+              </View>
+              <ThemedText variant="h1" style={{ fontSize: 28, fontWeight: "800" }}>
+                Configuración
               </ThemedText>
             </ThemedView>
 
-            <ThemedView style={{ gap: theme.spacing.sm }}>
-              <ThemedView
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  paddingVertical: theme.spacing.sm,
-                }}
-              >
-                <ThemedText variant="body" style={{ fontWeight: "600" }}>
-                  Email
-                </ThemedText>
-                <ThemedText variant="body" color="secondary">
-                  {user?.email}
+            {/* Profile Section */}
+            <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+              <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.lg }}>
+                <IconSymbol name="person.circle" size={24} color={theme.colors.primary} />
+                <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
+                  Perfil
                 </ThemedText>
               </ThemedView>
 
-              <ThemedView
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  paddingVertical: theme.spacing.sm,
-                }}
-              >
-                <ThemedText variant="body" style={{ fontWeight: "600" }}>
-                  Usuario
-                </ThemedText>
-                <ThemedText variant="body" color="secondary">
-                  {userName}
+              {/* Avatar Selection */}
+              <ThemedView style={{ alignItems: "center", marginBottom: theme.spacing.lg }}>
+                <AvatarSelector selectedAvatar={selectedAvatar} onAvatarSelect={setSelectedAvatar} size={80} />
+                <ThemedText variant="body" color="secondary" style={{ marginTop: theme.spacing.sm, textAlign: "center" }}>
+                  Toca para cambiar tu avatar
                 </ThemedText>
               </ThemedView>
-            </ThemedView>
-          </ThemedCard>
 
-          {/* Logout Button */}
-          <TouchableOpacity
-            onPress={handleLogout}
-            style={{
-              backgroundColor: theme.colors.error + "20",
-              paddingVertical: theme.spacing.md,
-              borderRadius: theme.borderRadius.md,
-              alignItems: "center",
-              borderWidth: 1,
-              borderColor: theme.colors.error + "40",
-            }}
-          >
-            <ThemedText variant="button" style={{ color: theme.colors.error, fontWeight: "600" }}>
-              Cerrar Sesión
-            </ThemedText>
-          </TouchableOpacity>
-          {/* Otras opciones de configuración */}
-          <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
-            <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
-              <IconSymbol name="questionmark.circle" size={24} color={theme.colors.primary} />
-              <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
-                Más opciones
+              {/* Profile Form */}
+              <ThemedView style={{ gap: theme.spacing.md }}>
+                <ThemedView>
+                  <ThemedText variant="body" style={{ marginBottom: theme.spacing.xs, fontWeight: "600" }}>
+                    Nombre completo
+                  </ThemedText>
+                  <TextInput
+                    style={{
+                      backgroundColor: theme.colors.surface,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      borderRadius: theme.borderRadius.md,
+                      paddingHorizontal: theme.spacing.md,
+                      paddingVertical: theme.spacing.sm,
+                      color: theme.colors.text,
+                      fontSize: 16,
+                    }}
+                    value={fullName}
+                    onChangeText={setFullName}
+                    placeholder="Tu nombre completo"
+                    placeholderTextColor={theme.colors.textMuted}
+                  />
+                </ThemedView>
+
+                <ThemedView>
+                  <ThemedText variant="body" style={{ marginBottom: theme.spacing.xs, fontWeight: "600" }}>
+                    Biografía
+                  </ThemedText>
+                  <TextInput
+                    style={{
+                      backgroundColor: theme.colors.surface,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      borderRadius: theme.borderRadius.md,
+                      paddingHorizontal: theme.spacing.md,
+                      paddingVertical: theme.spacing.sm,
+                      color: theme.colors.text,
+                      fontSize: 16,
+                      height: 80,
+                      textAlignVertical: "top",
+                    }}
+                    value={bio}
+                    onChangeText={setBio}
+                    placeholder="Cuéntanos sobre ti..."
+                    placeholderTextColor={theme.colors.textMuted}
+                    multiline
+                  />
+                </ThemedView>
+
+                <ThemedView style={{ flexDirection: "row", gap: theme.spacing.md }}>
+                  <ThemedView style={{ flex: 1 }}>
+                    <ThemedText variant="body" style={{ marginBottom: theme.spacing.xs, fontWeight: "600" }}>
+                      Universidad
+                    </ThemedText>
+                    <TextInput
+                      style={{
+                        backgroundColor: theme.colors.surface,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        borderRadius: theme.borderRadius.md,
+                        paddingHorizontal: theme.spacing.md,
+                        paddingVertical: theme.spacing.sm,
+                        color: theme.colors.text,
+                        fontSize: 16,
+                      }}
+                      value={university}
+                      onChangeText={setUniversity}
+                      placeholder="Tu universidad"
+                      placeholderTextColor={theme.colors.textMuted}
+                    />
+                  </ThemedView>
+
+                  <ThemedView style={{ flex: 1 }}>
+                    <ThemedText variant="body" style={{ marginBottom: theme.spacing.xs, fontWeight: "600" }}>
+                      Semestre
+                    </ThemedText>
+                    <TextInput
+                      style={{
+                        backgroundColor: theme.colors.surface,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        borderRadius: theme.borderRadius.md,
+                        paddingHorizontal: theme.spacing.md,
+                        paddingVertical: theme.spacing.sm,
+                        color: theme.colors.text,
+                        fontSize: 16,
+                      }}
+                      value={semester}
+                      onChangeText={setSemester}
+                      placeholder="Ej: 5"
+                      placeholderTextColor={theme.colors.textMuted}
+                      keyboardType="numeric"
+                    />
+                  </ThemedView>
+                </ThemedView>
+
+                <ThemedView>
+                  <ThemedText variant="body" style={{ marginBottom: theme.spacing.xs, fontWeight: "600" }}>
+                    Carrera
+                  </ThemedText>
+                  <TextInput
+                    style={{
+                      backgroundColor: theme.colors.surface,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      borderRadius: theme.borderRadius.md,
+                      paddingHorizontal: theme.spacing.md,
+                      paddingVertical: theme.spacing.sm,
+                      color: theme.colors.text,
+                      fontSize: 16,
+                    }}
+                    value={career}
+                    onChangeText={setCareer}
+                    placeholder="Tu carrera"
+                    placeholderTextColor={theme.colors.textMuted}
+                  />
+                </ThemedView>
+              </ThemedView>
+
+              <TouchableOpacity
+                onPress={handleSaveProfile}
+                disabled={loading}
+                style={{
+                  backgroundColor: theme.colors.primary,
+                  paddingVertical: theme.spacing.md,
+                  borderRadius: theme.borderRadius.md,
+                  alignItems: "center",
+                  marginTop: theme.spacing.lg,
+                  opacity: loading ? 0.6 : 1,
+                }}
+              >
+                <ThemedText variant="button" style={{ color: "white", fontWeight: "600" }}>
+                  {loading ? "Guardando..." : "Guardar Cambios"}
+                </ThemedText>
+              </TouchableOpacity>
+            </ThemedCard>
+
+            {/* Theme Selector */}
+            <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+              <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+                <IconSymbol name="paintbrush" size={24} color={theme.colors.primary} />
+                <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
+                  Tema
+                </ThemedText>
+              </ThemedView>
+              <ThemeSelector />
+            </ThemedCard>
+
+            {/* Account Card - Easter Egg Trigger */}
+            <TouchableOpacity onPress={handleSettingsCardTap} activeOpacity={0.7}>
+              <ThemedCard 
+                variant="elevated" 
+                padding="large" 
+                style={{ 
+                  marginBottom: theme.spacing.lg,
+                }}
+              >
+                <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+                  <IconSymbol name="person.circle" size={24} color={theme.colors.primary} />
+                  <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
+                    Cuenta
+                  </ThemedText>
+                </ThemedView>
+
+                <ThemedView style={{ gap: theme.spacing.sm }}>
+                  <ThemedView
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      paddingVertical: theme.spacing.sm,
+                    }}
+                  >
+                    <ThemedText variant="body" style={{ fontWeight: "600" }}>
+                      Email
+                    </ThemedText>
+                    <ThemedText variant="body" color="secondary">
+                      {user?.email}
+                    </ThemedText>
+                  </ThemedView>
+
+                  <ThemedView
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      paddingVertical: theme.spacing.sm,
+                    }}
+                  >
+                    <ThemedText variant="body" style={{ fontWeight: "600" }}>
+                      Usuario
+                    </ThemedText>
+                    <ThemedText variant="body" color="secondary">
+                      {userName}
+                    </ThemedText>
+                  </ThemedView>
+                </ThemedView>
+              </ThemedCard>
+            </TouchableOpacity>
+
+            {/* Logout Button */}
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={{
+                backgroundColor: theme.colors.error + "20",
+                paddingVertical: theme.spacing.md,
+                borderRadius: theme.borderRadius.md,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: theme.colors.error + "40",
+                marginBottom: theme.spacing.md,
+              }}
+            >
+              <ThemedText variant="button" style={{ color: theme.colors.error, fontWeight: "600" }}>
+                Cerrar Sesión
               </ThemedText>
-            </ThemedView>
-            <ThemedView style={{ gap: theme.spacing.sm }}>
-              <TouchableOpacity
-                onPress={() => router.push("/settings/help")}
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  paddingVertical: theme.spacing.md,
-                  borderRadius: theme.borderRadius.md,
-                  alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  marginBottom: theme.spacing.sm,
-                }}
-              >
-                <ThemedText variant="button" style={{ color: theme.colors.primary, fontWeight: "600" }}>
-                  Ayuda
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push("/settings/PersonalInfoScreen")}
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  paddingVertical: theme.spacing.md,
-                  borderRadius: theme.borderRadius.md,
-                  alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  marginBottom: theme.spacing.sm,
-                }}
-              >
-                <ThemedText variant="button" style={{ color: theme.colors.primary, fontWeight: "600" }}>
-                  Información Personal
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push("/settings/Privacy")}
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  paddingVertical: theme.spacing.md,
-                  borderRadius: theme.borderRadius.md,
-                  alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  marginBottom: theme.spacing.sm,
-                }}
-              >
-                <ThemedText variant="button" style={{ color: theme.colors.primary, fontWeight: "600" }}>
-                  Privacidad
-                </ThemedText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push("/settings/profile")}
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  paddingVertical: theme.spacing.md,
-                  borderRadius: theme.borderRadius.md,
-                  alignItems: "center",
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                }}
-              >
-                <ThemedText variant="button" style={{ color: theme.colors.primary, fontWeight: "600" }}>
-                  Perfil avanzado
-                </ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedCard>
-        </ScrollView>
-      </ThemedView>
-    </KeyboardAvoidingView>
+            </TouchableOpacity>
+
+
+          </ScrollView>
+        </ThemedView>
+      </KeyboardAvoidingView>
+
+      {/* Local Easter Egg Modal */}
+      <EasterEggModalLocal />
+    </>
   )
 }

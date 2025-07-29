@@ -18,6 +18,7 @@ export default function PrivacyScreen() {
   // Estados
   const [showPrivacyModal, setShowPrivacyModal] = useState<boolean>(false)
   const [showAppInfoModal, setShowAppInfoModal] = useState<boolean>(false)
+  const [showDataModal, setShowDataModal] = useState<boolean>(false)
 
   // Componente de Modal Burbuja
   const BubbleModal: React.FC<{
@@ -33,7 +34,7 @@ export default function PrivacyScreen() {
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backgroundColor: "rgba(0, 0, 0, 0.6)",
             justifyContent: "center",
             alignItems: "center",
             paddingHorizontal: theme.spacing.lg,
@@ -191,101 +192,21 @@ export default function PrivacyScreen() {
                 <IconSymbol name="lock.fill" size={24} color={theme.colors.info} />
               </View>
               <ThemedText variant="h1" style={{ fontSize: 28, fontWeight: "800" }}>
-                Privacidad
+                Privacidad y Seguridad
               </ThemedText>
             </ThemedView>
           </ThemedView>
-          <ThemedText variant="body" color="secondary">
-            Información sobre cómo protegemos tus datos
+          <ThemedText variant="body" color="secondary" style={{ fontSize: 16 }}>
+            Tu privacidad es nuestra prioridad. Conoce cómo protegemos tus datos
           </ThemedText>
         </ThemedView>
 
-        {/* Información */}
-        <ThemedCard variant="elevated" padding="medium" style={{ marginBottom: theme.spacing.lg }}>
-          <ThemedView
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: theme.spacing.md,
-            }}
-          >
-            <View
-              style={{
-                backgroundColor: theme.colors.primary + "20",
-                padding: theme.spacing.xs,
-                borderRadius: theme.borderRadius.full,
-                marginRight: theme.spacing.sm,
-              }}
-            >
-              <IconSymbol name="doc.text" size={20} color={theme.colors.primary} />
-            </View>
-            <ThemedText variant="h2">Información</ThemedText>
-          </ThemedView>
-
-          <ThemedView style={{ gap: theme.spacing.sm }}>
-            <TouchableOpacity
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                paddingVertical: theme.spacing.md,
-                paddingHorizontal: theme.spacing.sm,
-                backgroundColor: theme.colors.background,
-                borderRadius: theme.borderRadius.md,
-              }}
-              onPress={() => setShowPrivacyModal(true)}
-            >
-              <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
-                <View
-                  style={{
-                    backgroundColor: theme.colors.success + "20",
-                    padding: theme.spacing.xs,
-                    borderRadius: theme.borderRadius.sm,
-                    marginRight: theme.spacing.md,
-                  }}
-                >
-                  <IconSymbol name="doc.text" size={20} color={theme.colors.success} />
-                </View>
-                <ThemedText variant="body">Política de privacidad</ThemedText>
-              </ThemedView>
-              <IconSymbol name="chevron.right" size={16} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                paddingVertical: theme.spacing.md,
-                paddingHorizontal: theme.spacing.sm,
-                backgroundColor: theme.colors.background,
-                borderRadius: theme.borderRadius.md,
-              }}
-              onPress={() => setShowAppInfoModal(true)}
-            >
-              <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
-                <View
-                  style={{
-                    backgroundColor: theme.colors.secondary + "20",
-                    padding: theme.spacing.xs,
-                    borderRadius: theme.borderRadius.sm,
-                    marginRight: theme.spacing.md,
-                  }}
-                >
-                  <IconSymbol name="info.circle" size={20} color={theme.colors.secondary} />
-                </View>
-                <ThemedText variant="body">Acerca de Study Vault</ThemedText>
-              </ThemedView>
-              <IconSymbol name="chevron.right" size={16} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          </ThemedView>
-        </ThemedCard>
-
-        {/* Mensaje tranquilizador */}
+        {/* Resumen de Privacidad */}
         <ThemedCard
           variant="elevated"
-          padding="medium"
+          padding="large"
           style={{
+            marginBottom: theme.spacing.lg,
             backgroundColor: theme.colors.success + "10",
             borderLeftWidth: 4,
             borderLeftColor: theme.colors.success,
@@ -295,20 +216,246 @@ export default function PrivacyScreen() {
             <View
               style={{
                 backgroundColor: theme.colors.success + "20",
-                padding: theme.spacing.sm,
+                padding: theme.spacing.md,
                 borderRadius: theme.borderRadius.full,
-                marginRight: theme.spacing.md,
+                marginRight: theme.spacing.lg,
               }}
             >
               <IconSymbol name="shield.checkmark" size={28} color={theme.colors.success} />
             </View>
             <ThemedView style={{ flex: 1 }}>
-              <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
-                Tu privacidad es importante
+              <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm, color: theme.colors.success }}>
+                Tu información está segura
               </ThemedText>
               <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-                Solo usamos la información necesaria para que Study Vault funcione bien. Puedes cambiar estos ajustes
-                cuando quieras.
+                Study Vault utiliza encriptación de extremo a extremo y solo recopila la información mínima necesaria
+                para brindarte la mejor experiencia de estudio.
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
+        </ThemedCard>
+
+        {/* Información */}
+        <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+          <ThemedView
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: theme.spacing.lg,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: theme.colors.primary + "20",
+                padding: theme.spacing.sm,
+                borderRadius: theme.borderRadius.full,
+                marginRight: theme.spacing.md,
+              }}
+            >
+              <IconSymbol name="doc.text" size={24} color={theme.colors.primary} />
+            </View>
+            <ThemedText variant="h2" style={{ fontWeight: "700" }}>
+              Documentos Legales
+            </ThemedText>
+          </ThemedView>
+
+          <ThemedView style={{ gap: theme.spacing.sm }}>
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingVertical: theme.spacing.lg,
+                paddingHorizontal: theme.spacing.md,
+                backgroundColor: theme.colors.background,
+                borderRadius: theme.borderRadius.lg,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              }}
+              onPress={() => setShowPrivacyModal(true)}
+            >
+              <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
+                <View
+                  style={{
+                    backgroundColor: theme.colors.success + "20",
+                    padding: theme.spacing.sm,
+                    borderRadius: theme.borderRadius.sm,
+                    marginRight: theme.spacing.lg,
+                  }}
+                >
+                  <IconSymbol name="doc.text" size={24} color={theme.colors.success} />
+                </View>
+                <ThemedView>
+                  <ThemedText variant="body" style={{ fontWeight: "600", fontSize: 16 }}>
+                    Política de Privacidad
+                  </ThemedText>
+                  <ThemedText variant="caption" color="secondary" style={{ fontSize: 14 }}>
+                    Cómo manejamos tu información
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+              <IconSymbol name="chevron.right" size={20} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingVertical: theme.spacing.lg,
+                paddingHorizontal: theme.spacing.md,
+                backgroundColor: theme.colors.background,
+                borderRadius: theme.borderRadius.lg,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              }}
+              onPress={() => setShowDataModal(true)}
+            >
+              <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
+                <View
+                  style={{
+                    backgroundColor: theme.colors.warning + "20",
+                    padding: theme.spacing.sm,
+                    borderRadius: theme.borderRadius.sm,
+                    marginRight: theme.spacing.lg,
+                  }}
+                >
+                  <IconSymbol name="folder" size={24} color={theme.colors.warning} />
+                </View>
+                <ThemedView>
+                  <ThemedText variant="body" style={{ fontWeight: "600", fontSize: 16 }}>
+                    Gestión de Datos
+                  </ThemedText>
+                  <ThemedText variant="caption" color="secondary" style={{ fontSize: 14 }}>
+                    Controla tu información personal
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+              <IconSymbol name="chevron.right" size={20} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingVertical: theme.spacing.lg,
+                paddingHorizontal: theme.spacing.md,
+                backgroundColor: theme.colors.background,
+                borderRadius: theme.borderRadius.lg,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              }}
+              onPress={() => setShowAppInfoModal(true)}
+            >
+              <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
+                <View
+                  style={{
+                    backgroundColor: theme.colors.secondary + "20",
+                    padding: theme.spacing.sm,
+                    borderRadius: theme.borderRadius.sm,
+                    marginRight: theme.spacing.lg,
+                  }}
+                >
+                  <IconSymbol name="info.circle" size={24} color={theme.colors.secondary} />
+                </View>
+                <ThemedView>
+                  <ThemedText variant="body" style={{ fontWeight: "600", fontSize: 16 }}>
+                    Acerca de Study Vault
+                  </ThemedText>
+                  <ThemedText variant="caption" color="secondary" style={{ fontSize: 14 }}>
+                    Información de la aplicación
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+              <IconSymbol name="chevron.right" size={20} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          </ThemedView>
+        </ThemedCard>
+
+        {/* Configuraciones de Privacidad */}
+        <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+          <ThemedView
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: theme.spacing.lg,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: theme.colors.info + "20",
+                padding: theme.spacing.sm,
+                borderRadius: theme.borderRadius.full,
+                marginRight: theme.spacing.md,
+              }}
+            >
+              <IconSymbol name="gear" size={24} color={theme.colors.info} />
+            </View>
+            <ThemedText variant="h2" style={{ fontWeight: "700" }}>
+              Configuraciones de Privacidad
+            </ThemedText>
+          </ThemedView>
+
+          <ThemedView style={{ gap: theme.spacing.md }}>
+            <ThemedView
+              style={{
+                backgroundColor: theme.colors.background,
+                borderRadius: theme.borderRadius.lg,
+                padding: theme.spacing.lg,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              }}
+            >
+              <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.sm }}>
+                <IconSymbol name="eye.slash" size={20} color={theme.colors.info} />
+                <ThemedText variant="body" style={{ fontWeight: "600", marginLeft: theme.spacing.sm }}>
+                  Datos Anónimos
+                </ThemedText>
+              </ThemedView>
+              <ThemedText variant="caption" color="secondary" style={{ lineHeight: 20 }}>
+                Tus datos de estudio se almacenan de forma anónima y encriptada. No compartimos información personal con
+                terceros.
+              </ThemedText>
+            </ThemedView>
+
+            <ThemedView
+              style={{
+                backgroundColor: theme.colors.background,
+                borderRadius: theme.borderRadius.lg,
+                padding: theme.spacing.lg,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              }}
+            >
+              <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.sm }}>
+                <IconSymbol name="lock" size={20} color={theme.colors.success} />
+                <ThemedText variant="body" style={{ fontWeight: "600", marginLeft: theme.spacing.sm }}>
+                  Encriptación Local
+                </ThemedText>
+              </ThemedView>
+              <ThemedText variant="caption" color="secondary" style={{ lineHeight: 20 }}>
+                Toda tu información se encripta localmente en tu dispositivo antes de sincronizarse con la nube.
+              </ThemedText>
+            </ThemedView>
+
+            <ThemedView
+              style={{
+                backgroundColor: theme.colors.background,
+                borderRadius: theme.borderRadius.lg,
+                padding: theme.spacing.lg,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              }}
+            >
+              <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.sm }}>
+                <IconSymbol name="trash" size={20} color={theme.colors.error} />
+                <ThemedText variant="body" style={{ fontWeight: "600", marginLeft: theme.spacing.sm }}>
+                  Eliminación de Datos
+                </ThemedText>
+              </ThemedView>
+              <ThemedText variant="caption" color="secondary" style={{ lineHeight: 20 }}>
+                Puedes solicitar la eliminación completa de tus datos en cualquier momento contactando a soporte.
               </ThemedText>
             </ThemedView>
           </ThemedView>
@@ -325,31 +472,90 @@ export default function PrivacyScreen() {
       >
         <ThemedView style={{ marginBottom: theme.spacing.lg }}>
           <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
-            🛡️ Cómo cuidamos tus datos
+            🛡️ Cómo protegemos tus datos
           </ThemedText>
           <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-            Tu información es súper importante para nosotros. Solo recopilamos lo mínimo necesario para que la app
-            funcione de maravilla.
+            En Study Vault, tu privacidad es nuestra máxima prioridad. Implementamos las mejores prácticas de seguridad
+            para proteger tu información personal y académica.
           </ThemedText>
         </ThemedView>
 
         <ThemedView style={{ marginBottom: theme.spacing.lg }}>
           <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
-            📱 Qué información usamos
+            📱 Información que recopilamos
           </ThemedText>
           <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-            • Tu perfil básico (nombre, foto){"\n"}• Preferencias de la app{"\n"}• Datos de uso para mejorar la
-            experiencia
+            • Información de perfil básica (nombre, email){"\n"}• Datos académicos (materias, tareas, notas){"\n"}•
+            Preferencias de la aplicación{"\n"}• Datos de uso para mejorar la experiencia
           </ThemedText>
         </ThemedView>
 
         <ThemedView style={{ marginBottom: theme.spacing.lg }}>
           <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
-            🤝 Nuestras promesas
+            🔒 Cómo protegemos tu información
           </ThemedText>
           <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-            • Nunca vendemos tu información{"\n"}• Solo compartimos lo esencial con servicios confiables{"\n"}• Puedes
-            eliminar tus datos cuando quieras{"\n"}• Siempre te avisamos si algo cambia
+            • Encriptación de extremo a extremo{"\n"}• Almacenamiento seguro en servidores certificados{"\n"}• Acceso
+            restringido solo a personal autorizado{"\n"}• Auditorías de seguridad regulares
+          </ThemedText>
+        </ThemedView>
+
+        <ThemedView style={{ marginBottom: theme.spacing.lg }}>
+          <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
+            🤝 Nuestros compromisos
+          </ThemedText>
+          <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
+            • Nunca vendemos tu información personal{"\n"}• Solo compartimos datos esenciales con servicios confiables
+            {"\n"}• Respetamos tu derecho a la privacidad{"\n"}• Te notificamos sobre cualquier cambio importante
+          </ThemedText>
+        </ThemedView>
+      </BubbleModal>
+
+      {/* Modal de Gestión de Datos */}
+      <BubbleModal
+        visible={showDataModal}
+        onClose={() => setShowDataModal(false)}
+        title="Gestión de Datos"
+        iconName="folder"
+        iconColor={theme.colors.warning}
+      >
+        <ThemedView style={{ marginBottom: theme.spacing.lg }}>
+          <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
+            📊 Tus derechos sobre los datos
+          </ThemedText>
+          <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
+            Tienes control total sobre tu información personal. Puedes acceder, modificar o eliminar tus datos en
+            cualquier momento.
+          </ThemedText>
+        </ThemedView>
+
+        <ThemedView style={{ marginBottom: theme.spacing.lg }}>
+          <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
+            🔍 Acceso a tus datos
+          </ThemedText>
+          <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
+            • Puedes ver toda tu información desde la app{"\n"}• Solicita una copia completa de tus datos{"\n"}• Exporta
+            tus notas y materiales de estudio{"\n"}• Revisa el historial de actividad
+          </ThemedText>
+        </ThemedView>
+
+        <ThemedView style={{ marginBottom: theme.spacing.lg }}>
+          <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
+            ✏️ Modificación de datos
+          </ThemedText>
+          <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
+            • Edita tu perfil desde configuraciones{"\n"}• Actualiza tus preferencias en cualquier momento{"\n"}•
+            Corrige información incorrecta{"\n"}• Cambia tus configuraciones de privacidad
+          </ThemedText>
+        </ThemedView>
+
+        <ThemedView style={{ marginBottom: theme.spacing.lg }}>
+          <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
+            🗑️ Eliminación de datos
+          </ThemedText>
+          <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
+            • Elimina elementos específicos desde la app{"\n"}• Solicita la eliminación completa de tu cuenta{"\n"}• Los
+            datos se eliminan permanentemente en 30 días{"\n"}• Contacta a soporte para asistencia
           </ThemedText>
         </ThemedView>
       </BubbleModal>
@@ -364,42 +570,41 @@ export default function PrivacyScreen() {
       >
         <ThemedView style={{ marginBottom: theme.spacing.lg }}>
           <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
-            ✨ ¿Qué hace Study Vault?
+            ✨ Nuestra misión
           </ThemedText>
           <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-            Study Vault está diseñada para revolucionar tu experiencia de estudio. Te ayudamos a organizar, guardar y
-            acceder a todos tus materiales académicos de forma inteligente y eficiente.
+            Study Vault nació con la misión de revolucionar la forma en que los estudiantes organizan y acceden a su
+            conocimiento académico. Queremos hacer que estudiar sea más eficiente y organizado.
           </ThemedText>
         </ThemedView>
 
         <ThemedView style={{ marginBottom: theme.spacing.lg }}>
           <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
-            💡 ¿Por qué la creamos?
+            🎯 Nuestros valores
           </ThemedText>
           <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-            Queríamos crear la herramienta de estudio definitiva que realmente transformara la forma en que los
-            estudiantes organizan y acceden a su conocimiento. Después de muchas tazas de café y noches programando,
-            Study Vault nació.
+            • Privacidad y seguridad primero{"\n"}• Diseño centrado en el usuario{"\n"}• Innovación constante{"\n"}•
+            Accesibilidad para todos{"\n"}• Transparencia en nuestras prácticas
           </ThemedText>
         </ThemedView>
 
         <ThemedView style={{ marginBottom: theme.spacing.lg }}>
           <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
-            🚀 Dato curioso
+            🚀 Versión actual
           </ThemedText>
           <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-            El nombre "Study Vault" surgió porque queríamos que fuera como una bóveda segura para todo tu conocimiento.
-            ¡Un lugar donde tus estudios estén protegidos y organizados como un tesoro!
+            Study Vault v2.1.0{"\n"}Última actualización: Enero 2024{"\n"}Nuevas funciones: Sistema de rachas,
+            notificaciones mejoradas, y más personalización.
           </ThemedText>
         </ThemedView>
 
         <ThemedView style={{ marginBottom: theme.spacing.lg }}>
           <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm }}>
-            ❤️ Gracias por usar Study Vault
+            ❤️ Agradecimientos
           </ThemedText>
           <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-            Cada vez que abres Study Vault, nos haces felices. Tu feedback nos ayuda a mejorar la experiencia de estudio
-            cada día.
+            Gracias a todos los estudiantes que han confiado en Study Vault para organizar sus estudios. Su feedback nos
+            ayuda a mejorar cada día.
           </ThemedText>
         </ThemedView>
       </BubbleModal>

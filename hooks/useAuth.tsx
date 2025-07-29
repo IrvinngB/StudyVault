@@ -1,190 +1,253 @@
-import type { AuthSession, UserProfile } from '@/database/models/types';
-import { authService } from '@/database/services/authService';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+"use client"
+
+import type React from "react"
+
+import type { AuthSession, UserProfile } from "@/database/models/types"
+import { authService } from "@/database/services/authService"
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 
 interface AuthContextType {
-  user: UserProfile | null;
-  session: AuthSession | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signUp: (email: string, password: string, userData?: { name?: string }) => Promise<{ success: boolean; error?: string }>;
-  signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
-  updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
-  resendConfirmationEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
-  updateProfile: (updates: Partial<UserProfile>) => Promise<{ success: boolean; error?: string }>;
+  user: UserProfile | null
+  session: AuthSession | null
+  isLoading: boolean
+  isAuthenticated: boolean
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  signUp: (
+    email: string,
+    password: string,
+    userData?: { name?: string },
+  ) => Promise<{ success: boolean; error?: string }>
+  signOut: () => Promise<void>
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>
+  updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>
+  resendConfirmationEmail: (email: string) => Promise<{ success: boolean; error?: string }>
+  updateProfile: (updates: Partial<UserProfile>) => Promise<{ success: boolean; error?: string }>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider")
   }
-  return context;
+  return context
 }
 
 interface AuthProviderProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [session, setSession] = useState<AuthSession | null>(null);
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);  const initialize = useCallback(async () => {
-    try {
-      // Initialize auth service
-      await authService.initialize();
-      
-      // Get current session
-      const currentSession = await authService.getCurrentSession();
-      if (currentSession) {
-        setSession(currentSession);
-        setUser(currentSession.user);
-      }
-    } catch (error) {
-      console.error('❌ Auth initialization error:', error);
-    } finally {
-      setIsLoading(false);
+  const [session, setSession] = useState<AuthSession | null>(null)
+  const [user, setUser] = useState<UserProfile | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const isInitialized = useRef(false)
+  const initializationPromise = useRef<Promise<void> | null>(null)
+
+  const initialize = useCallback(async () => {
+    // Si ya hay una inicialización en progreso, esperar a que termine
+    if (initializationPromise.current) {
+      console.log("⏳ Esperando inicialización en progreso...")
+      return initializationPromise.current
     }
-  }, []);
+
+    // Si ya está inicializado, no hacer nada
+    if (isInitialized.current) {
+      console.log("✅ Auth ya inicializado, saltando...")
+      return
+    }
+
+    console.log("🚀 Inicializando AuthProvider...")
+    setIsLoading(true)
+
+    // Crear la promesa de inicialización
+    initializationPromise.current = (async () => {
+      try {
+        // Initialize auth service
+        await authService.initialize()
+
+        // Get current session
+        const currentSession = await authService.getCurrentSession()
+        console.log("📱 Sesión actual:", currentSession ? "encontrada" : "no encontrada")
+
+        if (currentSession) {
+          setSession(currentSession)
+          setUser(currentSession.user)
+          console.log("✅ Usuario autenticado:", currentSession.user?.email)
+        } else {
+          console.log("❌ No hay sesión activa")
+          setSession(null)
+          setUser(null)
+        }
+      } catch (error) {
+        console.error("❌ Auth initialization error:", error)
+        setSession(null)
+        setUser(null)
+      } finally {
+        setIsLoading(false)
+        isInitialized.current = true
+        initializationPromise.current = null
+        console.log("✅ Auth initialization completada")
+      }
+    })()
+
+    return initializationPromise.current
+  }, [])
 
   useEffect(() => {
-    initialize();    // Listen for auth state changes
-    const { data: { subscription } } = authService.onAuthStateChange((session) => {
-      setSession(session);
-      setUser(session?.user || null);
-    });
+    initialize()
+
+    // Listen for auth state changes
+    const {
+      data: { subscription },
+    } = authService.onAuthStateChange((session) => {
+      console.log("🔄 Auth state cambió:", session ? "autenticado" : "no autenticado")
+      setSession(session)
+      setUser(session?.user || null)
+    })
 
     return () => {
-      subscription?.unsubscribe();
-    };
-  }, [initialize]);
+      subscription?.unsubscribe()
+    }
+  }, [initialize])
 
   const signIn = useCallback(async (email: string, password: string) => {
-    setIsLoading(true);
+    console.log("🔑 Intentando iniciar sesión para:", email)
+    setIsLoading(true)
     try {
-      const result = await authService.signIn(email, password);
-      
+      const result = await authService.signIn(email, password)
+
       if (result.success && result.data) {
-        setSession(result.data);
-        setUser(result.data.user);
+        console.log("✅ Inicio de sesión exitoso")
+        setSession(result.data)
+        setUser(result.data.user)
+      } else {
+        console.log("❌ Error en inicio de sesión:", result.error)
       }
-      
-      return result;
+
+      return result
     } catch (error) {
-      console.error('Sign in error:', error);
+      console.error("💥 Sign in error:", error)
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Error al iniciar sesión'
-      };
+        error: error instanceof Error ? error.message : "Error al iniciar sesión",
+      }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  }, []);
+  }, [])
 
   const signUp = useCallback(async (email: string, password: string, userData?: { name?: string }) => {
-    setIsLoading(true);
+    console.log("📝 Intentando registrar usuario:", email)
+    setIsLoading(true)
     try {
-      const result = await authService.signUp(email, password, userData);
-      
+      const result = await authService.signUp(email, password, userData)
+
       if (result.success && result.data) {
-        setSession(result.data);
-        setUser(result.data.user);
+        console.log("✅ Registro exitoso")
+        setSession(result.data)
+        setUser(result.data.user)
+      } else {
+        console.log("❌ Error en registro:", result.error)
       }
-      
-      return result;
+
+      return result
     } catch (error) {
-      console.error('Sign up error:', error);
+      console.error("💥 Sign up error:", error)
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Error al crear la cuenta'
-      };
+        error: error instanceof Error ? error.message : "Error al crear la cuenta",
+      }
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  }, []);
+  }, [])
 
   const signOut = useCallback(async () => {
-    setIsLoading(true);    try {
-      await authService.signOut();
-      setSession(null);
-      setUser(null);
+    console.log("🚪 Cerrando sesión...")
+    setIsLoading(true)
+    try {
+      await authService.signOut()
+      setSession(null)
+      setUser(null)
+      console.log("✅ Sesión cerrada exitosamente")
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error("❌ Sign out error:", error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  }, []);
+  }, [])
 
   const resetPassword = useCallback(async (email: string) => {
     try {
-      return await authService.resetPassword(email);
+      return await authService.resetPassword(email)
     } catch (error) {
-      console.error('Reset password error:', error);
+      console.error("❌ Reset password error:", error)
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Error al restablecer la contraseña'
-      };
+        error: error instanceof Error ? error.message : "Error al restablecer la contraseña",
+      }
     }
-  }, []);
+  }, [])
 
   const updatePassword = useCallback(async (password: string) => {
     try {
-      return await authService.updatePassword(password);
+      return await authService.updatePassword(password)
     } catch (error) {
-      console.error('Update password error:', error);
+      console.error("❌ Update password error:", error)
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Error al actualizar la contraseña'
-      };
+        error: error instanceof Error ? error.message : "Error al actualizar la contraseña",
+      }
     }
-  }, []);
+  }, [])
 
   const resendConfirmationEmail = useCallback(async (email: string) => {
     try {
-      return await authService.resendConfirmationEmail(email);
+      return await authService.resendConfirmationEmail(email)
     } catch (error) {
-      console.error('Resend confirmation error:', error);
+      console.error("❌ Resend confirmation error:", error)
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Error al reenviar email de confirmación'
-      };
+        error: error instanceof Error ? error.message : "Error al reenviar email de confirmación",
+      }
     }
-  }, []);
+  }, [])
 
-  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
-    try {
-      const result = await authService.updateProfile(updates);
-      
-      if (result.success && result.data) {
-        setUser(result.data);
-        // Update session user as well
-        if (session) {
-          setSession({
-            ...session,
-            user: result.data
-          });
+  const updateProfile = useCallback(
+    async (updates: Partial<UserProfile>) => {
+      try {
+        const result = await authService.updateProfile(updates)
+
+        if (result.success && result.data) {
+          setUser(result.data)
+          // Update session user as well
+          if (session) {
+            setSession({
+              ...session,
+              user: result.data,
+            })
+          }
+        }
+
+        return result
+      } catch (error) {
+        console.error("❌ Update profile error:", error)
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Error al actualizar el perfil",
         }
       }
-      
-      return result;
-    } catch (error) {
-      console.error('Update profile error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Error al actualizar el perfil'
-      };
-    }
-  }, [session]);
+    },
+    [session],
+  )
 
   const value: AuthContextType = {
     user,
     session,
     isLoading,
-    isAuthenticated: !!session && !!user,
+    isAuthenticated: !!session && !!user && isInitialized.current,
     signIn,
     signUp,
     signOut,
@@ -192,11 +255,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     updatePassword,
     resendConfirmationEmail,
     updateProfile,
-  };
+  }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

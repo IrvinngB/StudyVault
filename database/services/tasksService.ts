@@ -510,26 +510,40 @@ class TasksService {
   }
 
   /**
-   * Actualizar estado de una tarea usando el endpoint de grades
+   * Actualizar estado de una tarea usando el endpoint específico de tasks
    */
   async updateTaskStatus(request: UpdateTaskStatusRequest): Promise<void> {
     try {
+      console.log("🔄 updateTaskStatus called with:", request)
+      
       if (request.status === "completed") {
+        // Si el task_id es en realidad un grade_id (cuando task_id es undefined)
+        if (!request.task_id.includes('task-') && request.task_id.length === 36) {
+          // Es un grade_id directo
+          console.log(`🎯 Using grade_id directly: ${request.task_id}`)
+          await apiClient.patch(`/tasks/${request.task_id}/complete`)
+          console.log(`✅ Grade ${request.task_id} value actualizado a 0 (completada) usando endpoint /tasks/${request.task_id}/complete`)
+          return
+        }
+
+        // Buscar por task_id normal
+        console.log(`🔍 Searching for task with task_id: ${request.task_id}`)
         const tasks = await this.getTasksWithEvents()
         const task = tasks.find((t) => t.task_id === request.task_id)
+        console.log(`🔍 Found task:`, task)
 
         if (task && task.grade_id) {
-          // Actualizar el campo value de la calificación a 0 (completada) usando gradesService
-          const { gradesService } = await import("@/database/services/gradesService")
-          await gradesService.patchGrade(task.grade_id, { value: 0 })
-          console.log(`Grade ${task.grade_id} value actualizado a 0 (completada) usando gradesService`)
+          // Usar el endpoint específico para completar la tarea
+          console.log(`🎯 Using grade_id from task: ${task.grade_id}`)
+          await apiClient.patch(`/tasks/${task.grade_id}/complete`)
+          console.log(`✅ Grade ${task.grade_id} value actualizado a 0 (completada) usando endpoint /tasks/${task.grade_id}/complete`)
           return
         }
       }
 
-      console.log(`Task ${request.task_id} status updated to ${request.status} (simulated)`)
+      console.log(`⚠️ Task ${request.task_id} status updated to ${request.status} (simulated)`)
     } catch (error) {
-      console.error("Error updating task status:", error)
+      console.error("❌ Error updating task status:", error)
       throw error
     }
   }
@@ -590,6 +604,41 @@ class TasksService {
     } catch (error) {
       console.error("Error fetching overdue tasks:", error)
       return []
+    }
+  }
+
+  /**
+   * Crear nueva tarea
+   */
+  async createTask(request: CreateTaskRequest): Promise<TaskWithEvent> {
+    try {
+      // Por ahora, simulamos la creación de una tarea
+      // En el futuro, esto debería crear un evento de calendario y una calificación
+      const newTask: TaskWithEvent = {
+        calendar_event_id: `temp-${Date.now()}`,
+        event_title: request.title,
+        start_datetime: request.due_date || new Date().toISOString(),
+        end_datetime: request.due_date || new Date().toISOString(),
+        event_type: "assignment",
+        event_description: request.description,
+        class_id: request.class_id,
+        task_id: `task-${Date.now()}`,
+        task_title: request.title,
+        task_description: request.description,
+        due_date: request.due_date,
+        status: "pending",
+        completion_percentage: 0,
+        priority: request.priority || "medium",
+        user_id: "current-user", // Esto debería venir del contexto de autenticación
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      console.log("Task created (simulated):", newTask)
+      return newTask
+    } catch (error) {
+      console.error("Error creating task:", error)
+      throw error
     }
   }
 

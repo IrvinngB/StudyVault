@@ -1,355 +1,483 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import {
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+"use client"
+
+import { IconSymbol } from "@/components/ui/IconSymbol"
+import { ThemedButton, ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
+import { useAuth } from "@/hooks/useAuth"
+
+import { useTheme } from "@/hooks/useTheme"
+import { router } from "expo-router"
+import type React from "react"
+import { useState } from "react"
+import { Alert, ScrollView, TextInput, TouchableOpacity, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 interface PersonalInfo {
-  fullName: string;
-  email: string;
-  timeZone: string;
+  fullName: string
+  email: string
+  timeZone: string
+  phoneNumber: string
+  bio: string
 }
 
 const PersonalInformationScreen: React.FC = () => {
-  const router = useRouter();
-  
+  const { theme } = useTheme()
+  const { user } = useAuth()
+  const insets = useSafeAreaInsets()
+
+
   // Estados para los campos del formulario
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
-    fullName: 'Nombre Apellido',
-    email: 'correo.estudiante@email.com',
-    timeZone: 'America/Panama (UTC-5)',
-  });
+    fullName: user?.user_metadata?.full_name || "Nombre Apellido",
+    email: user?.email || "correo.estudiante@email.com",
+    timeZone: "America/Panama (UTC-5)",
+    phoneNumber: "+507 0000-0000",
+    bio: "Estudiante apasionado por el aprendizaje",
+  })
 
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-
- {/* // Ocultar el header del navegador
-  useLayoutEffect(() => {
-    if (router && typeof router.setOptions === 'function') {
-      router.setOptions({
-        headerShown: false,
-      });
-    }
-  }, [router]);
-  */}
+  const [isEditing, setIsEditing] = useState<boolean>(false)
 
   // Función para actualizar los campos
   const updateField = (field: keyof PersonalInfo, value: string): void => {
-    setPersonalInfo(prev => ({
+    setPersonalInfo((prev) => ({
       ...prev,
-      [field]: value
-    }));
-  };
+      [field]: value,
+    }))
+  }
 
   // Función para guardar cambios
   const handleSave = (): void => {
-    Alert.alert(
-      "Información actualizada",
-      "Tus datos personales han sido guardados correctamente.",
-      [{ text: "OK", onPress: () => setIsEditing(false) }]
-    );
-  };
+    recordProfileUpdated() // Registrar acción para Easter egg
+    Alert.alert("Información actualizada", "Tus datos personales han sido guardados correctamente.", [
+      { text: "OK", onPress: () => setIsEditing(false) },
+    ])
+  }
 
   // Función para cancelar edición
   const handleCancel = (): void => {
-    setIsEditing(false);
+    setIsEditing(false)
     // Aquí podrías restaurar los valores originales si quisieras
-  };
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header con título y botón de editar */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Información Personal</Text>
-        <TouchableOpacity 
-          style={styles.editButton}
-          onPress={() => setIsEditing(!isEditing)}
-        >
-          <Ionicons 
-            name={isEditing ? "close" : "create-outline"} 
-            size={24} 
-            color="#1976D2" 
-          />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollView}>
-        {/* Avatar Section */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatarText}>
-              {personalInfo.fullName.charAt(0)}
-            </Text>
-          </View>
-          {isEditing && (
-            <TouchableOpacity style={styles.changePhotoButton}>
-              <Text style={styles.changePhotoText}>Cambiar foto</Text>
+    <ThemedView variant="background" style={{ flex: 1 }}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: theme.spacing.md,
+          paddingTop: insets.top + theme.spacing.md,
+          paddingBottom: insets.bottom + theme.spacing.xl,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header con título y botón de editar */}
+        <ThemedView style={{ marginBottom: theme.spacing.xl }}>
+          <ThemedView
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: theme.spacing.md,
+            }}
+          >
+            <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
+              <TouchableOpacity
+                onPress={() => router.back()}
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  padding: theme.spacing.sm,
+                  borderRadius: theme.borderRadius.full,
+                  marginRight: theme.spacing.md,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                }}
+              >
+                <IconSymbol name="chevron.left" size={20} color={theme.colors.text} />
+              </TouchableOpacity>
+              <ThemedText variant="h1" style={{ fontSize: 28, fontWeight: "800" }}>
+                Información Personal
+              </ThemedText>
+            </ThemedView>
+            <TouchableOpacity
+              style={{
+                backgroundColor: isEditing ? theme.colors.error + "20" : theme.colors.primary + "20",
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.sm,
+                borderRadius: theme.borderRadius.lg,
+                borderWidth: 1,
+                borderColor: isEditing ? theme.colors.error : theme.colors.primary,
+              }}
+              onPress={() => setIsEditing(!isEditing)}
+            >
+              <IconSymbol
+                name={isEditing ? "xmark" : "pencil"}
+                size={18}
+                color={isEditing ? theme.colors.error : theme.colors.primary}
+              />
             </TouchableOpacity>
-          )}
-        </View>
+          </ThemedView>
+          <ThemedText variant="body" color="secondary" style={{ fontSize: 16 }}>
+            Gestiona tu información personal y de contacto
+          </ThemedText>
+        </ThemedView>
+
+        {/* Avatar Section */}
+        <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+          <ThemedView style={{ alignItems: "center", paddingVertical: theme.spacing.md }}>
+            <View
+              style={{
+                width: 120,
+                height: 120,
+                borderRadius: 60,
+                backgroundColor: theme.colors.primary,
+                justifyContent: "center",
+                alignItems: "center",
+                marginBottom: theme.spacing.lg,
+                ...theme.shadows.medium,
+              }}
+            >
+              <ThemedText
+                style={{
+                  fontSize: 48,
+                  fontWeight: "bold",
+                  color: "white",
+                }}
+              >
+                {personalInfo.fullName.charAt(0)}
+              </ThemedText>
+            </View>
+            {isEditing && (
+              <ThemedButton
+                title="Cambiar foto de perfil"
+                variant="outline"
+                icon={<IconSymbol name="camera" size={16} color={theme.colors.primary} />}
+                onPress={() => Alert.alert("Próximamente", "Esta función estará disponible pronto")}
+              />
+            )}
+          </ThemedView>
+        </ThemedCard>
 
         {/* Information Fields */}
-        <View style={styles.infoContainer}>
-          
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldHeader}>
-              <View style={[styles.iconContainer, { backgroundColor: '#E3F2FD' }]}>
-                <Ionicons name="person-outline" size={20} color="#1976D2" />
-              </View>
-              <Text style={styles.fieldLabel}>Nombre completo</Text>
+        <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+          <ThemedView
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: theme.spacing.lg,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: theme.colors.info + "20",
+                padding: theme.spacing.sm,
+                borderRadius: theme.borderRadius.full,
+                marginRight: theme.spacing.md,
+              }}
+            >
+              <IconSymbol name="person.circle" size={24} color={theme.colors.info} />
             </View>
-            {isEditing ? (
-              <TextInput
-                style={styles.textInput}
-                value={personalInfo.fullName}
-                onChangeText={(value) => updateField('fullName', value)}
-                placeholder="Ingresa tu nombre completo"
-              />
-            ) : (
-              <Text style={styles.fieldValue}>{personalInfo.fullName}</Text>
-            )}
-          </View>
+            <ThemedText variant="h2" style={{ fontWeight: "700" }}>
+              Datos Personales
+            </ThemedText>
+          </ThemedView>
 
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldHeader}>
-              <View style={[styles.iconContainer, { backgroundColor: '#FFF3E0' }]}>
-                <Ionicons name="mail-outline" size={20} color="#F57C00" />
-              </View>
-              <Text style={styles.fieldLabel}>Correo electrónico</Text>
+          <ThemedView style={{ gap: theme.spacing.lg }}>
+            {/* Nombre completo */}
+            <ThemedView>
+              <ThemedView
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: theme.colors.primary + "20",
+                    padding: theme.spacing.xs,
+                    borderRadius: theme.borderRadius.sm,
+                    marginRight: theme.spacing.sm,
+                  }}
+                >
+                  <IconSymbol name="person" size={16} color={theme.colors.primary} />
+                </View>
+                <ThemedText variant="body" style={{ fontWeight: "600" }}>
+                  Nombre completo
+                </ThemedText>
+              </ThemedView>
+              {isEditing ? (
+                <TextInput
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    borderWidth: 2,
+                    borderColor: theme.colors.primary + "40",
+                    borderRadius: theme.borderRadius.md,
+                    paddingHorizontal: theme.spacing.md,
+                    paddingVertical: theme.spacing.md,
+                    color: theme.colors.text,
+                    fontSize: 16,
+                    marginLeft: theme.spacing.lg,
+                  }}
+                  value={personalInfo.fullName}
+                  onChangeText={(value) => updateField("fullName", value)}
+                  placeholder="Ingresa tu nombre completo"
+                  placeholderTextColor={theme.colors.textMuted}
+                />
+              ) : (
+                <ThemedText variant="body" style={{ marginLeft: theme.spacing.lg, fontSize: 16 }}>
+                  {personalInfo.fullName}
+                </ThemedText>
+              )}
+            </ThemedView>
+
+            {/* Email */}
+            <ThemedView>
+              <ThemedView
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: theme.colors.warning + "20",
+                    padding: theme.spacing.xs,
+                    borderRadius: theme.borderRadius.sm,
+                    marginRight: theme.spacing.sm,
+                  }}
+                >
+                  <IconSymbol name="envelope" size={16} color={theme.colors.warning} />
+                </View>
+                <ThemedText variant="body" style={{ fontWeight: "600" }}>
+                  Correo electrónico
+                </ThemedText>
+              </ThemedView>
+              {isEditing ? (
+                <TextInput
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    borderWidth: 2,
+                    borderColor: theme.colors.warning + "40",
+                    borderRadius: theme.borderRadius.md,
+                    paddingHorizontal: theme.spacing.md,
+                    paddingVertical: theme.spacing.md,
+                    color: theme.colors.text,
+                    fontSize: 16,
+                    marginLeft: theme.spacing.lg,
+                  }}
+                  value={personalInfo.email}
+                  onChangeText={(value) => updateField("email", value)}
+                  placeholder="correo@ejemplo.com"
+                  placeholderTextColor={theme.colors.textMuted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              ) : (
+                <ThemedText variant="body" style={{ marginLeft: theme.spacing.lg, fontSize: 16 }}>
+                  {personalInfo.email}
+                </ThemedText>
+              )}
+            </ThemedView>
+
+            {/* Teléfono */}
+            <ThemedView>
+              <ThemedView
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: theme.colors.success + "20",
+                    padding: theme.spacing.xs,
+                    borderRadius: theme.borderRadius.sm,
+                    marginRight: theme.spacing.sm,
+                  }}
+                >
+                  <IconSymbol name="phone" size={16} color={theme.colors.success} />
+                </View>
+                <ThemedText variant="body" style={{ fontWeight: "600" }}>
+                  Número de teléfono
+                </ThemedText>
+              </ThemedView>
+              {isEditing ? (
+                <TextInput
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    borderWidth: 2,
+                    borderColor: theme.colors.success + "40",
+                    borderRadius: theme.borderRadius.md,
+                    paddingHorizontal: theme.spacing.md,
+                    paddingVertical: theme.spacing.md,
+                    color: theme.colors.text,
+                    fontSize: 16,
+                    marginLeft: theme.spacing.lg,
+                  }}
+                  value={personalInfo.phoneNumber}
+                  onChangeText={(value) => updateField("phoneNumber", value)}
+                  placeholder="+507 0000-0000"
+                  placeholderTextColor={theme.colors.textMuted}
+                  keyboardType="phone-pad"
+                />
+              ) : (
+                <ThemedText variant="body" style={{ marginLeft: theme.spacing.lg, fontSize: 16 }}>
+                  {personalInfo.phoneNumber}
+                </ThemedText>
+              )}
+            </ThemedView>
+
+            {/* Zona horaria */}
+            <ThemedView>
+              <ThemedView
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: theme.colors.secondary + "20",
+                    padding: theme.spacing.xs,
+                    borderRadius: theme.borderRadius.sm,
+                    marginRight: theme.spacing.sm,
+                  }}
+                >
+                  <IconSymbol name="clock" size={16} color={theme.colors.secondary} />
+                </View>
+                <ThemedText variant="body" style={{ fontWeight: "600" }}>
+                  Zona horaria
+                </ThemedText>
+              </ThemedView>
+              {isEditing ? (
+                <TextInput
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    borderWidth: 2,
+                    borderColor: theme.colors.secondary + "40",
+                    borderRadius: theme.borderRadius.md,
+                    paddingHorizontal: theme.spacing.md,
+                    paddingVertical: theme.spacing.md,
+                    color: theme.colors.text,
+                    fontSize: 16,
+                    marginLeft: theme.spacing.lg,
+                  }}
+                  value={personalInfo.timeZone}
+                  onChangeText={(value) => updateField("timeZone", value)}
+                  placeholder="America/Panama (UTC-5)"
+                  placeholderTextColor={theme.colors.textMuted}
+                />
+              ) : (
+                <ThemedText variant="body" style={{ marginLeft: theme.spacing.lg, fontSize: 16 }}>
+                  {personalInfo.timeZone}
+                </ThemedText>
+              )}
+            </ThemedView>
+
+            {/* Biografía */}
+            <ThemedView>
+              <ThemedView
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: theme.colors.accent + "20",
+                    padding: theme.spacing.xs,
+                    borderRadius: theme.borderRadius.sm,
+                    marginRight: theme.spacing.sm,
+                  }}
+                >
+                  <IconSymbol name="text.alignleft" size={16} color={theme.colors.accent} />
+                </View>
+                <ThemedText variant="body" style={{ fontWeight: "600" }}>
+                  Biografía
+                </ThemedText>
+              </ThemedView>
+              {isEditing ? (
+                <TextInput
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    borderWidth: 2,
+                    borderColor: theme.colors.accent + "40",
+                    borderRadius: theme.borderRadius.md,
+                    paddingHorizontal: theme.spacing.md,
+                    paddingVertical: theme.spacing.md,
+                    color: theme.colors.text,
+                    fontSize: 16,
+                    marginLeft: theme.spacing.lg,
+                    height: 80,
+                    textAlignVertical: "top",
+                  }}
+                  value={personalInfo.bio}
+                  onChangeText={(value) => updateField("bio", value)}
+                  placeholder="Cuéntanos un poco sobre ti..."
+                  placeholderTextColor={theme.colors.textMuted}
+                  multiline={true}
+                  numberOfLines={3}
+                />
+              ) : (
+                <ThemedText variant="body" style={{ marginLeft: theme.spacing.lg, fontSize: 16, lineHeight: 22 }}>
+                  {personalInfo.bio}
+                </ThemedText>
+              )}
+            </ThemedView>
+          </ThemedView>
+
+          {/* Botones de acción cuando está editando */}
+          {isEditing && (
+            <ThemedView
+              style={{
+                flexDirection: "row",
+                gap: theme.spacing.sm,
+                marginTop: theme.spacing.xl,
+              }}
+            >
+              <ThemedButton title="Cancelar" variant="outline" onPress={handleCancel} style={{ flex: 1 }} />
+              <ThemedButton title="Guardar cambios" variant="primary" onPress={handleSave} style={{ flex: 1 }} />
+            </ThemedView>
+          )}
+        </ThemedCard>
+
+        {/* Información adicional */}
+        <ThemedCard
+          variant="elevated"
+          padding="large"
+          style={{
+            backgroundColor: theme.colors.info + "10",
+            borderLeftWidth: 4,
+            borderLeftColor: theme.colors.info,
+          }}
+        >
+          <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
+            <View
+              style={{
+                backgroundColor: theme.colors.info + "20",
+                padding: theme.spacing.md,
+                borderRadius: theme.borderRadius.full,
+                marginRight: theme.spacing.lg,
+              }}
+            >
+              <IconSymbol name="info.circle" size={28} color={theme.colors.info} />
             </View>
-            {isEditing ? (
-              <TextInput
-                style={styles.textInput}
-                value={personalInfo.email}
-                onChangeText={(value) => updateField('email', value)}
-                placeholder="correo@ejemplo.com"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            ) : (
-              <Text style={styles.fieldValue}>{personalInfo.email}</Text>
-            )}
-          </View>
-
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldHeader}>
-              <View style={[styles.iconContainer, { backgroundColor: '#E8F5E8' }]}>
-                <Ionicons name="time-outline" size={20} color="#388E3C" />
-              </View>
-              <Text style={styles.fieldLabel}>Zona horaria</Text>
-            </View>
-            {isEditing ? (
-              <TextInput
-                style={styles.textInput}
-                value={personalInfo.timeZone}
-                onChangeText={(value) => updateField('timeZone', value)}
-                placeholder="America/Panama (UTC-5)"
-              />
-            ) : (
-              <Text style={styles.fieldValue}>{personalInfo.timeZone}</Text>
-            )}
-          </View>
-
-        </View>
-
-        {/* Botones de acción cuando está editando */}
-        {isEditing && (
-          <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>Guardar cambios</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+            <ThemedView style={{ flex: 1 }}>
+              <ThemedText variant="h3" style={{ marginBottom: theme.spacing.sm, color: theme.colors.info }}>
+                Información importante
+              </ThemedText>
+              <ThemedText variant="body" color="secondary" style={{ lineHeight: 22 }}>
+                Tu información personal se mantiene privada y segura. Solo tú puedes ver y editar estos datos. Para
+                cambios importantes como el email, es posible que necesites verificación adicional.
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
+        </ThemedCard>
       </ScrollView>
-    </SafeAreaView>
-  );
-};
+    </ThemedView>
+  )
+}
 
-export default PersonalInformationScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 15,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#212121',
-  },
-  editButton: {
-    padding: 8,
-  },
-  placeholder: {
-    width: 40, 
-  },
-  scrollView: {
-    padding: 20,
-  },
-  avatarSection: {
-    alignItems: 'center',
-    marginBottom: 30,
-    paddingTop: 20,
-  },
-  avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#7C4DFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatarText: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  changePhotoButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#E3F2FD',
-    borderRadius: 20,
-  },
-  changePhotoText: {
-    color: '#1976D2',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  infoContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  fieldContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
-  },
-  fieldHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#757575',
-  },
-  fieldValue: {
-    fontSize: 16,
-    color: '#212121',
-    marginLeft: 44,
-  },
-  textInput: {
-    fontSize: 16,
-    color: '#212121',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginLeft: 44,
-    backgroundColor: '#FFFFFF',
-  },
-  multilineInput: {
-    height: 60,
-    textAlignVertical: 'top',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cancelButtonText: {
-    color: '#757575',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButton: {
-    flex: 1,
-    backgroundColor: '#1976D2',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginLeft: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+export default PersonalInformationScreen

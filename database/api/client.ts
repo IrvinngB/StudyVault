@@ -5,6 +5,7 @@ export class ApiClient {
   private static instance: ApiClient
   private baseURL: string
   private authSession: AuthSession | null = null
+  private isInitialized = false
 
   private constructor() {
     this.baseURL = __DEV__
@@ -20,12 +21,19 @@ export class ApiClient {
   }
 
   public async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      console.log("🔄 ApiClient ya inicializado")
+      return
+    }
+
+    console.log("🚀 Inicializando ApiClient...")
     try {
       const savedSession = await AsyncStorage.getItem("auth_session")
       if (savedSession) {
         this.authSession = JSON.parse(savedSession)
+        console.log("📱 Sesión encontrada en storage")
 
-        if (this.authSession && this.authSession.expires_at < Date.now()) {
+        if (this.authSession && typeof this.authSession.expires_at === "number" && this.authSession.expires_at < Date.now()) {
           console.log("🔄 Token expirado, intentando refrescar...")
           const refreshed = await this.refreshToken()
           if (!refreshed) {
@@ -33,20 +41,27 @@ export class ApiClient {
             await this.clearAuthSession()
           }
         }
+      } else {
+        console.log("❌ No hay sesión guardada")
       }
     } catch (error) {
-      console.error("Failed to load auth session:", error)
+      console.error("❌ Failed to load auth session:", error)
+    } finally {
+      this.isInitialized = true
+      console.log("✅ ApiClient inicializado")
     }
   }
 
   private async saveAuthSession(session: AuthSession): Promise<void> {
     this.authSession = session
     await AsyncStorage.setItem("auth_session", JSON.stringify(session))
+    console.log("💾 Sesión guardada en storage")
   }
 
   private async clearAuthSession(): Promise<void> {
     this.authSession = null
     await AsyncStorage.removeItem("auth_session")
+    console.log("🗑️ Sesión eliminada del storage")
   }
 
   private getAuthHeaders(): Record<string, string> {
@@ -62,16 +77,19 @@ export class ApiClient {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    // Asegurar que el cliente esté inicializado
+    if (!this.isInitialized) {
+      await this.initialize()
+    }
+
     try {
       const url = `${this.baseURL}${endpoint}`
+      console.log("🌐 API Request:", options.method || "GET", url)
 
-      // ❌ REMOVER ESTA VERIFICACIÓN - Era el problema principal
-      // No verificar autenticación aquí, dejar que el servidor responda
-      
       const headers = {
         ...this.getAuthHeaders(),
         ...options.headers,
-      };
+      }
 
       const response = await fetch(url, {
         ...options,
@@ -93,7 +111,6 @@ export class ApiClient {
         if (response.status === 401) {
           console.log("🔄 Token inválido, limpiando sesión...")
           await this.clearAuthSession()
-          // Si el backend manda un mensaje específico, propágalo
           return {
             success: false,
             error: data.detail || data.message || "Sesión expirada. Por favor, inicia sesión nuevamente.",
@@ -106,12 +123,13 @@ export class ApiClient {
         }
       }
 
+      console.log("✅ API Response:", response.status)
       return {
         success: true,
         data,
       }
     } catch (error) {
-      console.error("API request failed:", error)
+      console.error("❌ API request failed:", error)
 
       // Manejar errores de red
       if (error instanceof TypeError && error.message.includes("Network request failed")) {
@@ -304,7 +322,7 @@ export class ApiClient {
         console.log("❌ Token refresh failed:", response.status)
       }
     } catch (error) {
-      console.error("Token refresh failed:", error)
+      console.error("❌ Token refresh failed:", error)
     }
 
     await this.clearAuthSession()
@@ -347,7 +365,7 @@ export class ApiClient {
       await this.get("/health")
       return true
     } catch (error) {
-      console.error("Health check failed:", error)
+      console.error("❌ Health check failed:", error)
       return false
     }
   }
@@ -379,7 +397,7 @@ export class ApiClient {
 
       return data
     } catch (error) {
-      console.error("UPLOAD Request failed:", error)
+      console.error("❌ UPLOAD Request failed:", error)
       throw error
     }
   }

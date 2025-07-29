@@ -3,6 +3,7 @@
 import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import type { TaskWithEvent } from "@/database/services/tasksService"
 import { useTheme } from "@/hooks/useTheme"
+import { useGlobalModal } from "@/hooks/ModalProvider"
 import { Ionicons } from "@expo/vector-icons"
 import { TouchableOpacity } from "react-native"
 
@@ -13,6 +14,7 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onToggleCompletion }: TaskCardProps) {
   const { theme } = useTheme()
+  const { showModal } = useGlobalModal()
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -95,16 +97,27 @@ export function TaskCard({ task, onToggleCompletion }: TaskCardProps) {
         <TouchableOpacity
           onPress={() => {
             console.log('Checkbox pressed for task:', task);
-            // Si no tiene task_id pero tiene grade_id, lo pasamos como task_id y value: 0
-            if (!task.task_id && task.grade_id) {
-              const updatedTask = { ...task, task_id: task.grade_id, value: 0 };
-              onToggleCompletion(updatedTask);
-            } else if (task.grade_id) {
-              const updatedTask = { ...task, value: 0 };
-              onToggleCompletion(updatedTask);
-            } else {
-              onToggleCompletion(task);
-            }
+            
+            const newStatus = task.status === "completed" ? "pending" : "completed";
+            const actionText = newStatus === "completed" ? "completar" : "marcar como pendiente";
+            
+            showModal({
+              type: "confirm",
+              title: "Confirmar Acción",
+              message: `¿Estás seguro de que quieres ${actionText} la tarea "${task.task_title || task.event_title}"?`,
+              confirmText: "Confirmar",
+              cancelText: "Cancelar",
+              onConfirm: () => {
+                // Si no tiene task_id pero tiene grade_id, usamos grade_id directamente
+                if (!task.task_id && task.grade_id) {
+                  onToggleCompletion({ ...task, task_id: task.grade_id });
+                } else if (task.grade_id) {
+                  onToggleCompletion(task);
+                } else {
+                  onToggleCompletion(task);
+                }
+              },
+            });
           }}
           style={{
             width: 24,

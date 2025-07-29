@@ -44,7 +44,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const [eventType, setEventType] = useState<EventType>("class")
   const [location, setLocation] = useState("")
   const [classroom, setClassroom] = useState("")
-  const [reminderMinutes, setReminderMinutes] = useState(15)
+  const [reminderMinutes, setReminderMinutes] = useState(0) // Cambiado a 0 por defecto (sin recordatorio)
   const [isRecurring, setIsRecurring] = useState(false)
   const [selectedClass, setSelectedClass] = useState<ClassData | null>(null)
 
@@ -134,7 +134,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     setEventType("class")
     setLocation("")
     setClassroom("")
-    setReminderMinutes(15)
+    setReminderMinutes(0) // Reset a sin recordatorio
     setIsRecurring(false)
     setSelectedClass(null)
   }
@@ -179,6 +179,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       console.log("Start DateTime (UTC for DB):", startDateTimeString)
       console.log("End DateTime (UTC for DB):", endDateTimeString)
       console.log("Day of week:", dayOfWeek)
+      console.log("Reminder minutes:", reminderMinutes)
 
       const eventData: CreateCalendarEventRequest = {
         title: title.trim(),
@@ -186,12 +187,12 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         start_datetime: startDateTimeString,
         end_datetime: endDateTimeString,
         event_type: eventType,
-        event_category: currentEventConfig?.category || "general_event",
+        event_category: currentEventConfig?.category === "academic" ? "grade_event" : "general_event",
         class_id: selectedClass?.id || undefined,
         location: currentEventConfig?.supportsClassroom
           ? classroom.trim() || undefined // Para eventos con aula, guardar el classroom en location
           : location.trim() || undefined, // Para otros eventos, usar location normal
-        reminder_minutes: reminderMinutes,
+        reminder_minutes: reminderMinutes > 0 ? reminderMinutes : undefined, // Solo incluir si es mayor a 0
         is_recurring: currentEventConfig?.supportsRecurrence ? isRecurring : false,
         recurrence_pattern: isRecurring
           ? {
@@ -222,7 +223,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       console.log("🚀 FINAL EVENT DATA:", JSON.stringify(eventData, null, 2))
 
       // Crear el evento y obtener el id (si lo retorna)
-      // Crear el evento (no se puede obtener el id del evento creado por ahora)
       const createdEvent = await onCreateEvent(eventData)
 
       // Si el evento NO es de tipo 'class', crear calificación automática
@@ -230,8 +230,10 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         await createAutoGradeForEvent(createdEvent?.id, selectedClass.id, title.trim(), eventType)
       }
 
-      // Programar notificación si el campo de recordatorio tiene un valor válido Y NO es un evento tipo clase
-      if (reminderMinutes > 0 && eventType !== "class") {
+      // CAMBIO PRINCIPAL: Solo programar notificación si el usuario especificó un recordatorio
+      if (reminderMinutes > 0) {
+        console.log("📱 Usuario especificó recordatorio de", reminderMinutes, "minutos")
+
         // Crear la fecha local para la notificación (NO UTC)
         const [year, month, day] = selectedDate.split("-").map(Number)
         const localEventDateTime = new Date(
@@ -250,14 +252,14 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         } else {
           const notificationData = {
             userId: user?.id || "unknown-user",
-            title,
-            body: description || "Evento programado",
+            title: `${eventType === "class" ? "📚 Clase" : eventType === "examen_final" ? "📝 Examen Final" : eventType === "tarea" ? "📋 Tarea" : eventType === "quiz" ? "📝 Quiz" : eventType === "parcial" ? "📝 Parcial" : eventType === "proyecto" ? "📋 Proyecto" : eventType === "laboratorio" ? "🔬 Laboratorio" : "📅 Evento"}: ${title}`,
+            body: description || `Recordatorio: ${title}`,
             date: localEventDateTime, // Usar fecha local en lugar de UTC
             minutosAntes: reminderMinutes,
             type: "calendar",
           }
 
-          console.log("📅 Datos de notificación:", {
+          console.log("📅 Programando notificación:", {
             fechaSeleccionada: selectedDate,
             horaInicio: startTime.toLocaleTimeString(),
             eventoLocal: localEventDateTime.toLocaleString(),
@@ -276,10 +278,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
             console.log("⚠️ No se pudo crear la notificación, pero el evento se creó correctamente")
           }
         }
-      } else if (eventType === "class") {
-        console.log("📚 No se programó notificación porque es un evento tipo clase.")
-      } else if (reminderMinutes <= 0) {
-        console.log("⏰ No se programó notificación porque el campo de recordatorio está vacío o es 0.")
+      } else if (reminderMinutes === 0) {
+        console.log("📱 Usuario no especificó recordatorio, no se programará notificación")
       }
 
       // Cerrar modal automáticamente al completar exitosamente
@@ -573,10 +573,15 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
               </View>
             )}
 
-            {/* Reminder */}
+            {/* Reminder - MEJORADO */}
             <View style={styles.section}>
               <ThemedText variant="h3" style={[styles.sectionTitle, { color: theme.colors.text }]}>
                 Recordatorio
+              </ThemedText>
+              <ThemedText variant="caption" style={{ color: theme.colors.textMuted, marginBottom: 12 }}>
+                {reminderMinutes === 0
+                  ? "Sin recordatorio - No se enviará notificación"
+                  : `Se enviará notificación ${reminderMinutes} minutos antes del evento`}
               </ThemedText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.reminderContainer}>
@@ -588,7 +593,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                         {
                           backgroundColor:
                             reminderMinutes === option.value ? theme.colors.primary : theme.colors.surface,
-                          borderColor: theme.colors.border,
+                          borderColor: reminderMinutes === option.value ? theme.colors.primary : theme.colors.border,
+                          borderWidth: reminderMinutes === option.value ? 2 : 1,
                         },
                       ]}
                       onPress={() => setReminderMinutes(option.value)}
@@ -599,6 +605,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
                           color: reminderMinutes === option.value ? theme.colors.surface : theme.colors.text,
                           fontSize: 12,
                           textAlign: "center",
+                          fontWeight: reminderMinutes === option.value ? "600" : "400",
                         }}
                       >
                         {option.label}

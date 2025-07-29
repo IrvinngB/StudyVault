@@ -3,6 +3,8 @@
 import { tasksService, type TaskWithEvent, type TasksFilters, type TasksStats } from "@/database/services/tasksService"
 import { useCallback, useEffect, useState } from "react"
 import { Alert } from "react-native"
+import { useGlobalModal } from "./ModalProvider"
+import { useNotifications } from "./useNotifications"
 
 export interface UseTasksReturn {
   tasks: TaskWithEvent[]
@@ -36,6 +38,8 @@ export function useTasks(initialFilters?: TasksFilters): UseTasksReturn {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { showModal } = useGlobalModal()
+  const { createNotification } = useNotifications()
 
   const fetchTasks = useCallback(
     async (filters?: TasksFilters) => {
@@ -54,7 +58,11 @@ export function useTasks(initialFilters?: TasksFilters): UseTasksReturn {
         console.error("Error fetching tasks:", err)
 
         // Mostrar error al usuario
-        Alert.alert("Error", "No se pudieron cargar las tareas. Verifica tu conexión a internet.", [{ text: "OK" }])
+        showModal({
+          type: "error",
+          title: "Error de Carga",
+          message: "No se pudieron cargar las tareas. Verifica tu conexión a internet.",
+        })
       } finally {
         setLoading(false)
       }
@@ -84,7 +92,7 @@ export function useTasks(initialFilters?: TasksFilters): UseTasksReturn {
         // Actualizar el estado local
         setTasks((prevTasks) =>
           prevTasks.map((task) =>
-            task.task_id === taskId
+            (task.task_id === taskId || task.grade_id === taskId)
               ? {
                   ...task,
                   status,
@@ -97,18 +105,41 @@ export function useTasks(initialFilters?: TasksFilters): UseTasksReturn {
         // Actualizar estadísticas
         await tasksService.getTasksStats().then(setStats)
 
-        Alert.alert(
-          "Éxito",
-          `Tarea marcada como ${status === "completed" ? "completada" : status === "pending" ? "pendiente" : status}`,
-          [{ text: "OK" }],
-        )
+        // Mostrar modal de éxito
+        showModal({
+          type: "success",
+          title: "Tarea Actualizada",
+          message: `Tarea marcada como ${status === "completed" ? "completada" : status === "pending" ? "pendiente" : status}`,
+          autoClose: 2000,
+        })
+
+        // Si la tarea se completó y tiene grade_id, crear notificación para calificación
+        if (status === "completed") {
+          const completedTask = tasks.find(t => t.task_id === taskId || t.grade_id === taskId)
+          if (completedTask && completedTask.grade_id) {
+            try {
+              await createNotification({
+                title: "Tarea Completada",
+                message: `Ya puedes agregar la calificación para "${completedTask.task_title || completedTask.event_title}" en la pantalla de calificaciones.`,
+                type: "info",
+                scheduled_for: new Date().toISOString(),
+              })
+            } catch (error) {
+              console.log("No se pudo crear notificación para calificación:", error)
+            }
+          }
+        }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error al actualizar la tarea"
-        Alert.alert("Error", errorMessage, [{ text: "OK" }])
+        showModal({
+          type: "error",
+          title: "Error",
+          message: errorMessage,
+        })
         console.error("Error updating task status:", err)
       }
     },
-    [],
+    [showModal],
   )
 
   const createTask = useCallback(
@@ -134,14 +165,23 @@ export function useTasks(initialFilters?: TasksFilters): UseTasksReturn {
         // Actualizar estadísticas
         await tasksService.getTasksStats().then(setStats)
 
-        Alert.alert("Éxito", "Tarea creada correctamente", [{ text: "OK" }])
+        showModal({
+          type: "success",
+          title: "Tarea Creada",
+          message: "Tarea creada correctamente",
+          autoClose: 2000,
+        })
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Error al crear la tarea"
-        Alert.alert("Error", errorMessage, [{ text: "OK" }])
+        showModal({
+          type: "error",
+          title: "Error",
+          message: errorMessage,
+        })
         console.error("Error creating task:", err)
       }
     },
-    [],
+    [showModal],
   )
 
   const deleteTask = useCallback(async (taskId: string) => {
@@ -154,13 +194,22 @@ export function useTasks(initialFilters?: TasksFilters): UseTasksReturn {
       // Actualizar estadísticas
       await tasksService.getTasksStats().then(setStats)
 
-      Alert.alert("Éxito", "Tarea eliminada correctamente", [{ text: "OK" }])
+      showModal({
+        type: "success",
+        title: "Tarea Eliminada",
+        message: "Tarea eliminada correctamente",
+        autoClose: 2000,
+      })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Error al eliminar la tarea"
-      Alert.alert("Error", errorMessage, [{ text: "OK" }])
+      showModal({
+        type: "error",
+        title: "Error",
+        message: errorMessage,
+      })
       console.error("Error deleting task:", err)
     }
-  }, [])
+  }, [showModal])
 
   const getTasksByClass = useCallback(async (classId: string): Promise<TaskWithEvent[]> => {
     try {

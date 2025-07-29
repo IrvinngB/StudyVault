@@ -10,11 +10,13 @@ import type { TaskWithEvent, TasksFilters as TasksFiltersType } from "@/database
 import { useClasses } from "@/hooks/useClasses"
 import { useTasks } from "@/hooks/useTasks"
 import { useTheme } from "@/hooks/useTheme"
+import { useGlobalModal } from "@/hooks/ModalProvider"
 import { useEffect, useMemo, useState } from "react"
-import { ActivityIndicator, Alert, RefreshControl, ScrollView } from "react-native"
+import { ActivityIndicator, RefreshControl, ScrollView } from "react-native"
 
 export default function TasksScreen() {
   const { theme } = useTheme()
+  const { showModal } = useGlobalModal()
   const [searchText, setSearchText] = useState("")
   const [activeTab, setActiveTab] = useState<"tasks" | "exams">("tasks")
   const [activeFilter, setActiveFilter] = useState<"all" | "pending" | "completed" | "in_progress" | "overdue">("all")
@@ -97,22 +99,18 @@ export default function TasksScreen() {
   }
 
   const handleCreateTask = () => {
-    Alert.prompt(
-      "Nueva Tarea",
-      "Ingresa el título de la tarea:",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Crear",
-          onPress: async (title) => {
-            if (title && title.trim()) {
-              await createTask(title.trim())
-            }
-          },
-        },
-      ],
-      "plain-text",
-    )
+    showModal({
+      type: "info",
+      title: "Nueva Tarea",
+      message: "Ingresa el título de la tarea:",
+      confirmText: "Crear",
+      cancelText: "Cancelar",
+      onConfirm: async () => {
+        // Por ahora, creamos una tarea con título por defecto
+        // En el futuro, esto debería abrir un modal con un formulario
+        await createTask("Nueva tarea")
+      },
+    })
   }
 
   const handleSearchChange = (text: string) => {

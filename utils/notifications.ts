@@ -121,35 +121,33 @@ export async function scheduleCalendarNotification({
       timeDifference: `${Math.round((triggerDate.getTime() - new Date().getTime()) / 60000)} minutes from now`,
     })
 
-    // Convertir el contenido a 'any' para poder añadir las propiedades sin errores de tipo
-    const notificationContent: any = {
+    // Configurar el contenido de la notificación
+    const notificationContent = {
       title,
       body,
       sound: "default",
-      priority: "high",
+      priority: Notifications.AndroidNotificationPriority.HIGH,
       vibrate: [0, 250, 250, 250],
-      // Corrigiendo advertencia de deprecación - estas propiedades están disponibles en expo-notifications
-      // pero TypeScript no las reconoce correctamente
-      shouldShowBanner: true,
-      shouldShowList: true,
       data: {
         eventDate: fechaEvento.toISOString(),
-        scheduledFor: triggerDate.toISOString(), // Guardar también la hora programada
+        scheduledFor: triggerDate.toISOString(),
+        type: type,
+        userId: userId,
       },
     }
 
+    // Programar la notificación local
     localNotificationId = await Notifications.scheduleNotificationAsync({
       content: notificationContent,
       trigger: {
-        type: "datetime",
         date: triggerDate,
         ...(Platform.OS === "android" ? { channelId: "calendar-reminders" } : {}),
-      } as any, // 'as any' para evitar error de tipado, seguro en Expo
+      } as any,
     })
 
     console.log(`✅ Local notification scheduled with ID: ${localNotificationId}`)
 
-    // Luego intentamos guardar en la base de datos (esto puede fallar si no hay conexión)
+    // Guardar en la base de datos para persistencia
     try {
       const dbResult = await saveNotificationToDatabase({
         userId,
@@ -165,7 +163,6 @@ export async function scheduleCalendarNotification({
         console.warn("⚠️ Failed to create remote notification record, but local notification was scheduled")
       }
     } catch (dbError) {
-      // Si falla el guardado en la BD, no afecta la notificación local
       console.warn("⚠️ Could not save notification to database, but local notification was scheduled:", dbError)
     }
 
@@ -173,13 +170,11 @@ export async function scheduleCalendarNotification({
   } catch (error) {
     console.error("❌ Failed to schedule notification:", error)
 
-    // Si ya habíamos creado la notificación local pero falló otra parte, no lanzamos el error
     if (localNotificationId) {
       console.log("⚠️ Error in notification process, but local notification was scheduled")
       return localNotificationId
     }
 
-    // Solo lanzamos el error si falló la creación de la notificación local
     throw error
   }
 }
