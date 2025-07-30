@@ -4,6 +4,7 @@
  */
 
 import { CategoryDistribution } from '@/components/grades/CategoryDistribution'
+import AppModal from '@/components/ui/AppModal'
 import { ThemedButton, ThemedText, ThemedView } from '@/components/ui/ThemedComponents'
 import { categoryService, type CategoryGradeData } from '@/database/services/categoryService'
 import { useAutoCategory } from '@/hooks/useAutoCategory'
@@ -23,14 +24,13 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 }) => {
   const { theme } = useTheme()
   const { 
-    getSuggestedDistribution, 
-    ensureAllCategoriesExist, 
-    syncCategoriesWithEventTypes 
+    getSuggestedDistribution
   } = useAutoCategory()
   
   const [categories, setCategories] = useState<CategoryGradeData[]>([])
   const [loading, setLoading] = useState(false)
   const [suggestedCategories, setSuggestedCategories] = useState<Record<string, number>>({})
+  const [showInfoModal, setShowInfoModal] = useState(false)
 
   useEffect(() => {
     loadCategories()
@@ -46,35 +46,6 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
     } catch (error) {
       console.error('Error loading categories:', error)
       Alert.alert('Error', 'No se pudieron cargar las categorías')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSyncCategories = async () => {
-    try {
-      setLoading(true)
-      await syncCategoriesWithEventTypes(classId)
-      await loadCategories()
-      Alert.alert('Éxito', 'Categorías sincronizadas correctamente')
-    } catch (error) {
-      console.error('Error syncing categories:', error)
-      Alert.alert('Error', 'Error al sincronizar categorías')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleCreateAllCategories = async () => {
-    try {
-      setLoading(true)
-      const newCategories = await ensureAllCategoriesExist(classId)
-      setCategories(newCategories)
-      onCategoriesUpdated?.(newCategories)
-      Alert.alert('Éxito', 'Todas las categorías han sido creadas')
-    } catch (error) {
-      console.error('Error creating categories:', error)
-      Alert.alert('Error', 'Error al crear categorías')
     } finally {
       setLoading(false)
     }
@@ -126,7 +97,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
         styles.suggestedItem,
         { backgroundColor: theme.colors.accent + '20', borderColor: theme.colors.accent }
       ]}>
-        <Ionicons name="add-circle-outline" size={20} color={theme.colors.accent} />
+        <Ionicons name="information-circle-outline" size={20} color={theme.colors.accent} />
         <View style={styles.suggestedInfo}>
           <ThemedText variant="body" style={{ color: theme.colors.text }}>
             {name}
@@ -162,37 +133,33 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 
       {missingSuggested.length > 0 && (
         <View style={styles.section}>
-          <ThemedText variant="h3" style={{ color: theme.colors.text, marginBottom: 8 }}>
-            Categorías Sugeridas
-          </ThemedText>
+          <View style={styles.sectionHeader}>
+            <ThemedText variant="h3" style={{ color: theme.colors.text }}>
+              Categorías Sugeridas
+            </ThemedText>
+            <ThemedButton
+              title="ℹ️ Info"
+              onPress={() => setShowInfoModal(true)}
+              variant="outline"
+              size="small"
+            />
+          </View>
           <FlatList
             data={missingSuggested}
             renderItem={renderSuggestedCategory}
             keyExtractor={([name]) => name}
             scrollEnabled={false}
           />
-          <ThemedButton
-            title="Crear Todas las Categorías"
-            onPress={handleCreateAllCategories}
-            loading={loading}
-            style={{ marginTop: 12 }}
-          />
+          <ThemedText variant="bodySmall" style={{ color: theme.colors.textMuted, marginTop: 8, textAlign: 'center' }}>
+            Estas categorías se crearán automáticamente cuando agregues eventos del calendario
+          </ThemedText>
         </View>
       )}
 
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <ThemedText variant="h3" style={{ color: theme.colors.text }}>
-            Categorías Actuales ({categories.length})
-          </ThemedText>
-          <ThemedButton
-            title="Sincronizar"
-            onPress={handleSyncCategories}
-            loading={loading}
-            variant="outline"
-            size="small"
-          />
-        </View>
+        <ThemedText variant="h3" style={{ color: theme.colors.text, marginBottom: 12 }}>
+          Categorías Actuales ({categories.length})
+        </ThemedText>
         
         {categories.length > 0 ? (
           <FlatList
@@ -206,11 +173,21 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
             <Ionicons name="folder-outline" size={48} color={theme.colors.textMuted} />
             <ThemedText variant="body" style={{ color: theme.colors.textMuted, textAlign: 'center', marginTop: 12 }}>
               No hay categorías creadas.{'\n'}
-              Crea categorías automáticamente basadas en tipos de eventos.
+              Las categorías se crearán automáticamente cuando agregues eventos del calendario.
             </ThemedText>
           </View>
         )}
       </View>
+
+      {/* Modal de información */}
+      <AppModal
+        visible={showInfoModal}
+        type="info"
+        title="Categorías Automáticas"
+        message="Las categorías se crean automáticamente cuando agregas eventos del calendario. No es necesario crearlas manualmente. El sistema sugiere categorías basadas en los tipos de eventos que has configurado."
+        onClose={() => setShowInfoModal(false)}
+        confirmText="Entendido"
+      />
     </ThemedView>
   )
 }

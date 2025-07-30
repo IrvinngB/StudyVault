@@ -45,10 +45,35 @@ export function usePasswordResetDeepLink() {
           return
         }
 
+        // Handle Supabase verification URLs (like the one you're getting)
+        if (url.includes("supabase.co/auth/v1/verify")) {
+          console.log("🔑 Detectado enlace de verificación de Supabase")
+          
+          const urlObj = new URL(url)
+          const token = urlObj.searchParams.get("token")
+          const type = urlObj.searchParams.get("type")
+          
+          if (token && type === "recovery") {
+            console.log("✅ Token de recuperación encontrado en URL de Supabase")
+            
+            // Guardar el token de recuperación en AsyncStorage
+            try {
+              await AsyncStorage.setItem('recovery_token', token)
+              console.log("💾 Token de recuperación guardado en AsyncStorage")
+              
+              // Navegar a la pantalla de actualización de contraseña
+              router.push("/(auth)/update-password")
+            } catch (error) {
+              console.error("❌ Error guardando token de recuperación:", error)
+            }
+            return
+          }
+        }
+
         const parsedUrl = Linking.parse(url)
         console.log("🔗 URL parseada:", parsedUrl)
 
-        // Handle password reset URLs
+        // Handle password reset URLs (your app's deep links)
         if (parsedUrl.path?.includes("reset-password") || parsedUrl.queryParams?.type === "recovery") {
           console.log("🔑 Detectado enlace de recuperación de contraseña")
 

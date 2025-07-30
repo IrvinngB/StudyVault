@@ -19,7 +19,7 @@ import { classService } from "@/database/services/courseService"
 import type { GradeData } from "@/database/services/gradesService"
 import { gradesService } from "@/database/services/gradesService"
 import { useTheme } from "@/hooks/useTheme"
-import { calculateWeightedGrade } from "@/utils/calculateGrade"
+import { calculateFinalGrade, calculateWeightedGrade } from "@/utils/calculateGrade"
 
 export default function GradesByCategoryScreen() {
   const { classId } = useLocalSearchParams<{ classId: string }>()
@@ -29,6 +29,7 @@ export default function GradesByCategoryScreen() {
   const [evaluaciones, setEvaluaciones] = useState<GradeData[]>([])
   const [defaultMaxScore, setDefaultMaxScore] = useState<number | null>(null)
   const [notaActual, setNotaActual] = useState(0)
+  const [notaFinal, setNotaFinal] = useState(0)
   const [cursoInfo, setCursoInfo] = useState({
     nombre: '',
     codigo: '',
@@ -79,7 +80,9 @@ export default function GradesByCategoryScreen() {
       })
 
       const promedio = calculateWeightedGrade(grades, cats, defaultMaxScore!)
+      const notaFinalCalculada = calculateFinalGrade(grades, cats, defaultMaxScore!)
       setNotaActual(promedio)
+      setNotaFinal(notaFinalCalculada)
     } catch (error) {
       Alert.alert("Error", "No se pudo cargar la información del curso")
       console.error("❌ Error:", error)
@@ -103,7 +106,9 @@ export default function GradesByCategoryScreen() {
     setCategories(updatedCategories)
     // Recalcular promedio con las nuevas categorías
     const promedio = calculateWeightedGrade(evaluaciones, updatedCategories, defaultMaxScore!)
+    const notaFinalCalculada = calculateFinalGrade(evaluaciones, updatedCategories, defaultMaxScore!)
     setNotaActual(promedio)
+    setNotaFinal(notaFinalCalculada)
   }
 
   const handleScaleSelect = async (scale: number) => {
@@ -156,6 +161,7 @@ export default function GradesByCategoryScreen() {
           creditos={cursoInfo.creditos}
           escala={defaultMaxScore}
           notaActual={notaActual}
+          notaFinal={notaFinal}
         />
       )}
 
@@ -170,6 +176,23 @@ export default function GradesByCategoryScreen() {
                   <ThemedCard variant="outlined" padding="medium" style={{ marginBottom: theme.spacing.sm }}>
                     <ThemedText variant="body">
                       Te queda {porcentajeDisponible}% por asignar en categorías.
+                    </ThemedText>
+                    <ThemedText variant="bodySmall" color="secondary" style={{ marginTop: theme.spacing.xs }}>
+                      • Nota actual: Basada en evaluaciones entregadas
+                    </ThemedText>
+                    <ThemedText variant="bodySmall" color="secondary">
+                      • Nota final: Si no entregas nada más (asume 0 en faltantes)
+                    </ThemedText>
+                  </ThemedCard>
+                )}
+
+                {porcentajeDisponible === 0 && (
+                  <ThemedCard variant="outlined" padding="medium" style={{ marginBottom: theme.spacing.sm }}>
+                    <ThemedText variant="bodySmall" color="secondary">
+                      • Nota actual: Basada en evaluaciones entregadas
+                    </ThemedText>
+                    <ThemedText variant="bodySmall" color="secondary">
+                      • Nota final: Si no entregas nada más (asume 0 en faltantes)
                     </ThemedText>
                   </ThemedCard>
                 )}

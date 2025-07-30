@@ -516,27 +516,67 @@ class TasksService {
     try {
       console.log("🔄 updateTaskStatus called with:", request)
       
+      // Buscar la tarea para obtener el grade_id
+      const tasks = await this.getTasksWithEvents()
+      const task = tasks.find((t) => t.task_id === request.task_id || t.grade_id === request.task_id)
+      console.log(`🔍 Found task:`, task)
+
+      if (task && task.grade_id) {
+        if (request.status === "completed") {
+          // Marcar como completada
+          console.log(`🎯 Marking grade ${task.grade_id} as completed`)
+          await apiClient.patch(`/tasks/${task.grade_id}/complete`)
+          console.log(`✅ Grade ${task.grade_id} marked as completed`)
+        } else if (request.status === "pending") {
+          // Desmarcar (marcar como pendiente) - usar endpoint diferente
+          console.log(`🎯 Marking grade ${task.grade_id} as pending`)
+          try {
+            // Intentar usar un endpoint PUT directo para actualizar la calificación
+            await apiClient.put(`/grades/${task.grade_id}`, { value: 1 })
+            console.log(`✅ Grade ${task.grade_id} marked as pending (value = 1)`)
+          } catch (error) {
+            console.log("⚠️ Fallback: Trying with different approach")
+            // Si no funciona, intentar con un endpoint alternativo
+            try {
+              await apiClient.patch(`/grades/${task.grade_id}`, { value: 1 })
+              console.log(`✅ Grade ${task.grade_id} marked as pending using PATCH`)
+            } catch (error2) {
+              console.log("❌ No se pudo desmarcar la tarea:", error2)
+              throw error2
+            }
+          }
+        }
+        return
+      }
+
+      // Si no tiene grade_id, es una tarea normal
       if (request.status === "completed") {
-        // Si el task_id es en realidad un grade_id (cuando task_id es undefined)
+        // Si el task_id es en realidad un grade_id directo
         if (!request.task_id.includes('task-') && request.task_id.length === 36) {
-          // Es un grade_id directo
           console.log(`🎯 Using grade_id directly: ${request.task_id}`)
           await apiClient.patch(`/tasks/${request.task_id}/complete`)
-          console.log(`✅ Grade ${request.task_id} value actualizado a 0 (completada) usando endpoint /tasks/${request.task_id}/complete`)
+          console.log(`✅ Grade ${request.task_id} marked as completed`)
           return
         }
-
-        // Buscar por task_id normal
-        console.log(`🔍 Searching for task with task_id: ${request.task_id}`)
-        const tasks = await this.getTasksWithEvents()
-        const task = tasks.find((t) => t.task_id === request.task_id)
-        console.log(`🔍 Found task:`, task)
-
-        if (task && task.grade_id) {
-          // Usar el endpoint específico para completar la tarea
-          console.log(`🎯 Using grade_id from task: ${task.grade_id}`)
-          await apiClient.patch(`/tasks/${task.grade_id}/complete`)
-          console.log(`✅ Grade ${task.grade_id} value actualizado a 0 (completada) usando endpoint /tasks/${task.grade_id}/complete`)
+      } else if (request.status === "pending") {
+        // Desmarcar tarea con grade_id directo
+        if (!request.task_id.includes('task-') && request.task_id.length === 36) {
+          console.log(`🎯 Unmarking grade_id directly: ${request.task_id}`)
+          try {
+            // Intentar usar un endpoint PUT directo para actualizar la calificación
+            await apiClient.put(`/grades/${request.task_id}`, { value: 1 })
+            console.log(`✅ Grade ${request.task_id} marked as pending (value = 1)`)
+          } catch (error) {
+            console.log("⚠️ Fallback: Trying with different approach")
+            // Si no funciona, intentar con un endpoint alternativo
+            try {
+              await apiClient.patch(`/grades/${request.task_id}`, { value: 1 })
+              console.log(`✅ Grade ${request.task_id} marked as pending using PATCH`)
+            } catch (error2) {
+              console.log("❌ No se pudo desmarcar la tarea:", error2)
+              throw error2
+            }
+          }
           return
         }
       }

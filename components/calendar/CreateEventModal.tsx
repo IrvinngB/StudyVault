@@ -7,9 +7,8 @@ import { EVENT_TYPES_CONFIG, REMINDER_OPTIONS } from "@/constants/Calendar"
 import type { CalendarEvent, CreateCalendarEventRequest, EventType } from "@/database/models/calendarTypes"
 import type { ClassData } from "@/database/services"
 import { useAuth } from "@/hooks/useAuth"
+import { useAutoCategory } from "@/hooks/useAutoCategory"
 import { useTheme } from "@/hooks/useTheme"
-import { categoryService } from "@/database/services/categoryService"
-import { gradesService } from "@/database/services/gradesService"
 import { scheduleCalendarNotification } from "@/utils/notifications"
 import { convertLocalToUTC, formatTimeWithPreferences, getTimezoneInfo } from "@/utils/timezoneHelpers"
 import { Ionicons } from "@expo/vector-icons"
@@ -33,6 +32,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 }) => {
   const { theme } = useTheme()
   const { user } = useAuth()
+  const { createAutoGradeForEvent } = useAutoCategory()
   const [loading, setLoading] = useState(false)
   const [use24HourFormat, setUse24HourFormat] = useState(false)
 
@@ -123,38 +123,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   // Crea una calificación automática para el evento (si aplica)
   const createAutoGrade = async (eventId: string | undefined, classId: string, eventTitle: string, eventType: string) => {
     try {
-      // Obtener categorías de la clase
-      let categories: any[] = []
-      if (classId) {
-        categories = await categoryService.getCategoriesByClassId(classId)
-      }
-
-      let categoryId = categories.length > 0 ? categories[0].id : null
-
-      // Si no hay categoría, crear una por defecto
-      if (!categoryId && classId) {
-        const defaultCategory = await categoryService.createCategory({ 
-          class_id: classId, 
-          name: "General", 
-          percentage: 100 
-        })
-        categoryId = defaultCategory.id
-      }
-
-      if (!categoryId) return // No se puede crear calificación sin categoría
-
-      // Crear la calificación con score 0 y max_score 0 por defecto
-      await gradesService.createGrade({
-        class_id: classId,
-        category_id: categoryId,
-        title: eventTitle,
-        score: 0,
-        max_score: 0,
-        ...(eventId && { calendar_event_id: eventId }),
-        event_type: eventType,
-        value: 1 // 1 = incompleta/activa por defecto
-      })
-
+      // Usar la función del hook que crea la categoría específica según el tipo de evento
+      await createAutoGradeForEvent(eventId, classId, eventTitle, eventType)
       console.log("✅ Calificación automática creada exitosamente")
     } catch (err) {
       console.error("Error creando calificación automática:", err)

@@ -2,7 +2,6 @@
 
 import { tasksService, type TaskWithEvent, type TasksFilters, type TasksStats } from "@/database/services/tasksService"
 import { useCallback, useEffect, useState } from "react"
-import { Alert } from "react-native"
 import { useGlobalModal } from "./ModalProvider"
 import { useNotifications } from "./useNotifications"
 
@@ -89,18 +88,8 @@ export function useTasks(initialFilters?: TasksFilters): UseTasksReturn {
           completion_percentage: completionPercentage,
         })
 
-        // Actualizar el estado local
-        setTasks((prevTasks) =>
-          prevTasks.map((task) =>
-            (task.task_id === taskId || task.grade_id === taskId)
-              ? {
-                  ...task,
-                  status,
-                  completion_percentage: completionPercentage ?? task.completion_percentage,
-                }
-              : task,
-          ),
-        )
+        // Refrescar los datos desde el servidor para asegurar sincronización
+        await fetchTasks()
 
         // Actualizar estadísticas
         await tasksService.getTasksStats().then(setStats)
@@ -113,20 +102,26 @@ export function useTasks(initialFilters?: TasksFilters): UseTasksReturn {
           autoClose: 2000,
         })
 
-        // Si la tarea se completó y tiene grade_id, crear notificación para calificación
+        // Si la tarea se completó y tiene grade_id, mostrar opción para ir a grades
         if (status === "completed") {
           const completedTask = tasks.find(t => t.task_id === taskId || t.grade_id === taskId)
           if (completedTask && completedTask.grade_id) {
-            try {
-              await createNotification({
-                title: "Tarea Completada",
-                message: `Ya puedes agregar la calificación para "${completedTask.task_title || completedTask.event_title}" en la pantalla de calificaciones.`,
-                type: "info",
-                scheduled_for: new Date().toISOString(),
-              })
-            } catch (error) {
-              console.log("No se pudo crear notificación para calificación:", error)
-            }
+            // Mostrar modal con opción de ir a grades
+            showModal({
+              type: "confirm",
+              title: "Tarea Completada",
+              message: `¿Quieres agregar la calificación para "${completedTask.task_title || completedTask.event_title}" ahora?`,
+              confirmText: "Ir a Calificaciones",
+              cancelText: "Más Tarde",
+              onConfirm: () => {
+                // Navegar a la pantalla de grades con el class_id
+                if (completedTask.class_id) {
+                  // Usar router para navegar a grades
+                  const router = require('expo-router').router
+                  router.push(`/grades/${completedTask.class_id}`)
+                }
+              },
+            })
           }
         }
       } catch (err) {

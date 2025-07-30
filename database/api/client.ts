@@ -64,16 +64,32 @@ export class ApiClient {
     console.log("🗑️ Sesión eliminada del storage")
   }
 
-  private getAuthHeaders(): Record<string, string> {
+  private getAuthHeaders(requireAuth: boolean = true): Record<string, string> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     }
 
-    if (this.authSession?.access_token) {
+    if (requireAuth && this.authSession?.access_token) {
       headers["Authorization"] = `Bearer ${this.authSession.access_token}`
     }
 
     return headers
+  }
+
+  private isPublicEndpoint(endpoint: string): boolean {
+    // Endpoints públicos que no requieren autenticación
+    const publicEndpoints = [
+      '/auth/signup',
+      '/auth/signin',
+      '/auth/reset-password',
+      '/auth/refresh',
+      '/health',
+      '/health/check'
+    ]
+    
+    return publicEndpoints.some(publicEndpoint => 
+      endpoint.startsWith(publicEndpoint)
+    )
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
@@ -86,8 +102,12 @@ export class ApiClient {
       const url = `${this.baseURL}${endpoint}`
       console.log("🌐 API Request:", options.method || "GET", url)
 
+      // Detectar si es un endpoint público (no requiere autenticación)
+      const isPublicEndpoint = this.isPublicEndpoint(endpoint)
+      console.log(`🔐 Endpoint ${isPublicEndpoint ? 'público' : 'privado'}: ${endpoint}`)
+      
       const headers = {
-        ...this.getAuthHeaders(),
+        ...this.getAuthHeaders(!isPublicEndpoint),
         ...options.headers,
       }
 

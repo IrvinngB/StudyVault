@@ -2,8 +2,8 @@
 
 import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import type { TaskWithEvent } from "@/database/services/tasksService"
-import { useTheme } from "@/hooks/useTheme"
 import { useGlobalModal } from "@/hooks/ModalProvider"
+import { useTheme } from "@/hooks/useTheme"
 import { Ionicons } from "@expo/vector-icons"
 import { TouchableOpacity } from "react-native"
 
@@ -99,7 +99,7 @@ export function TaskCard({ task, onToggleCompletion }: TaskCardProps) {
             console.log('Checkbox pressed for task:', task);
             
             const newStatus = task.status === "completed" ? "pending" : "completed";
-            const actionText = newStatus === "completed" ? "completar" : "marcar como pendiente";
+            const actionText = newStatus === "completed" ? "completar" : "desmarcar";
             
             showModal({
               type: "confirm",
@@ -108,14 +108,17 @@ export function TaskCard({ task, onToggleCompletion }: TaskCardProps) {
               confirmText: "Confirmar",
               cancelText: "Cancelar",
               onConfirm: () => {
-                // Si no tiene task_id pero tiene grade_id, usamos grade_id directamente
-            if (!task.task_id && task.grade_id) {
-                  onToggleCompletion({ ...task, task_id: task.grade_id });
-            } else if (task.grade_id) {
-                  onToggleCompletion(task);
-            } else {
-              onToggleCompletion(task);
-            }
+                // Determinar el ID correcto para la tarea
+                let taskId = task.task_id;
+                if (!taskId && task.grade_id) {
+                  taskId = task.grade_id;
+                }
+                
+                if (taskId) {
+                  onToggleCompletion({ ...task, task_id: taskId });
+                } else {
+                  console.error('No se encontró ID válido para la tarea:', task);
+                }
               },
             });
           }}
@@ -220,6 +223,38 @@ export function TaskCard({ task, onToggleCompletion }: TaskCardProps) {
                 {formatDateTime(task.start_datetime)}
               </ThemedText>
             </ThemedView>
+            
+            {/* Botón para ir a grades si la tarea está completada y tiene grade_id */}
+            {isCompleted && task.grade_id && task.class_id && (
+              <TouchableOpacity
+                onPress={() => {
+                  const router = require('expo-router').router;
+                  router.push(`/grades/${task.class_id}`);
+                }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: theme.colors.success,
+                  paddingHorizontal: theme.spacing.sm,
+                  paddingVertical: 4,
+                  borderRadius: theme.borderRadius.sm,
+                  marginLeft: "auto",
+                }}
+              >
+                <Ionicons name="school" size={12} color="white" />
+                <ThemedText
+                  variant="caption"
+                  style={{
+                    color: "white",
+                    fontSize: 11,
+                    fontWeight: "600",
+                    marginLeft: 4,
+                  }}
+                >
+                  Calificar
+                </ThemedText>
+              </TouchableOpacity>
+            )}
           </ThemedView>
         </ThemedView>
       </ThemedView>

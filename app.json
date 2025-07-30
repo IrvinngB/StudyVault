@@ -4,18 +4,21 @@
     "slug": "StudyVault",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
     "scheme": "studyvault",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "icon": "./assets/Assets.xcassets/AppIcon.appiconset/1024.png",
+      "bundleIdentifier": "com.irvinng04.StudyVault"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
         "backgroundColor": "#ffffff"
       },
+      "icon": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
       "edgeToEdgeEnabled": true,
       "package": "com.irvinng04.StudyVault"
     },
@@ -29,10 +32,14 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
+          "imageWidth": 150,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#E8B54A",
+          "dark": {
+            "image": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
+            "backgroundColor": "#8B4513"
+          }
         }
       ],
       "expo-secure-store"

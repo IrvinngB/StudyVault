@@ -8,7 +8,7 @@ import type { CategoryGradeData } from '@/database/services/categoryService'
 import { useTheme } from '@/hooks/useTheme'
 import { Ionicons } from '@expo/vector-icons'
 import React from 'react'
-import { Modal, Pressable, StyleSheet, View } from 'react-native'
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 interface CategoryManagerModalProps {
   visible: boolean
@@ -58,13 +58,17 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           </View>
         </View>
 
-        {/* Content */}
-        <View style={styles.content}>
+        {/* Content with ScrollView */}
+        <ScrollView 
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.contentContainer}
+        >
           <CategoryManager
             classId={classId}
             onCategoriesUpdated={onCategoriesUpdated}
           />
-        </View>
+        </ScrollView>
 
         {/* Footer */}
         <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
@@ -117,6 +121,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 20,
   },
   footer: {
     borderTopWidth: 1,

@@ -28,7 +28,8 @@ export default function UpdatePasswordScreen() {
   const [recoveryTokens, setRecoveryTokens] = useState<{
     accessToken: string | null;
     refreshToken: string | null;
-  }>({ accessToken: null, refreshToken: null });
+    recoveryToken: string | null;
+  }>({ accessToken: null, refreshToken: null, recoveryToken: null });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
 
@@ -52,8 +53,10 @@ export default function UpdatePasswordScreen() {
       // Verificar si tenemos tokens temporales del deep link
       const accessToken = await AsyncStorage.getItem('temp_access_token');
       const refreshToken = await AsyncStorage.getItem('temp_refresh_token');
+      const recoveryToken = await AsyncStorage.getItem('recovery_token');
       
-      if (!accessToken || !refreshToken) {
+      // Verificar si tenemos al menos un tipo de token válido
+      if (!accessToken && !refreshToken && !recoveryToken) {
         console.error('❌ No recovery tokens found in AsyncStorage');
         Alert.alert(
           'Enlace Inválido', 
@@ -69,11 +72,12 @@ export default function UpdatePasswordScreen() {
       }
 
       console.log('🔑 Recovery tokens found!');
-      console.log('Access token length:', accessToken.length);
-      console.log('Refresh token length:', refreshToken.length);
+      if (accessToken) console.log('Access token length:', accessToken.length);
+      if (refreshToken) console.log('Refresh token length:', refreshToken.length);
+      if (recoveryToken) console.log('Recovery token length:', recoveryToken.length);
 
       // Guardar tokens en estado para usarlos después
-      setRecoveryTokens({ accessToken, refreshToken });
+      setRecoveryTokens({ accessToken, refreshToken, recoveryToken });
       setHasValidRecoveryTokens(true);
 
     } catch (error) {
@@ -95,7 +99,7 @@ export default function UpdatePasswordScreen() {
 
   const clearRecoveryTokens = async () => {
     try {
-      await AsyncStorage.multiRemove(['temp_access_token', 'temp_refresh_token']);
+      await AsyncStorage.multiRemove(['temp_access_token', 'temp_refresh_token', 'recovery_token']);
       console.log('🧹 Recovery tokens cleared');
     } catch (error) {
       console.error('Error clearing recovery tokens:', error);
@@ -137,7 +141,7 @@ export default function UpdatePasswordScreen() {
   };
 
   const handleUpdatePassword = async () => {
-    if (!hasValidRecoveryTokens || !recoveryTokens.accessToken) {
+    if (!hasValidRecoveryTokens || (!recoveryTokens.accessToken && !recoveryTokens.recoveryToken)) {
       showError('No se encontraron tokens de recuperación válidos. Solicita un nuevo enlace.', 'Error');
       return;
     }
@@ -173,14 +177,21 @@ export default function UpdatePasswordScreen() {
     try {
       console.log('🔄 Updating password via FastAPI...');
       
-      // Llamar a FastAPI con el token de autorización
-      const response = await apiClient.post('/auth/update-password', 
-        {
-          password: formData.password,
-          // Si necesitas enviar el token, inclúyelo en el body o modifica el apiClient para aceptar headers
-          // accessToken: recoveryTokens.accessToken
-        }
-      );
+      // Determinar qué tipo de token usar
+      let requestData: any = { password: formData.password };
+      
+      if (recoveryTokens.recoveryToken) {
+        // Usar token de recuperación de Supabase
+        console.log('🔑 Using Supabase recovery token');
+        requestData.recovery_token = recoveryTokens.recoveryToken;
+      } else if (recoveryTokens.accessToken) {
+        // Usar tokens de acceso/refresh (método anterior)
+        console.log('🔑 Using access/refresh tokens');
+        // El token se maneja automáticamente por el apiClient
+      }
+      
+      // Llamar a FastAPI
+      const response = await apiClient.post('/auth/update-password', requestData);
 
       const typedResponse = response as { data: any };
       console.log('✅ Password updated successfully:', typedResponse.data);
@@ -332,7 +343,7 @@ export default function UpdatePasswordScreen() {
               </View>
 
               {/* Token info para debugging (remover en producción) */}
-              {__DEV__ && recoveryTokens.accessToken && (
+              {__DEV__ && (recoveryTokens.accessToken || recoveryTokens.recoveryToken) && (
                 <View style={{ 
                   backgroundColor: theme.colors.surface,
                   padding: theme.spacing.sm,
@@ -340,7 +351,11 @@ export default function UpdatePasswordScreen() {
                   marginBottom: theme.spacing.md
                 }}>
                   <ThemedText variant="caption" color="secondary">
-                    🔑 Token válido encontrado ({recoveryTokens.accessToken.substring(0, 20)}...)
+                    🔑 Token válido encontrado (
+                    {recoveryTokens.recoveryToken 
+                      ? `Recovery: ${recoveryTokens.recoveryToken.substring(0, 20)}...`
+                      : `Access: ${recoveryTokens.accessToken?.substring(0, 20)}...`
+                    })
                   </ThemedText>
                 </View>
               )}

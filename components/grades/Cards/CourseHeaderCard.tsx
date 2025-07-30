@@ -1,7 +1,7 @@
-import React from 'react'
-import { View } from 'react-native'
 import { ThemedCard, ThemedText } from '@/components/ui/ThemedComponents'
 import { useTheme } from '@/hooks/useTheme'
+import React from 'react'
+import { View } from 'react-native'
 
 interface CourseHeaderCardProps {
   nombre: string
@@ -9,6 +9,7 @@ interface CourseHeaderCardProps {
   creditos?: number
   escala: number
   notaActual: number
+  notaFinal: number
 }
 
 export default function CourseHeaderCard({
@@ -16,7 +17,8 @@ export default function CourseHeaderCard({
   codigo,
   creditos,
   escala,
-  notaActual
+  notaActual,
+  notaFinal
 }: CourseHeaderCardProps) {
   const { theme } = useTheme()
 
@@ -61,24 +63,45 @@ export default function CourseHeaderCard({
           </ThemedText>
         </View>
 
-        {/* 🎯 Nota actual a la derecha */}
-        <View style={{ alignItems: 'flex-end', flexShrink: 1, maxWidth: '40%' }}>
-          <ThemedText
-            variant="h1"
-            style={{
-              fontWeight: 'bold',
-              color: theme.colors.primary,
-              marginBottom: theme.spacing.xs
-            }}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
-          >
-            {notaActual.toFixed(1)}
-          </ThemedText>
-          <ThemedText variant="caption" color="secondary">
-            Nota actual
-          </ThemedText>
+        {/* 🎯 Notas a la derecha */}
+        <View style={{ alignItems: 'flex-end', flexShrink: 1, maxWidth: '45%' }}>
+          <View style={{ alignItems: 'flex-end', marginBottom: theme.spacing.sm }}>
+            <ThemedText
+              variant="h1"
+              style={{
+                fontWeight: 'bold',
+                color: theme.colors.primary,
+                marginBottom: theme.spacing.xs
+              }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {notaActual.toFixed(1)}
+            </ThemedText>
+            <ThemedText variant="caption" color="secondary">
+              Nota actual
+            </ThemedText>
+          </View>
+          
+          <View style={{ alignItems: 'flex-end' }}>
+            <ThemedText
+              variant="h3"
+              style={{
+                fontWeight: 'bold',
+                color: theme.colors.secondary,
+                marginBottom: theme.spacing.xs
+              }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {notaFinal.toFixed(1)}
+            </ThemedText>
+            <ThemedText variant="caption" color="secondary">
+              Nota final
+            </ThemedText>
+          </View>
         </View>
       </View>
     </ThemedCard>
