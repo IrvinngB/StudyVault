@@ -2,10 +2,10 @@
 
 
 import type {
-  CalendarEvent,
-  CalendarEventFilters,
-  CreateCalendarEventRequest,
-  UpdateCalendarEventRequest,
+    CalendarEvent,
+    CalendarEventFilters,
+    CreateCalendarEventRequest,
+    UpdateCalendarEventRequest,
 } from "@/database/models/calendarTypes"
 import { calendarService } from "@/database/services"
 import { useAuth } from "@/hooks/useAuth"
@@ -107,8 +107,8 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
         setEvents((prevEvents) => [...prevEvents, response.data!])
 
         // Schedule notification for the event using reminder_minutes
-        // Note: Notifications are disabled in Expo Go since SDK 53
-        if (eventData.reminder_minutes && eventData.reminder_minutes > 0 && !__DEV__ && user?.id) {
+        // Note: Notifications are disabled in Expo Go since SDK 53, but we allow them in development for testing
+        if (eventData.reminder_minutes && eventData.reminder_minutes > 0 && user?.id) {
           try {
             // Import at the top of the file
             const { requestNotificationPermission, scheduleCalendarNotification, setupAndroidChannel } = await import(
@@ -127,6 +127,7 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
                 body: eventData.description || "Evento próximo a comenzar",
                 date: eventData.start_datetime,
                 minutosAntes: eventData.reminder_minutes,
+                eventId: response.data.id,
               })
               console.log(
                 `📱 Notification scheduled for event ${eventData.title}, ${eventData.reminder_minutes} minutes before`,
@@ -168,12 +169,11 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
           setEvents((prevEvents) => prevEvents.map((event) => (event.id === eventId ? response.data! : event)))
 
           // Update notification for the event if reminder_minutes is set
-          // Note: Notifications are disabled in Expo Go since SDK 53
+          // Note: Notifications are disabled in Expo Go since SDK 53, but we allow them in development for testing
           if (
             eventData.reminder_minutes !== undefined &&
             eventData.reminder_minutes > 0 &&
             eventData.start_datetime &&
-            !__DEV__ &&
             user?.id
           ) {
             try {
@@ -194,6 +194,7 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
                   body: response.data.description || "Evento próximo a comenzar",
                   date: response.data.start_datetime,
                   minutosAntes: eventData.reminder_minutes,
+                  eventId: eventId,
                 })
                 console.log(
                   `📱 Notification updated for event ${response.data.title}, ${eventData.reminder_minutes} minutes before`,

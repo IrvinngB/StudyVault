@@ -28,6 +28,9 @@ export default function UnifiedSettingsScreen() {
   const [semester, setSemester] = useState("")
   const [selectedAvatar, setSelectedAvatar] = useState<string>("")
   
+  // Notification settings
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  
   // Easter Egg Local State
   const [showEasterEgg, setShowEasterEgg] = useState(false)
   const [tapCount, setTapCount] = useState(0)
@@ -110,6 +113,9 @@ export default function UnifiedSettingsScreen() {
       setUniversity(preferences.university || "")
       setCareer(preferences.career || "")
       setSemester(preferences.semester ? preferences.semester.toString() : "")
+      
+      // Load notification settings
+      setNotificationsEnabled(profile.notification_settings?.push_notifications ?? true)
     }
   }, [profile])
 
@@ -156,6 +162,35 @@ export default function UnifiedSettingsScreen() {
         },
       },
     ])
+  }
+
+  const handleNotificationToggle = async (enabled: boolean) => {
+    try {
+      setNotificationsEnabled(enabled)
+      
+      const updateData = {
+        notification_settings: {
+          push_notifications: enabled,
+          study_session_reminders: enabled,
+          grade_notifications: enabled,
+          calendar_reminders: enabled,
+        },
+      }
+
+      const success = await updateProfile(updateData)
+      if (success) {
+        console.log("✅ Notification settings updated successfully")
+      } else {
+        // Revert the change if update failed
+        setNotificationsEnabled(!enabled)
+        Alert.alert("Error", "No se pudo actualizar la configuración de notificaciones")
+      }
+    } catch (error) {
+      // Revert the change if update failed
+      setNotificationsEnabled(!enabled)
+      console.error("Error updating notification settings:", error)
+      Alert.alert("Error", "Ocurrió un error al actualizar las notificaciones")
+    }
   }
 
   // Easter Egg Logic - Local Implementation
@@ -353,19 +388,6 @@ export default function UnifiedSettingsScreen() {
                 marginBottom: theme.spacing.xl,
               }}
             >
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  padding: theme.spacing.sm,
-                  borderRadius: theme.borderRadius.full,
-                  marginRight: theme.spacing.md,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                }}
-              >
-                <IconSymbol name="chevron.left" size={20} color={theme.colors.text} />
-              </TouchableOpacity>
               <View
                 style={{
                   backgroundColor: theme.colors.primary + "20",
@@ -586,10 +608,10 @@ export default function UnifiedSettingsScreen() {
                     </ThemedText>
                   </ThemedView>
                   <Switch
-                    value={true}
-                    onValueChange={() => {}}
+                    value={notificationsEnabled}
+                    onValueChange={handleNotificationToggle}
                     trackColor={{ false: theme.colors.border, true: theme.colors.primary + "40" }}
-                    thumbColor={theme.colors.primary}
+                    thumbColor={notificationsEnabled ? theme.colors.primary : theme.colors.textMuted}
                   />
                 </ThemedView>
               </ThemedView>

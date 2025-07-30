@@ -1,6 +1,25 @@
 import * as Notifications from "expo-notifications"
 import { Platform } from "react-native"
 
+// Función para crear una fecha local correctamente
+function createLocalDate(dateString: string): Date {
+  // Si la fecha viene como ISO string, la parseamos manteniendo la zona horaria local
+  const date = new Date(dateString)
+  
+  // Crear una nueva fecha usando los componentes locales
+  const localDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    date.getSeconds(),
+    date.getMilliseconds()
+  )
+  
+  return localDate
+}
+
 export async function requestNotificationPermission() {
   const { status } = await Notifications.getPermissionsAsync()
   if (status !== "granted") {
@@ -54,12 +73,39 @@ export async function scheduleCalendarNotification({
   date,
   minutosAntes = 0,
   type = "calendar",
-}: { userId: string; title: string; body: string; date: Date | string; minutosAntes?: number; type?: string }) {
+  eventId,
+}: { userId: string; title: string; body: string; date: Date | string; minutosAntes?: number; type?: string; eventId?: string }) {
   let localNotificationId = null
 
   try {
+    console.log(`📱 Received notification request:`, {
+      title,
+      body,
+      date,
+      dateType: typeof date,
+      minutosAntes,
+      type,
+      eventId
+    })
+    
     // Asegurarnos de que estamos trabajando con objetos Date adecuados
-    const fechaEvento = new Date(date)
+    // Si la fecha viene como string ISO, la parseamos correctamente
+    let fechaEvento: Date
+    
+    if (typeof date === 'string') {
+      // Si es un string ISO, crear la fecha manteniendo la zona horaria local
+      fechaEvento = createLocalDate(date)
+    } else {
+      fechaEvento = new Date(date)
+    }
+    
+    console.log(`📱 Date parsing debug:`, {
+      originalDate: date,
+      parsedDate: fechaEvento,
+      parsedDateLocal: fechaEvento.toLocaleString(),
+      parsedDateISO: fechaEvento.toISOString(),
+      timezoneOffset: fechaEvento.getTimezoneOffset()
+    })
 
     // Validar que la fecha del evento es válida
     if (isNaN(fechaEvento.getTime())) {
@@ -68,43 +114,68 @@ export async function scheduleCalendarNotification({
     }
 
     // Calcular cuándo debe notificarse (X minutos antes del evento)
-    const fechaNotificacion = new Date(fechaEvento.getTime() - minutosAntes * 60000)
+    let fechaNotificacion = new Date(fechaEvento.getTime() - minutosAntes * 60000)
 
     // Verificar si la fecha de notificación ya pasó
     const now = new Date()
     
     console.log(`📱 Debugging notification scheduling:`)
+    console.log(`- Original date input: ${date}`)
     console.log(`- Event time (local): ${fechaEvento.toLocaleString()}`)
+    console.log(`- Event time (UTC): ${fechaEvento.toISOString()}`)
+    console.log(`- Event timezone offset: ${fechaEvento.getTimezoneOffset()} minutes`)
     console.log(`- Reminder minutes: ${minutosAntes}`)
     console.log(`- Notification time (local): ${fechaNotificacion.toLocaleString()}`)
+    console.log(`- Notification time (UTC): ${fechaNotificacion.toISOString()}`)
     console.log(`- Current time (local): ${now.toLocaleString()}`)
+    console.log(`- Current time (UTC): ${now.toISOString()}`)
+    console.log(`- Current timezone offset: ${now.getTimezoneOffset()} minutes`)
     console.log(`- Minutes until notification: ${Math.round((fechaNotificacion.getTime() - now.getTime()) / 60000)}`)
+    console.log(`- Minutes until event: ${Math.round((fechaEvento.getTime() - now.getTime()) / 60000)}`)
     
+    // Solo programar la notificación si el evento aún no ha ocurrido
+    if (fechaEvento <= now) {
+      console.log(`⚠️ Event already passed, skipping notification`)
+      return null
+    }
+    
+    // Cancelar notificaciones existentes para este evento si se proporciona eventId
+    if (eventId) {
+      await cancelEventNotifications(eventId)
+    }
+    
+    // Si la fecha de notificación ya pasó pero el evento aún no ha ocurrido,
+    // significa que el recordatorio debería haberse enviado antes.
+    // En este caso, programamos la notificación para el tiempo correcto
     if (fechaNotificacion <= now) {
-      console.warn(`⚠️ Notification scheduled for past time:`, {
+      console.warn(`⚠️ Reminder time already passed, but event hasn't occurred yet:`, {
         now: now.toLocaleString(),
         eventTime: fechaEvento.toLocaleString(),
         notificationTime: fechaNotificacion.toLocaleString(),
         minutesBeforeEvent: minutosAntes,
         minutesDifference: Math.round((fechaNotificacion.getTime() - now.getTime()) / 60000),
       })
-
-      // Si la hora ya pasó, podemos enviar una notificación inmediata si el evento aún no ha ocurrido
-      if (fechaEvento > now) {
-        console.log(`⚠️ Sending immediate notification instead as event hasn't occurred yet`)
-        // Configuramos la notificación para 10 segundos en el futuro (casi inmediata)
-        fechaNotificacion.setTime(now.getTime() + 10000)
-      } else {
-        console.log(`⚠️ Event already passed, skipping notification`)
-        return null
+      
+      // Si el tiempo de recordatorio ya pasó, programamos la notificación para el tiempo correcto
+      // La notificación se enviará X minutos antes del evento, no inmediatamente
+      console.log(`📱 Scheduling notification for correct reminder time (${minutosAntes} minutes before event)`)
+      
+      // Asegurarnos de que la fecha de notificación sea al menos 1 minuto en el futuro
+      // para evitar notificaciones inmediatas
+      const oneMinuteFromNow = new Date(now.getTime() + 60000)
+      if (fechaNotificacion < oneMinuteFromNow) {
+        console.log(`📱 Adjusting notification time to be at least 1 minute in the future`)
+        fechaNotificacion = new Date(oneMinuteFromNow)
       }
     }
 
     console.log(`📱 Scheduling notification:`)
     console.log(`- Title: ${title}`)
     console.log(`- Event time: ${fechaEvento.toLocaleString()}`)
+    console.log(`- Event time (ISO): ${fechaEvento.toISOString()}`)
     console.log(`- Reminder minutes: ${minutosAntes}`)
     console.log(`- Notification time: ${fechaNotificacion.toLocaleString()}`)
+    console.log(`- Notification time (ISO): ${fechaNotificacion.toISOString()}`)
     console.log(
       `- Time until notification: ${Math.round((fechaNotificacion.getTime() - now.getTime()) / 60000)} minutes`,
     )
@@ -133,6 +204,7 @@ export async function scheduleCalendarNotification({
         scheduledFor: triggerDate.toISOString(),
         type: type,
         userId: userId,
+        eventId: eventId,
       },
     }
 
@@ -146,6 +218,9 @@ export async function scheduleCalendarNotification({
     })
 
     console.log(`✅ Local notification scheduled with ID: ${localNotificationId}`)
+
+    // Listar todas las notificaciones programadas para debugging
+    await listScheduledNotifications()
 
     // Guardar en la base de datos para persistencia
     try {
@@ -197,5 +272,43 @@ export async function setupAndroidChannel() {
       console.error("❌ Failed to set up Android notification channel:", error)
       throw error
     }
+  }
+}
+
+// Función para cancelar notificaciones existentes para un evento específico
+export async function cancelEventNotifications(eventId: string) {
+  try {
+    const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync()
+    
+    for (const notification of scheduledNotifications) {
+      if (notification.content.data?.eventId === eventId) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier)
+        console.log(`🗑️ Cancelled notification ${notification.identifier} for event ${eventId}`)
+      }
+    }
+  } catch (error) {
+    console.error("❌ Error cancelling notifications:", error)
+  }
+}
+
+// Función para listar todas las notificaciones programadas (para debugging)
+export async function listScheduledNotifications() {
+  try {
+    const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync()
+    console.log(`📋 Found ${scheduledNotifications.length} scheduled notifications:`)
+    
+    scheduledNotifications.forEach((notification, index) => {
+      console.log(`${index + 1}. ID: ${notification.identifier}`)
+      console.log(`   Title: ${notification.content.title}`)
+      console.log(`   Body: ${notification.content.body}`)
+      console.log(`   Trigger: ${JSON.stringify(notification.trigger)}`)
+      console.log(`   Data: ${JSON.stringify(notification.content.data)}`)
+      console.log(`   ---`)
+    })
+    
+    return scheduledNotifications
+  } catch (error) {
+    console.error("❌ Error listing notifications:", error)
+    return []
   }
 }

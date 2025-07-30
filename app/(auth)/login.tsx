@@ -6,10 +6,10 @@ import { useModal } from "@/hooks/modals"
 import { useAuth } from "@/hooks/useAuth"
 import { useTheme } from "@/hooks/useTheme"
 import {
-  authenticateBiometric,
-  getCredentials,
-  isBiometricAvailable,
-  updateCredentialsIfNeeded,
+    authenticateBiometric,
+    getCredentials,
+    isBiometricAvailable,
+    updateCredentialsIfNeeded,
 } from "@/utils/biometricAuth"
 import { router } from "expo-router"
 import { useEffect, useState } from "react"

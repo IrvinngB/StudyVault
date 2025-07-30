@@ -3,15 +3,17 @@ import { useTheme } from '@/hooks/useTheme';
 import { createStyles } from '@/utils/createStyles';
 import React from 'react'; // ¡Asegúrate de que React esté importado!
 import {
-  ActivityIndicator,
-  Text,
-  TextInput,
-  TextInputProps,
-  TextProps,
-  TouchableOpacity,
-  TouchableOpacityProps,
-  View,
-  ViewProps
+    ActivityIndicator,
+    StyleProp,
+    Text,
+    TextInput,
+    TextInputProps,
+    TextProps,
+    TouchableOpacity,
+    TouchableOpacityProps,
+    View,
+    ViewProps,
+    ViewStyle
 } from 'react-native';
 
 // --- INTERFACES: TODAS LAS INTERFACES DEBEN IR AQUÍ, UNA SOLA VEZ ---
@@ -220,6 +222,113 @@ export function ThemedButton({
       {renderContent()}
     </TouchableOpacity>
   );
+}
+
+// Componente de logo mejorado
+export function ThemedLogo({ 
+  size = 120, 
+  variant = "default",
+  style 
+}: { 
+  size?: number
+  variant?: "default" | "compact" | "large"
+  style?: StyleProp<ViewStyle>
+}) {
+  const { theme } = useTheme()
+  
+  const getLogoSize = () => {
+    switch (variant) {
+      case "compact": return size * 0.6
+      case "large": return size * 1.4
+      default: return size
+    }
+  }
+
+  const logoSize = getLogoSize()
+
+  return (
+    <View style={[
+      {
+        width: logoSize,
+        height: logoSize,
+        borderRadius: logoSize / 2,
+        backgroundColor: theme.colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: theme.colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+      },
+      style
+    ]}>
+      <ThemedText 
+        variant="h1" 
+        style={{ 
+          fontSize: logoSize * 0.4,
+          color: '#FFFFFF',
+          fontWeight: 'bold',
+          textShadowColor: 'rgba(0, 0, 0, 0.3)',
+          textShadowOffset: { width: 0, height: 2 },
+          textShadowRadius: 4,
+        }}
+      >
+        📚
+      </ThemedText>
+    </View>
+  )
+}
+
+// Componente de logo con texto
+export function ThemedLogoWithText({ 
+  size = 120,
+  showText = true,
+  style 
+}: { 
+  size?: number
+  showText?: boolean
+  style?: StyleProp<ViewStyle>
+}) {
+  const { theme } = useTheme()
+
+  return (
+    <View style={[
+      {
+        alignItems: 'center',
+        gap: theme.spacing.md,
+      },
+      style
+    ]}>
+      <ThemedLogo size={size} />
+      {showText && (
+        <View style={{ alignItems: 'center' }}>
+          <ThemedText 
+            variant="h1" 
+            color="primary" 
+            style={{ 
+              fontSize: size * 0.25,
+              fontWeight: 'bold',
+              textAlign: 'center',
+            }}
+          >
+            StudyVault
+          </ThemedText>
+          <ThemedText 
+            variant="body" 
+            color="secondary" 
+            style={{ 
+              fontSize: size * 0.12,
+              textAlign: 'center',
+              marginTop: theme.spacing.xs,
+            }}
+          >
+            Tu bóveda de conocimiento
+          </ThemedText>
+        </View>
+      )}
+    </View>
+  )
 }
 
 // *** ThemedInput con forwardRef (¡solo una vez!) ***

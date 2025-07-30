@@ -1,10 +1,10 @@
 import { AppModal } from '@/components/ui/AppModal';
 import {
-  ThemedButton,
-  ThemedCard,
-  ThemedInput,
-  ThemedText,
-  ThemedView
+    ThemedButton,
+    ThemedCard,
+    ThemedInput,
+    ThemedText,
+    ThemedView
 } from '@/components/ui/ThemedComponents';
 import { useModal } from '@/hooks/modals';
 import { useAuth } from '@/hooks/useAuth';

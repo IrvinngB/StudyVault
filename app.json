@@ -16,7 +16,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#2563EB"
       },
       "icon": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
       "edgeToEdgeEnabled": true,
@@ -33,12 +33,12 @@
         "expo-splash-screen",
         {
           "image": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
-          "imageWidth": 150,
+          "imageWidth": 220,
           "resizeMode": "contain",
-          "backgroundColor": "#E8B54A",
+          "backgroundColor": "#0F172A",
           "dark": {
             "image": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
-            "backgroundColor": "#8B4513"
+            "backgroundColor": "#0F172A"
           }
         }
       ],

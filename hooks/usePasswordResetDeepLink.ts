@@ -1,9 +1,9 @@
 "use client"
 
+import AsyncStorage from "@react-native-async-storage/async-storage"
 import * as Linking from "expo-linking"
 import { router } from "expo-router"
 import { useEffect } from "react"
-import AsyncStorage from "@react-native-async-storage/async-storage"
 
 export function usePasswordResetDeepLink() {
   useEffect(() => {
@@ -13,7 +13,10 @@ export function usePasswordResetDeepLink() {
         const initialUrl = await Linking.getInitialURL()
         if (initialUrl) {
           console.log("🚀 URL inicial detectada:", initialUrl)
-          handleDeepLink(initialUrl)
+          // Agregar un pequeño delay para asegurar que la app esté lista
+          setTimeout(() => {
+            handleDeepLink(initialUrl)
+          }, 500)
         }
       } catch (error) {
         console.error("❌ Error getting initial URL:", error)
@@ -21,9 +24,9 @@ export function usePasswordResetDeepLink() {
     }
 
     // Handle URLs when app is already running
-    const handleUrlChange = (event: { url: string }) => {
+    const handleUrlChange = async (event: { url: string }) => {
       console.log("📱 Deep link recibido:", event.url)
-      handleDeepLink(event.url)
+      await handleDeepLink(event.url)
     }
 
     const handleDeepLink = async (url: string) => {
@@ -61,10 +64,16 @@ export function usePasswordResetDeepLink() {
               await AsyncStorage.setItem('recovery_token', token)
               console.log("💾 Token de recuperación guardado en AsyncStorage")
               
-              // Navegar a la pantalla de actualización de contraseña
-              router.push("/(auth)/update-password")
+              // Navegar a la pantalla de actualización de contraseña usando replace para evitar problemas de navegación
+              setTimeout(() => {
+                router.replace("/(auth)/update-password" as any)
+              }, 100)
             } catch (error) {
               console.error("❌ Error guardando token de recuperación:", error)
+              // Si hay error, redirigir a forgot-password
+              setTimeout(() => {
+                router.replace("/(auth)/forgot-password" as any)
+              }, 100)
             }
             return
           }
@@ -88,14 +97,22 @@ export function usePasswordResetDeepLink() {
               await AsyncStorage.setItem('temp_access_token', accessToken)
               await AsyncStorage.setItem('temp_refresh_token', refreshToken)
               console.log("💾 Tokens guardados en AsyncStorage")
+              
+              // Usar replace para evitar problemas de navegación
+              setTimeout(() => {
+                router.replace("/(auth)/update-password" as any)
+              }, 100)
             } catch (error) {
               console.error("❌ Error guardando tokens:", error)
+              setTimeout(() => {
+                router.replace("/(auth)/forgot-password" as any)
+              }, 100)
             }
-            
-            router.push("/(auth)/update-password")
           } else {
             console.log("❌ Tokens no encontrados en URL de recuperación")
-            router.push("/(auth)/forgot-password")
+            setTimeout(() => {
+              router.replace("/(auth)/forgot-password" as any)
+            }, 100)
           }
           return
         }
@@ -109,23 +126,35 @@ export function usePasswordResetDeepLink() {
 
           if (accessToken && refreshToken) {
             console.log("✅ Tokens encontrados, navegando a confirm-email")
-            router.push({
-              pathname: "/(auth)/confirm-email",
-              params: {
-                access_token: accessToken,
-                refresh_token: refreshToken,
-              },
-            })
+            setTimeout(() => {
+              router.replace({
+                pathname: "/(auth)/confirm-email",
+                params: {
+                  access_token: accessToken,
+                  refresh_token: refreshToken,
+                },
+              } as any)
+            }, 100)
           } else {
             console.log("❌ Tokens no encontrados en URL de confirmación")
+            setTimeout(() => {
+              router.replace("/(auth)/login" as any)
+            }, 100)
           }
           return
         }
 
-        // For any other unrecognized URLs, just log them but don't redirect
-        console.log("ℹ️ URL no reconocida, manteniendo navegación actual:", url)
+        // For any other unrecognized URLs, redirect to login instead of showing error
+        console.log("ℹ️ URL no reconocida, redirigiendo a login:", url)
+        setTimeout(() => {
+          router.replace("/(auth)/login" as any)
+        }, 100)
       } catch (error) {
         console.error("❌ Error procesando deep link:", error)
+        // En caso de error, redirigir a login
+        setTimeout(() => {
+          router.replace("/(auth)/login" as any)
+        }, 100)
       }
     }
 

@@ -53,9 +53,12 @@ export function AuthNavigator({ children }: AuthNavigatorProps) {
       pathname.includes("/update-password") ||
       pathname.includes("/reset-password")
 
+    // Rutas especiales que no deben ser redirigidas (como +not-found)
+    const isSpecialRoute = pathname.includes("+not-found")
+
     if (!isAuthenticated) {
-      // Si no está autenticado y no está en una ruta de auth (y no es pública)
-      if (!isAuthRoute && !isPublicRoute && !hasRedirected.current) {
+      // Si no está autenticado y no está en una ruta de auth (y no es pública o especial)
+      if (!isAuthRoute && !isPublicRoute && !isSpecialRoute && !hasRedirected.current) {
         console.log("🔄 Redirigiendo a login desde:", pathname)
         hasRedirected.current = true
         router.replace("/(auth)/login")

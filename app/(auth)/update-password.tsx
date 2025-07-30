@@ -12,7 +12,7 @@ import { useTheme } from '@/hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 
 export default function UpdatePasswordScreen() {
   const { theme } = useTheme();
@@ -43,7 +43,17 @@ export default function UpdatePasswordScreen() {
     // Si es recovery, continuar con el flujo normal
     validateRecoveryTokens();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [params]);
+
+  // Redirigir automáticamente si no hay tokens válidos después de la validación
+  useEffect(() => {
+    if (!isValidatingSession && !hasValidRecoveryTokens) {
+      const timer = setTimeout(() => {
+        router.replace('/forgot-password' as any);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isValidatingSession, hasValidRecoveryTokens]);
 
   const validateRecoveryTokens = async () => {
     try {
@@ -58,16 +68,8 @@ export default function UpdatePasswordScreen() {
       // Verificar si tenemos al menos un tipo de token válido
       if (!accessToken && !refreshToken && !recoveryToken) {
         console.error('❌ No recovery tokens found in AsyncStorage');
-        Alert.alert(
-          'Enlace Inválido', 
-          'Este enlace de restablecimiento no es válido o ha expirado. Solicita un nuevo enlace.',
-          [
-            { 
-              text: 'Solicitar nuevo enlace', 
-              onPress: () => router.replace('/forgot-password' as any) 
-            }
-          ]
-        );
+        // En lugar de mostrar alert, redirigir directamente
+        router.replace('/forgot-password' as any);
         return;
       }
 
@@ -82,16 +84,8 @@ export default function UpdatePasswordScreen() {
 
     } catch (error) {
       console.error('❌ Error checking recovery tokens:', error);
-      Alert.alert(
-        'Error', 
-        'Hubo un problema al validar el enlace. Inténtalo de nuevo.',
-        [
-          { 
-            text: 'OK', 
-            onPress: () => router.replace('/forgot-password' as any) 
-          }
-        ]
-      );
+      // En lugar de mostrar alert, redirigir directamente
+      router.replace('/forgot-password' as any);
     } finally {
       setIsValidatingSession(false);
     }
@@ -221,18 +215,9 @@ export default function UpdatePasswordScreen() {
         switch (status) {
           case 401:
             errorMessage = 'El enlace de restablecimiento ha expirado. Solicita un nuevo enlace.';
-            // Ofrecer solicitar nuevo enlace
+            // Redirigir directamente en lugar de mostrar alert
             setTimeout(() => {
-              Alert.alert(
-                'Enlace Expirado',
-                errorMessage,
-                [
-                  { 
-                    text: 'Solicitar nuevo enlace', 
-                    onPress: () => router.replace('/forgot-password' as any) 
-                  }
-                ]
-              );
+              router.replace('/forgot-password' as any);
             }, 100);
             return;
             
@@ -288,25 +273,20 @@ export default function UpdatePasswordScreen() {
     );
   }
 
-  // Si no hay tokens válidos, no mostrar el formulario
+  // Si no hay tokens válidos, redirigir automáticamente
   if (!hasValidRecoveryTokens) {
     return (
       <ThemedView variant="background" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <View style={{ alignItems: 'center', padding: theme.spacing.xl }}>
           <ThemedText variant="h1" style={{ fontSize: 48, marginBottom: theme.spacing.md }}>
-            ❌
+            🔄
           </ThemedText>
-          <ThemedText variant="h3" color="error" style={{ marginBottom: theme.spacing.sm }}>
-            Enlace no válido
+          <ThemedText variant="h3" color="primary" style={{ marginBottom: theme.spacing.sm }}>
+            Redirigiendo...
           </ThemedText>
-          <ThemedText variant="body" color="secondary" style={{ textAlign: 'center', marginBottom: theme.spacing.lg }}>
-            Este enlace de restablecimiento no es válido o ha expirado.
+          <ThemedText variant="body" color="secondary" style={{ textAlign: 'center' }}>
+            Enlace no válido. Redirigiendo a recuperación de contraseña...
           </ThemedText>
-          <ThemedButton
-            title="Solicitar nuevo enlace"
-            variant="primary"
-            onPress={() => router.replace('/forgot-password' as any)}
-          />
         </View>
       </ThemedView>
     );
