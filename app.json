@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/Assets.xcassets/AppIcon.appiconset/1024.png",
-      "bundleIdentifier": "com.irvinng04.StudyVault"
+      "bundleIdentifier": "com.studyteam.StudyVault"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +20,7 @@
       },
       "icon": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
       "edgeToEdgeEnabled": true,
-      "package": "com.irvinng04.StudyVault"
+      "package": "com.studyteam.StudyVault"
     },
     "web": {
       "bundler": "metro",
