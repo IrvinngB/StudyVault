@@ -15,12 +15,13 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
+        "foregroundImage": "./assets/Assets.xcassets/AppIcon.appiconset/512.png",
         "backgroundColor": "#2563EB"
       },
-      "icon": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
+      "icon": "./assets/Assets.xcassets/AppIcon.appiconset/512.png",
       "edgeToEdgeEnabled": true,
-      "package": "com.studyteam.StudyVault"
+      "package": "com.studyteam.StudyVault",
+      "allowBackup": false
     },
     "web": {
       "bundler": "metro",
