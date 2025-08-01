@@ -59,12 +59,14 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
     setLastFilters(filters)
 
     console.log("🔄 Fetching events with filters:", filters)
+    console.log("📊 Current events before fetch:", events.length)
 
     try {
       const response = await calendarService.getEvents(filters)
 
       if (response.success && response.data) {
         console.log("✅ Successfully fetched", response.data.length, "events")
+        console.log("📋 Events fetched:", response.data.map(e => ({ id: e.id, title: e.title, type: e.event_type })))
         setEvents(response.data)
       } else {
         console.error("❌ Failed to fetch events:", response.error)
@@ -75,7 +77,7 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [events.length])
 
   const fetchEventsForDay = useCallback(
     async (date: string) => {

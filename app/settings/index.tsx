@@ -5,6 +5,8 @@ import { IconSymbol } from "@/components/ui/IconSymbol"
 import { ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { ThemeSelector } from "@/components/ui/ThemeSelector"
 import { useAuth } from "@/hooks/useAuth"
+import { useStreakSystem } from "@/hooks/useStreakSystem"
+import { useTasks } from "@/hooks/useTasks"
 import { useTheme } from "@/hooks/useTheme"
 import { useUserProfile } from "@/hooks/useUserProfile"
 import { clearCredentialsIfNeeded } from "@/utils/biometricAuth"
@@ -17,8 +19,19 @@ export default function UnifiedSettingsScreen() {
   const { theme } = useTheme()
   const { user, signOut } = useAuth()
   const { profile, updateProfile, loading } = useUserProfile()
+  const { tasks } = useTasks()
   const insets = useSafeAreaInsets()
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window')
+
+  // Streak system
+  const { 
+    streakData, 
+    resetStreak, 
+    restoreStreak, 
+    canRestoreStreak, 
+    getRemainingRestorations,
+    streakStatus 
+  } = useStreakSystem(tasks, profile)
 
   // Form state
   const [fullName, setFullName] = useState("")
@@ -191,6 +204,68 @@ export default function UnifiedSettingsScreen() {
       console.error("Error updating notification settings:", error)
       Alert.alert("Error", "Ocurrió un error al actualizar las notificaciones")
     }
+  }
+
+  const handleResetStreak = () => {
+    Alert.alert(
+      "Restablecer Racha",
+      `¿Estás seguro de que quieres restablecer tu racha actual de ${streakData.current} días? Esta acción no se puede deshacer.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Restablecer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await resetStreak()
+              Alert.alert("Éxito", "Racha restablecida correctamente")
+            } catch (error) {
+              console.error("Error resetting streak:", error)
+              Alert.alert("Error", "No se pudo restablecer la racha")
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  const handleRestoreStreak = () => {
+    const remainingRestorations = getRemainingRestorations()
+    const canRestore = canRestoreStreak()
+    
+    if (!canRestore) {
+      Alert.alert(
+        "Límite Alcanzado",
+        "Ya has usado todas tus restauraciones este mes. Tendrás 3 nuevas restauraciones el próximo mes.",
+        [{ text: "Entendido", style: "default" }]
+      )
+      return
+    }
+
+    Alert.alert(
+      "Restaurar Racha",
+      `¿Quieres restaurar tu racha? Te quedan ${remainingRestorations} restauraciones este mes.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Restaurar",
+          style: "default",
+          onPress: async () => {
+            try {
+              const success = await restoreStreak()
+              if (success) {
+                Alert.alert("Éxito", "¡Racha restaurada! Continúa con tu progreso.")
+              } else {
+                Alert.alert("Error", "No se pudo restaurar la racha")
+              }
+            } catch (error) {
+              console.error("Error restoring streak:", error)
+              Alert.alert("Error", "Ocurrió un error al restaurar la racha")
+            }
+          },
+        },
+      ]
+    )
   }
 
   // Easter Egg Logic - Local Implementation
@@ -557,6 +632,186 @@ export default function UnifiedSettingsScreen() {
               </TouchableOpacity>
             </ThemedCard>
 
+            {/* Streak Management */}
+            <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+              <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+                <IconSymbol name="flame" size={24} color={theme.colors.primary} />
+                <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, fontWeight: "700" }}>
+                  Racha de Estudio
+                </ThemedText>
+              </ThemedView>
+              
+              <ThemedView style={{ gap: theme.spacing.sm }}>
+                <ThemedView
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    padding: theme.spacing.md,
+                    borderRadius: theme.borderRadius.md,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
+                    <View
+                      style={{
+                        backgroundColor: theme.colors.primary + "20",
+                        padding: theme.spacing.sm,
+                        borderRadius: theme.borderRadius.full,
+                        marginRight: theme.spacing.md,
+                      }}
+                    >
+                      <IconSymbol name="flame" size={20} color={theme.colors.primary} />
+                    </View>
+                    <ThemedView>
+                      <ThemedText variant="button" style={{ fontWeight: "600", marginBottom: 4 }}>
+                        Racha Actual
+                      </ThemedText>
+                      <ThemedText variant="caption" color="secondary">
+                        {streakData.current} días consecutivos
+                      </ThemedText>
+                    </ThemedView>
+                  </ThemedView>
+                  <ThemedText variant="h3" style={{ color: theme.colors.primary, fontWeight: "700" }}>
+                    {streakData.current}
+                  </ThemedText>
+                </ThemedView>
+
+                <ThemedView
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    padding: theme.spacing.md,
+                    borderRadius: theme.borderRadius.md,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
+                    <View
+                      style={{
+                        backgroundColor: theme.colors.success + "20",
+                        padding: theme.spacing.sm,
+                        borderRadius: theme.borderRadius.full,
+                        marginRight: theme.spacing.md,
+                      }}
+                    >
+                      <IconSymbol name="star" size={20} color={theme.colors.success} />
+                    </View>
+                    <ThemedView>
+                      <ThemedText variant="button" style={{ fontWeight: "600", marginBottom: 4 }}>
+                        Mejor Racha
+                      </ThemedText>
+                      <ThemedText variant="caption" color="secondary">
+                        Récord personal
+                      </ThemedText>
+                    </ThemedView>
+                  </ThemedView>
+                  <ThemedText variant="h3" style={{ color: theme.colors.success, fontWeight: "700" }}>
+                    {streakData.longest}
+                  </ThemedText>
+                </ThemedView>
+
+                <ThemedView
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    padding: theme.spacing.md,
+                    borderRadius: theme.borderRadius.md,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
+                    <View
+                      style={{
+                        backgroundColor: theme.colors.info + "20",
+                        padding: theme.spacing.sm,
+                        borderRadius: theme.borderRadius.full,
+                        marginRight: theme.spacing.md,
+                      }}
+                    >
+                      <IconSymbol name="repeat" size={20} color={theme.colors.info} />
+                    </View>
+                    <ThemedView>
+                      <ThemedText variant="button" style={{ fontWeight: "600", marginBottom: 4 }}>
+                        Restauraciones
+                      </ThemedText>
+                      <ThemedText variant="caption" color="secondary">
+                        Restantes este mes
+                      </ThemedText>
+                    </ThemedView>
+                  </ThemedView>
+                  <ThemedText variant="h3" style={{ color: theme.colors.info, fontWeight: "700" }}>
+                    {getRemainingRestorations()}/3
+                  </ThemedText>
+                </ThemedView>
+
+                {/* Botones de acción */}
+                <ThemedView style={{ flexDirection: "row", gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
+                  {/* Restaurar Racha (solo si está perdida y hay restauraciones disponibles) */}
+                  {streakStatus.status === 'lost' && canRestoreStreak() && (
+                    <TouchableOpacity
+                      onPress={handleRestoreStreak}
+                      style={{
+                        flex: 1,
+                        backgroundColor: theme.colors.info + "20",
+                        padding: theme.spacing.md,
+                        borderRadius: theme.borderRadius.md,
+                        borderWidth: 1,
+                        borderColor: theme.colors.info + "40",
+                        alignItems: "center",
+                      }}
+                    >
+                      <ThemedText variant="button" style={{ color: theme.colors.info, fontWeight: "600" }}>
+                        🔄 Restaurar
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Resetear Racha (siempre disponible) */}
+                  <TouchableOpacity
+                    onPress={handleResetStreak}
+                    style={{
+                      flex: 1,
+                      backgroundColor: theme.colors.error + "20",
+                      padding: theme.spacing.md,
+                      borderRadius: theme.borderRadius.md,
+                      borderWidth: 1,
+                      borderColor: theme.colors.error + "40",
+                      alignItems: "center",
+                    }}
+                  >
+                    <ThemedText variant="button" style={{ color: theme.colors.error, fontWeight: "600" }}>
+                      🗑️ Resetear
+                    </ThemedText>
+                  </TouchableOpacity>
+                </ThemedView>
+
+                {/* Estado de la racha */}
+                <ThemedView
+                  style={{
+                    backgroundColor: streakStatus.color + "20",
+                    padding: theme.spacing.md,
+                    borderRadius: theme.borderRadius.md,
+                    borderWidth: 1,
+                    borderColor: streakStatus.color + "40",
+                    alignItems: "center",
+                  }}
+                >
+                  <ThemedText variant="body" style={{ color: streakStatus.color, fontWeight: "600", textAlign: "center" }}>
+                    {streakStatus.message}
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+            </ThemedCard>
+
             {/* Theme Selector */}
             <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
               <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
@@ -661,7 +916,7 @@ export default function UnifiedSettingsScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => router.push("/settings/privacy")}
+                  onPress={() => router.push("/settings/Privacy")}
                   style={{
                     backgroundColor: theme.colors.surface,
                     padding: theme.spacing.md,

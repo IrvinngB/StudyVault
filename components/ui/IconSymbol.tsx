@@ -96,6 +96,16 @@ const MAPPING = {
   // New icons for course detail
   bolt: "flash-on",
   "arrow.clockwise": "refresh",
+  
+  // Restoration and refresh icons
+  "arrow.clockwise.circle": "refresh",
+  "arrow.clockwise.circle.fill": "refresh",
+  "arrow.triangle.2.circlepath": "refresh",
+  "arrow.triangle.2.circlepath.circle": "refresh",
+  "arrow.triangle.2.circlepath.circle.fill": "refresh",
+  "repeat": "refresh",
+  "repeat.circle": "refresh",
+  "repeat.circle.fill": "refresh",
 } as IconMapping;
 
 /**

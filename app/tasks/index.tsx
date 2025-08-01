@@ -7,10 +7,10 @@ import { TasksStatsComponent } from "@/components/tasks/TasksStats"
 import { TasksTabs } from "@/components/tasks/TasksTabs"
 import { ThemedView } from "@/components/ui/ThemedComponents"
 import type { TaskWithEvent, TasksFilters as TasksFiltersType } from "@/database/services/tasksService"
+import { useGlobalModal } from "@/hooks/ModalProvider"
 import { useClasses } from "@/hooks/useClasses"
 import { useTasks } from "@/hooks/useTasks"
 import { useTheme } from "@/hooks/useTheme"
-import { useGlobalModal } from "@/hooks/ModalProvider"
 import { useEffect, useMemo, useState } from "react"
 import { ActivityIndicator, RefreshControl, ScrollView } from "react-native"
 
@@ -50,6 +50,13 @@ export default function TasksScreen() {
   const filteredTasks = useMemo(() => {
     let filtered = [...tasksWithClassNames]
 
+    console.log("🔍 Filtering tasks:", {
+      total: tasksWithClassNames.length,
+      activeFilter,
+      searchText,
+      activeTab
+    })
+
     // Filtrar por estado o atrasadas
     if (activeFilter !== "all") {
       if (activeFilter === "overdue") {
@@ -81,8 +88,15 @@ export default function TasksScreen() {
       return new Date(a.due_date || a.start_datetime).getTime() - new Date(b.due_date || b.start_datetime).getTime()
     })
 
+    console.log("📋 Filtered tasks:", filtered.map(t => ({ 
+      title: t.task_title || t.event_title, 
+      type: t.event_type, 
+      status: t.status,
+      tab: activeTab 
+    })))
+
     return filtered
-  }, [tasksWithClassNames, searchText, activeFilter])
+  }, [tasksWithClassNames, searchText, activeFilter, activeTab])
 
   // Refrescar datos al cargar
   useEffect(() => {

@@ -17,10 +17,14 @@ export function TasksList({ tasks, loading, onToggleTaskCompletion, activeTab }:
 
   // Filtrar por tab
   const filteredTasks = tasks.filter((task) => {
+    const isExamOrQuiz = task.event_type === "exam" || task.event_type === "quiz"
+    
+    console.log(`🔍 Task "${task.task_title || task.event_title}" (${task.event_type}) - Tab: ${activeTab}, IsExamOrQuiz: ${isExamOrQuiz}`)
+    
     if (activeTab === "exams") {
-      return task.event_type === "exam" || task.event_type === "quiz"
+      return isExamOrQuiz
     }
-    return task.event_type !== "exam" && task.event_type !== "quiz"
+    return !isExamOrQuiz
   })
 
   // Ordenar: pendientes primero, completadas al final

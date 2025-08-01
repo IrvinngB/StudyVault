@@ -507,17 +507,11 @@ export default function UnifiedCourseScreen() {
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
           <IconSymbol name="bolt" size={24} color={theme.colors.secondary} />
           <ThemedText variant="h2" style={{ marginLeft: theme.spacing.sm, color: theme.colors.primary }}>
-            Acciones Rápidas
+            Gestión del Curso
           </ThemedText>
         </View>
         <View style={{ gap: theme.spacing.sm }}>
-          <ThemedButton
-            title="Ver Tareas"
-            variant="outline"
-            onPress={() => {
-              showInfo("La gestión de tareas estará disponible pronto.", "Próximamente")
-            }}
-          />
+          
           <ThemedButton
             title="Ver Calificaciones"
             variant="outline"

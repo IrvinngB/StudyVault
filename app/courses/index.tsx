@@ -1,5 +1,3 @@
-"use client"
-
 import CoursesHeader from "@/components/courses/CoursesHeader"
 import CoursesStats from "@/components/courses/CoursesStats"
 import EnhancedCourseCard from "@/components/courses/Improve"
@@ -8,7 +6,7 @@ import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { type ClassData, classService } from "@/database/services/courseService"
 import { useCommonStyles, useTheme } from "@/hooks/useTheme"
 import { useFocusEffect } from "@react-navigation/native"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { ActivityIndicator, FlatList, RefreshControl } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 
@@ -19,6 +17,19 @@ export default function CoursesScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('active')
+
+  // Filtrar cursos según el filtro activo
+  const filteredCourses = useMemo(() => {
+    switch (activeFilter) {
+      case 'active':
+        return courses.filter(course => course.is_active)
+      case 'inactive':
+        return courses.filter(course => !course.is_active)
+      default:
+        return courses
+    }
+  }, [courses, activeFilter])
 
   // Recargar cursos cuando la pantalla recibe foco
   useFocusEffect(
@@ -48,6 +59,10 @@ export default function CoursesScreen() {
     setRefreshing(true)
     await loadCourses()
     setRefreshing(false)
+  }
+
+  const handleFilterChange = (filter: 'all' | 'active' | 'inactive') => {
+    setActiveFilter(filter)
   }
 
   const renderCourseItem = ({ item }: { item: ClassData }) => <EnhancedCourseCard course={item} />
@@ -153,13 +168,17 @@ export default function CoursesScreen() {
           </ThemedView>
         ) : (
           <FlatList
-            data={courses}
+            data={filteredCourses}
             renderItem={renderCourseItem}
             keyExtractor={(item) => item.id || `${item.name}-${item.created_at}`}
             ListHeaderComponent={() => (
               <>
                 <CoursesHeader />
-                <CoursesStats courses={courses} />
+                <CoursesStats 
+                  courses={courses} 
+                  activeFilter={activeFilter}
+                  onFilterChange={handleFilterChange} 
+                />
               </>
             )}
             ListEmptyComponent={renderEmptyState}
@@ -169,7 +188,7 @@ export default function CoursesScreen() {
                 onRefresh={handleRefresh}
                 colors={[theme.colors.primary]}
                 tintColor={theme.colors.primary}
-              />
+            />
             }
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{

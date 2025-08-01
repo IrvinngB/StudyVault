@@ -96,11 +96,9 @@ export default function CourseHeaderCard({
               adjustsFontSizeToFit
               minimumFontScale={0.7}
             >
-              {notaFinal.toFixed(1)}
+          
             </ThemedText>
-            <ThemedText variant="caption" color="secondary">
-              Nota final
-            </ThemedText>
+            
           </View>
         </View>
       </View>

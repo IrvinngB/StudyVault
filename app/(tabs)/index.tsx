@@ -43,6 +43,24 @@ export default function HomeScreen() {
     refreshStreak
   } = useStreakSystem(tasks, profile)
 
+  // Debug logs para verificar el sistema de rachas
+  console.log('🔥 Streak System Debug:', {
+    currentStreak: streakData.current,
+    longestStreak: streakData.longest,
+    lastActivityDate: streakData.lastActivityDate,
+    totalTasks: tasks.length,
+    completedTasks: tasks.filter(t => t.status === 'completed').length,
+    todayTasks: tasks.filter(t => {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const completedDate = new Date(t.completed_at || 0)
+      completedDate.setHours(0, 0, 0, 0)
+      return t.status === 'completed' && completedDate.getTime() === today.getTime()
+    }).length,
+    streakStatus: streakStatus.status,
+    motivation: motivation
+  })
+
   // Stats para hoy
   const today = new Date()
   today.setHours(0, 0, 0, 0)

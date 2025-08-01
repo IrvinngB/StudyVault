@@ -6,9 +6,9 @@ import { FloatingActionButton } from "@/components/ui/FloatingActionButton"
 import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { EVENT_TYPES_CONFIG } from "@/constants/Calendar"
 import type {
-    CalendarEvent,
-    CreateCalendarEventRequest,
-    UpdateCalendarEventRequest,
+  CalendarEvent,
+  CreateCalendarEventRequest,
+  UpdateCalendarEventRequest,
 } from "@/database/models/calendarTypes"
 import { useCalendar } from "@/hooks/useCalendar"
 import { useClasses } from "@/hooks/useClasses"
@@ -144,6 +144,7 @@ export default function CalendarScreen() {
   useEffect(() => {
     const { start, end } = getMonthRange(year, month)
     console.log(`📅 Loading events for month range: ${start} to ${end}`)
+    console.log(`📊 Current events count: ${events.length}`)
     fetchEventsForDateRange(start, end)
   }, [year, month, fetchEventsForDateRange])
 
@@ -207,9 +208,9 @@ export default function CalendarScreen() {
     if (!result) {
       throw new Error("No se pudo crear el evento")
     }
-    // Refrescar eventos para el mes actual después de crear uno nuevo
-    const { start, end } = getMonthRange(year, month)
-    await fetchEventsForDateRange(start, end)
+    // No refrescar eventos aquí porque createEvent ya agrega el evento a la lista
+    // Solo refrescar si hay algún problema de sincronización
+    console.log("✅ Evento creado y agregado a la lista local")
     return result;
   }
 
@@ -219,9 +220,8 @@ export default function CalendarScreen() {
     if (!result) {
       throw new Error("No se pudo actualizar el evento")
     }
-    // Refrescar eventos para el mes actual después de actualizar
-    const { start, end } = getMonthRange(year, month)
-    await fetchEventsForDateRange(start, end)
+    // No refrescar eventos aquí porque updateEvent ya actualiza el evento en la lista
+    console.log("✅ Evento actualizado en la lista local")
   }
 
   // Handle event deletion
@@ -230,9 +230,8 @@ export default function CalendarScreen() {
     if (!success) {
       throw new Error("No se pudo eliminar el evento")
     }
-    // Refrescar eventos para el mes actual después de eliminar
-    const { start, end } = getMonthRange(year, month)
-    await fetchEventsForDateRange(start, end)
+    // No refrescar eventos aquí porque deleteEvent ya elimina el evento de la lista
+    console.log("✅ Evento eliminado de la lista local")
   }
 
   // Handle event click

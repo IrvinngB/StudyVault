@@ -1,10 +1,10 @@
 import { AppModal } from '@/components/ui/AppModal';
 import {
-    ThemedButton,
-    ThemedCard,
-    ThemedInput,
-    ThemedText,
-    ThemedView
+  ThemedButton,
+  ThemedCard,
+  ThemedInput,
+  ThemedText,
+  ThemedView
 } from '@/components/ui/ThemedComponents';
 import { useModal } from '@/hooks/modals';
 import { useAuth } from '@/hooks/useAuth';
@@ -69,11 +69,23 @@ export default function RegisterScreen() {
       );
 
       if (result.success) {
-        console.log('✅ Registration successful!');
+        console.log('✅ Registration successful! Redirecting to login...');
         showSuccess(
           'Te hemos enviado un correo para confirmar tu email. Por favor, revisa tu bandeja de entrada.',
           'Registro exitoso',
-          () => router.replace('/login')
+          () => {
+            console.log('🔄 Redirecting to login page...');
+            // Limpiar el formulario antes de redirigir
+            setFormData({
+              name: '',
+              email: '',
+              password: '',
+              confirmPassword: ''
+            });
+            setErrors({});
+            // Usar replace para evitar que el usuario pueda volver atrás
+            router.replace('/login');
+          }
         );
       } else {
         console.log('❌ Registration failed:', result.error);

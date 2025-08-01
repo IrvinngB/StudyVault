@@ -6,10 +6,10 @@ import { useModal } from "@/hooks/modals"
 import { useAuth } from "@/hooks/useAuth"
 import { useTheme } from "@/hooks/useTheme"
 import {
-    authenticateBiometric,
-    getCredentials,
-    isBiometricAvailable,
-    updateCredentialsIfNeeded,
+  authenticateBiometric,
+  getCredentials,
+  isBiometricAvailable,
+  updateCredentialsIfNeeded,
 } from "@/utils/biometricAuth"
 import { router } from "expo-router"
 import { useEffect, useState } from "react"
@@ -162,7 +162,7 @@ export default function LoginScreen() {
                 />
 
                 {/* Forgot password link */}
-                <View style={{ alignItems: "flex-end" }}>
+                {/* <View style={{ alignItems: "flex-end" }}>
                   <ThemedButton
                     title="¿Olvidaste tu contraseña?"
                     variant="ghost"
@@ -172,7 +172,7 @@ export default function LoginScreen() {
                       router.push("/(auth)/forgot-password")
                     }}
                   />
-                </View>
+                </View> */}
 
                 <ThemedButton
                   title={isLoading ? "Iniciando sesión..." : "🔑 Iniciar Sesión"}
@@ -195,40 +195,7 @@ export default function LoginScreen() {
                 )}
 
                 {/* Botones para probar modales */}
-                <View
-                  style={{
-                    flexDirection: "row",
-                    flexWrap: "wrap",
-                    gap: 8,
-                    marginTop: theme.spacing.md,
-                    justifyContent: "center",
-                  }}
-                >
-                  <ThemedButton
-                    title="Error"
-                    variant="error"
-                    size="small"
-                    onPress={() => showError("Esto es un mensaje de error.")}
-                  />
-                  <ThemedButton
-                    title="Advertencia"
-                    variant="warning"
-                    size="small"
-                    onPress={() => showWarning("Esto es una advertencia.")}
-                  />
-                  <ThemedButton
-                    title="Info"
-                    variant="secondary"
-                    size="small"
-                    onPress={() => showInfo("Esto es información.")}
-                  />
-                  <ThemedButton
-                    title="Éxito"
-                    variant="success"
-                    size="small"
-                    onPress={() => showSuccess("¡Operación exitosa!")}
-                  />
-                </View>
+               
 
                 {/* Register Link */}
                 <View

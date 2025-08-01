@@ -1,23 +1,31 @@
 import * as Notifications from "expo-notifications"
 import { Platform } from "react-native"
+import { convertUTCToLocal, debugTimezone } from "./timezoneHelpers"
 
-// Función para crear una fecha local correctamente
+// Función para crear una fecha local correctamente usando las utilidades de zona horaria
 function createLocalDate(dateString: string): Date {
-  // Si la fecha viene como ISO string, la parseamos manteniendo la zona horaria local
-  const date = new Date(dateString)
-  
-  // Crear una nueva fecha usando los componentes locales
-  const localDate = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    date.getHours(),
-    date.getMinutes(),
-    date.getSeconds(),
-    date.getMilliseconds()
-  )
-  
-  return localDate
+  try {
+    // Usar la función de conversión de zona horaria
+    const localDate = convertUTCToLocal(dateString)
+    
+    console.log(`📅 Date conversion using timezone helpers:`, {
+      original: dateString,
+      converted: localDate.toISOString(),
+      localString: localDate.toLocaleString()
+    })
+    
+    return localDate
+  } catch (error) {
+    console.error("❌ Error in createLocalDate:", error)
+    // Fallback a la conversión original
+    const date = new Date(dateString)
+    
+    if (isNaN(date.getTime())) {
+      throw new Error(`Invalid date string: ${dateString}`)
+    }
+    
+    return date
+  }
 }
 
 export async function requestNotificationPermission() {
@@ -95,6 +103,9 @@ export async function scheduleCalendarNotification({
     if (typeof date === 'string') {
       // Si es un string ISO, crear la fecha manteniendo la zona horaria local
       fechaEvento = createLocalDate(date)
+      
+      // Debug de zona horaria
+      debugTimezone(date)
     } else {
       fechaEvento = new Date(date)
     }
@@ -118,6 +129,13 @@ export async function scheduleCalendarNotification({
 
     // Verificar si la fecha de notificación ya pasó
     const now = new Date()
+    
+    // Asegurar que la notificación se programe al menos 1 minuto en el futuro
+    const oneMinuteFromNow = new Date(now.getTime() + 60000)
+    if (fechaNotificacion < oneMinuteFromNow) {
+      console.log(`📱 Adjusting notification time to be at least 1 minute in the future`)
+      fechaNotificacion = new Date(oneMinuteFromNow)
+    }
     
     console.log(`📱 Debugging notification scheduling:`)
     console.log(`- Original date input: ${date}`)
@@ -146,9 +164,9 @@ export async function scheduleCalendarNotification({
     
     // Si la fecha de notificación ya pasó pero el evento aún no ha ocurrido,
     // significa que el recordatorio debería haberse enviado antes.
-    // En este caso, programamos la notificación para el tiempo correcto
+    // En este caso, NO programamos la notificación para evitar notificaciones inmediatas
     if (fechaNotificacion <= now) {
-      console.warn(`⚠️ Reminder time already passed, but event hasn't occurred yet:`, {
+      console.warn(`⚠️ Reminder time already passed, skipping notification:`, {
         now: now.toLocaleString(),
         eventTime: fechaEvento.toLocaleString(),
         notificationTime: fechaNotificacion.toLocaleString(),
@@ -156,17 +174,9 @@ export async function scheduleCalendarNotification({
         minutesDifference: Math.round((fechaNotificacion.getTime() - now.getTime()) / 60000),
       })
       
-      // Si el tiempo de recordatorio ya pasó, programamos la notificación para el tiempo correcto
-      // La notificación se enviará X minutos antes del evento, no inmediatamente
-      console.log(`📱 Scheduling notification for correct reminder time (${minutosAntes} minutes before event)`)
-      
-      // Asegurarnos de que la fecha de notificación sea al menos 1 minuto en el futuro
-      // para evitar notificaciones inmediatas
-      const oneMinuteFromNow = new Date(now.getTime() + 60000)
-      if (fechaNotificacion < oneMinuteFromNow) {
-        console.log(`📱 Adjusting notification time to be at least 1 minute in the future`)
-        fechaNotificacion = new Date(oneMinuteFromNow)
-      }
+      // No programar la notificación si el tiempo de recordatorio ya pasó
+      console.log(`📱 Skipping notification because reminder time already passed`)
+      return null
     }
 
     console.log(`📱 Scheduling notification:`)
