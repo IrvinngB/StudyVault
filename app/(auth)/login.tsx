@@ -11,7 +11,7 @@ import {
   isBiometricAvailable,
   updateCredentialsIfNeeded,
 } from "@/utils/biometricAuth"
-import { router } from "expo-router"
+import { router, useLocalSearchParams } from "expo-router"
 import { useEffect, useState } from "react"
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native"
 
@@ -19,6 +19,7 @@ export default function LoginScreen() {
   const { theme } = useTheme()
   const { signIn, signOut, isLoading, isAuthenticated } = useAuth()
   const { modalProps, showError, showSuccess, showWarning, showInfo } = useModal()
+  const params = useLocalSearchParams()
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -26,7 +27,14 @@ export default function LoginScreen() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   // Estado para biometría
   const [biometricReady, setBiometricReady] = useState(false)
+
   useEffect(() => {
+    // Pre-llenar el email si viene como parámetro
+    const emailParam = params.email as string;
+    if (emailParam) {
+      setFormData(prev => ({ ...prev, email: emailParam }));
+    }
+
     if (isAuthenticated) {
       router.replace("/(tabs)")
     }
@@ -35,7 +43,7 @@ export default function LoginScreen() {
       const available = await isBiometricAvailable()
       setBiometricReady(available)
     })()
-  }, [isAuthenticated])
+  }, [isAuthenticated, params.email])
   // Login normal
   const handleLogin = async () => {
     setErrors({})

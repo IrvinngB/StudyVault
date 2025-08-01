@@ -10,6 +10,9 @@ export default function AuthLayout() {
         headerShown: false,
         contentStyle: { backgroundColor: theme.colors.background },
         animation: "slide_from_right",
+        animationDuration: 300,
+        gestureEnabled: true,
+        gestureDirection: "horizontal",
       }}
     >
       <Stack.Screen
@@ -17,6 +20,7 @@ export default function AuthLayout() {
         options={{
           title: "Iniciar Sesión",
           headerShown: false,
+          animation: "slide_from_right",
         }}
       />
       <Stack.Screen
@@ -24,6 +28,7 @@ export default function AuthLayout() {
         options={{
           title: "Registrarse",
           headerShown: false,
+          animation: "slide_from_right",
         }}
       />
       <Stack.Screen
@@ -32,6 +37,7 @@ export default function AuthLayout() {
           title: "Recuperar Contraseña",
           headerShown: false,
           presentation: "modal",
+          animation: "slide_from_bottom",
         }}
       />
       <Stack.Screen
@@ -39,6 +45,8 @@ export default function AuthLayout() {
         options={{
           title: "Confirmar Email",
           headerShown: false,
+          animation: "fade",
+          animationDuration: 200,
         }}
       />
       <Stack.Screen
@@ -46,6 +54,7 @@ export default function AuthLayout() {
         options={{
           title: "Actualizar Contraseña",
           headerShown: false,
+          animation: "slide_from_right",
         }}
       />
     </Stack>

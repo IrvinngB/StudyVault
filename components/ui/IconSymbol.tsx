@@ -19,7 +19,7 @@ const MAPPING = {
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
 
-  // Navigation icons
+    // Navigation icons
   "book.closed.fill": "menu-book",
   checklist: "checklist",
   "note.text": "note",
@@ -27,8 +27,8 @@ const MAPPING = {
   "person.crop.circle": "account-circle",
   "person.crop.circle.fill": "account-circle",
   "gearshape.fill": "settings",
-  
-
+   
+ 
   // Stats icons
   "clock.fill": "schedule",
   "calendar.badge.checkmark": "event-available",
@@ -49,6 +49,10 @@ const MAPPING = {
   xmark: "close",
   "xmark.circle": "cancel",
   "xmark.circle.fill": "cancel",
+  
+  // Task status icons
+  clock: "schedule",
+  "exclamationmark.triangle": "warning",
   gear: "settings",
   magnifyingglass: "search",
   bell: "notifications",
@@ -83,7 +87,6 @@ const MAPPING = {
   "doc.text.fill": "description",
   "chart.bar": "bar-chart",
   "chart.bar.fill": "bar-chart",
-  clock: "access-time",
   timer: "timer",
   bookmark: "bookmark-border",
   "bookmark.fill": "bookmark",

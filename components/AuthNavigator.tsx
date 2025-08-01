@@ -13,18 +13,18 @@ interface AuthNavigatorProps {
 }
 
 export function AuthNavigator({ children }: AuthNavigatorProps) {
-  const { isAuthenticated, isLoading, user } = useAuth()
+  const { isAuthenticated, isLoading, isTransitioning, user } = useAuth()
   const pathname = usePathname()
   const hasRedirected = useRef(false)
   const lastAuthState = useRef<boolean | null>(null)
 
   useEffect(() => {
-    // Solo actuar cuando el estado de carga haya terminado
-    if (isLoading) {
+    // Solo actuar cuando el estado de carga haya terminado y no esté en transición
+    if (isLoading || isTransitioning) {
       return
     }
 
-    // Evitar redirecciones múltiples
+    // Evitar redirecciones múltiples si el estado no cambió
     if (lastAuthState.current === isAuthenticated) {
       return
     }
@@ -36,6 +36,7 @@ export function AuthNavigator({ children }: AuthNavigatorProps) {
       hasUser: !!user,
       pathname,
       hasRedirected: hasRedirected.current,
+      isTransitioning,
     })
 
     // Rutas de autenticación que no requieren redirección
@@ -56,16 +57,19 @@ export function AuthNavigator({ children }: AuthNavigatorProps) {
     // Rutas especiales que no deben ser redirigidas (como +not-found)
     const isSpecialRoute = pathname.includes("+not-found")
 
+    // Rutas de transición que no deben causar redirecciones automáticas
+    const isTransitionRoute = pathname.includes("/confirm-email")
+
     if (!isAuthenticated) {
-      // Si no está autenticado y no está en una ruta de auth (y no es pública o especial)
-      if (!isAuthRoute && !isPublicRoute && !isSpecialRoute && !hasRedirected.current) {
+      // Si no está autenticado y no está en una ruta de auth (y no es pública, especial o de transición)
+      if (!isAuthRoute && !isPublicRoute && !isSpecialRoute && !isTransitionRoute && !hasRedirected.current) {
         console.log("🔄 Redirigiendo a login desde:", pathname)
         hasRedirected.current = true
         router.replace("/(auth)/login")
       }
     } else {
-      // Si está autenticado y está en una ruta de auth (pero no pública)
-      if (isAuthRoute && !isPublicRoute && !hasRedirected.current) {
+      // Si está autenticado y está en una ruta de auth (pero no pública o de transición)
+      if (isAuthRoute && !isPublicRoute && !isTransitionRoute && !hasRedirected.current) {
         console.log("✅ Usuario autenticado, redirigiendo a tabs desde:", pathname)
         hasRedirected.current = true
         router.replace("/(tabs)")
@@ -75,15 +79,15 @@ export function AuthNavigator({ children }: AuthNavigatorProps) {
         hasRedirected.current = false
       }
     }
-  }, [isAuthenticated, isLoading, pathname, user])
+  }, [isAuthenticated, isLoading, isTransitioning, pathname, user])
 
   // Reset redirect flag when auth state changes
   useEffect(() => {
     hasRedirected.current = false
   }, [isAuthenticated])
 
-  // Mostrar loading mientras se verifica la autenticación
-  if (isLoading) {
+  // Mostrar loading mientras se verifica la autenticación o está en transición
+  if (isLoading || isTransitioning) {
     return (
       <ThemedView
         variant="background"
@@ -96,7 +100,7 @@ export function AuthNavigator({ children }: AuthNavigatorProps) {
       >
         <ActivityIndicator size="large" color="#007AFF" />
         <ThemedText variant="body" color="secondary">
-          Verificando autenticación...
+          {isTransitioning ? "Procesando..." : "Verificando autenticación..."}
         </ThemedText>
       </ThemedView>
     )

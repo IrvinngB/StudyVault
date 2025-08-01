@@ -16,7 +16,7 @@ import { useTheme } from "@/hooks/useTheme"
 import { formatTimeForDisplay, isValidDate, safeParseDate } from "@/utils/dateHelpers"; // Usar funciones más seguras
 import { Ionicons } from "@expo/vector-icons"
 import type React from "react"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ActivityIndicator, Alert, FlatList, ScrollView, StyleSheet, TouchableOpacity, View } from "react-native"
 
 const months = [
@@ -36,10 +36,66 @@ const months = [
 
 const daysSpanish = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
 
+// Función para obtener información de zona horaria
+const getTimezoneInfo = () => {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const offset = new Date().getTimezoneOffset()
+  const offsetHours = Math.abs(Math.floor(offset / 60))
+  const offsetMinutes = Math.abs(offset % 60)
+  const offsetSign = offset > 0 ? "-" : "+"
+  
+  return {
+    timezone,
+    offsetString: `${offsetSign}${offsetHours.toString().padStart(2, "0")}:${offsetMinutes.toString().padStart(2, "0")}`
+  }
+}
+
+// Función para formatear fecha con información de zona horaria
+const formatDateWithTimezone = (dateString: string) => {
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return {
+        localDate: "Fecha inválida",
+        localTime: "--:--",
+        timezone: "Unknown",
+        offset: "--:--",
+        originalDate: dateString
+      }
+    }
+    
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const offset = new Date().getTimezoneOffset()
+    const offsetHours = Math.abs(Math.floor(offset / 60))
+    const offsetMinutes = Math.abs(offset % 60)
+    const offsetSign = offset > 0 ? "-" : "+"
+    const offsetString = `${offsetSign}${offsetHours.toString().padStart(2, "0")}:${offsetMinutes.toString().padStart(2, "0")}`
+    
+    return {
+      localDate: date.toLocaleDateString('es-ES', { timeZone: timezone }),
+      localTime: date.toLocaleTimeString('es-ES', { 
+        timeZone: timezone,
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      timezone: timezone,
+      offset: offsetString,
+      originalDate: dateString
+    }
+  } catch (error) {
+    return {
+      localDate: "Fecha inválida",
+      localTime: "--:--",
+      timezone: "Unknown",
+      offset: "--:--",
+      originalDate: dateString
+    }
+  }
+}
+
 // Formatear fecha a 'YYYY-MM-DD'
 const formatDate = (date: Date) => {
   if (!isValidDate(date)) {
-    console.error("❌ Invalid date passed to formatDate:", date)
     return new Date().toISOString().split("T")[0] // Fallback a fecha actual
   }
 
@@ -49,10 +105,19 @@ const formatDate = (date: Date) => {
   return `${y}-${m}-${d}`
 }
 
+// Función mejorada para formatear fecha de manera consistente
+const formatDateConsistent = (date: Date) => {
+  if (!isValidDate(date)) {
+    return new Date().toLocaleDateString('en-CA') // Fallback a fecha actual
+  }
+
+  // Usar toLocaleDateString para evitar problemas de zona horaria
+  return date.toLocaleDateString('en-CA') // Formato YYYY-MM-DD
+}
+
 // Formatear fecha larga con día y mes en español
 const formatDateLong = (date: Date) => {
   if (!isValidDate(date)) {
-    console.error("❌ Invalid date passed to formatDateLong:", date)
     return "Fecha inválida"
   }
 
@@ -63,7 +128,6 @@ const formatDateLong = (date: Date) => {
     const year = date.getFullYear()
     return `${dayName}, ${dayNumber} de ${monthName} de ${year}`
   } catch (error) {
-    console.error("�� Error formatting long date:", error)
     return "Fecha inválida"
   }
 }
@@ -114,7 +178,7 @@ export default function CalendarScreen() {
     events,
     loading,
     error,
-    fetchEventsForDateRange,
+    fetchEventsForDateRange: originalFetchEventsForDateRange,
     getEventsForDate,
     createEvent,
     updateEvent,
@@ -122,19 +186,51 @@ export default function CalendarScreen() {
     clearError,
   } = useCalendar()
 
+  // Memoizar fetchEventsForDateRange para evitar recreaciones
+  const fetchEventsForDateRange = useCallback(async (startDate: string, endDate: string) => {
+    await originalFetchEventsForDateRange(startDate, endDate)
+  }, [originalFetchEventsForDateRange])
+
+  // Ref para FlatList de días
+  const flatListRef = useRef<FlatList<Date>>(null)
+  
+  // Ref para evitar re-renders innecesarios
+  const lastEventsCount = useRef<number>(0)
+  const lastSelectedDate = useRef<string>("")
+
   // Obtener días del mes
   const daysInMonth = getDaysInMonth(year, month)
 
   // Filtrar eventos para el día seleccionado
-  const eventsForSelectedDay = getEventsForDate(formatDate(selectedDay))
-
-  // Ref para FlatList de días
-  const flatListRef = useRef<FlatList<Date>>(null)
+  const eventsForSelectedDay = getEventsForDate(formatDateConsistent(selectedDay))
+  
+  // Debug: Log eventos para el día seleccionado
+  useEffect(() => {
+    console.log('📅 Calendar: Events for selected day:', {
+      date: formatDateConsistent(selectedDay),
+      count: eventsForSelectedDay.length,
+      events: eventsForSelectedDay.map(e => ({ 
+        id: e.id, 
+        title: e.title, 
+        type: e.event_type, 
+        start_datetime: e.start_datetime 
+      }))
+    })
+  }, [eventsForSelectedDay, selectedDay])
+  
+  // Optimización: solo actualizar si realmente hay cambios
+  const currentSelectedDate = formatDateConsistent(selectedDay)
+  const shouldUpdateEvents = lastSelectedDate.current !== currentSelectedDate || lastEventsCount.current !== eventsForSelectedDay.length
+  
+  if (shouldUpdateEvents) {
+    lastSelectedDate.current = currentSelectedDate
+    lastEventsCount.current = eventsForSelectedDay.length
+  }
 
   // Scroll al día seleccionado cada vez que cambian mes, año o día seleccionado
   useEffect(() => {
     if (!flatListRef.current) return
-    const index = daysInMonth.findIndex((d) => formatDate(d) === formatDate(selectedDay))
+    const index = daysInMonth.findIndex((d) => formatDateConsistent(d) === formatDateConsistent(selectedDay))
     if (index >= 0) {
       flatListRef.current.scrollToIndex({ index, animated: true })
     }
@@ -143,8 +239,6 @@ export default function CalendarScreen() {
   // Cargar eventos cuando cambien el mes o año
   useEffect(() => {
     const { start, end } = getMonthRange(year, month)
-    console.log(`📅 Loading events for month range: ${start} to ${end}`)
-    console.log(`📊 Current events count: ${events.length}`)
     fetchEventsForDateRange(start, end)
   }, [year, month, fetchEventsForDateRange])
 
@@ -173,7 +267,7 @@ export default function CalendarScreen() {
             names[classId] = classData.name
           }
         } catch (error) {
-          console.error(`Error loading class ${classId}:`, error)
+          // Error loading class data
         }
       }
       setClassNames(names)
@@ -202,15 +296,11 @@ export default function CalendarScreen() {
   }
 
   // Handle event creation
-  // Modificado: retorna el evento creado (con id)
   const handleCreateEvent = async (eventData: CreateCalendarEventRequest) => {
     const result = await createEvent(eventData)
     if (!result) {
       throw new Error("No se pudo crear el evento")
     }
-    // No refrescar eventos aquí porque createEvent ya agrega el evento a la lista
-    // Solo refrescar si hay algún problema de sincronización
-    console.log("✅ Evento creado y agregado a la lista local")
     return result;
   }
 
@@ -220,8 +310,6 @@ export default function CalendarScreen() {
     if (!result) {
       throw new Error("No se pudo actualizar el evento")
     }
-    // No refrescar eventos aquí porque updateEvent ya actualiza el evento en la lista
-    console.log("✅ Evento actualizado en la lista local")
   }
 
   // Handle event deletion
@@ -230,8 +318,6 @@ export default function CalendarScreen() {
     if (!success) {
       throw new Error("No se pudo eliminar el evento")
     }
-    // No refrescar eventos aquí porque deleteEvent ya elimina el evento de la lista
-    console.log("✅ Evento eliminado de la lista local")
   }
 
   // Handle event click
@@ -242,7 +328,7 @@ export default function CalendarScreen() {
 
   // Render día en scroll horizontal
   const renderDay = ({ item }: { item: Date }) => {
-    const isSelected = formatDate(item) === formatDate(selectedDay)
+    const isSelected = formatDateConsistent(item) === formatDateConsistent(selectedDay)
     return (
       <TouchableOpacity
         onPress={() => setSelectedDay(item)}
@@ -267,80 +353,119 @@ export default function CalendarScreen() {
   }
 
   // Render evento
-  const renderEventItem = ({ item }: { item: CalendarEvent }) => {
-    // Find the event type configuration
-    const eventConfig = EVENT_TYPES_CONFIG.find((config) => config.value === item.event_type)
+  const renderEventItem = useMemo(() => {
+    const EventItem = ({ item }: { item: CalendarEvent }) => {
+      // Find the event type configuration
+      const eventConfig = EVENT_TYPES_CONFIG.find((config) => config.value === item.event_type)
 
-    const iconName: React.ComponentProps<typeof Ionicons>["name"] = (eventConfig?.icon as any) || "calendar-outline"
-    let iconColor = theme.colors.primary
+      const iconName: React.ComponentProps<typeof Ionicons>["name"] = (eventConfig?.icon as any) || "calendar-outline"
+      let iconColor = theme.colors.primary
 
-    // Set color based on event category
-    switch (item.event_category || eventConfig?.category) {
-      case "class":
-        iconColor = theme.colors.primary
-        break
-      case "grade_event":
-        iconColor = theme.colors.accent
-        break
-      case "general_event":
-        iconColor = theme.colors.secondary
-        break
-      default:
-        iconColor = theme.colors.primary
-        break
-    }
+      // Set color based on event category
+      switch (item.event_category || eventConfig?.category) {
+        case "class":
+          iconColor = theme.colors.primary
+          break
+        case "grade_event":
+          iconColor = theme.colors.accent
+          break
+        case "general_event":
+          iconColor = theme.colors.secondary
+          break
+        default:
+          iconColor = theme.colors.primary
+          break
+      }
 
-    // Override specific colors for important events
-    if (item.event_type === "parcial" || item.event_type === "examen_final") {
-      iconColor = theme.colors.error
-    }
+      // Override specific colors for important events
+      if (item.event_type === "parcial" || item.event_type === "examen_final") {
+        iconColor = theme.colors.error
+      }
 
-    // USAR LA FUNCIÓN SEGURA PARA PARSEAR LA FECHA
-    const startDateTime = safeParseDate(item.start_datetime)
+      // USAR LA FUNCIÓN SEGURA PARA PARSEAR LA FECHA
+      const startDateTime = safeParseDate(item.start_datetime)
+       
+      // Obtener información adicional de la fecha
+      const eventDate = new Date(item.start_datetime)
+      const isToday = formatDateConsistent(eventDate) === formatDateConsistent(new Date())
+      const isTomorrow = formatDateConsistent(eventDate) === formatDateConsistent(new Date(Date.now() + 24 * 60 * 60 * 1000))
 
-    return (
-      <TouchableOpacity
-        style={[styles.eventItem, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
-        onPress={() => handleEventClick(item)}
-        activeOpacity={0.7}
-      >
-        <Ionicons name={iconName} size={24} color={iconColor} style={{ marginRight: 12 }} />
-        <View style={{ flex: 1 }}>
-          <ThemedText variant="h3" style={{ color: theme.colors.text }}>
-            {item.title || 'Sin título'}
-          </ThemedText>
-          {item.description ? (
-            <ThemedText variant="body" style={{ color: theme.colors.secondary }}>
-              {item.description}
+      // Obtener información de zona horaria para este evento
+      const timezoneInfo = formatDateWithTimezone(item.start_datetime)
+      
+      // Verificar si hay discrepancia entre la fecha original y la fecha local
+      const originalDate = new Date(item.start_datetime)
+      const originalDateString = originalDate.toISOString().split('T')[0]
+      const localDateString = formatDateConsistent(eventDate)
+      const hasTimezoneDiscrepancy = originalDateString !== localDateString
+
+      return (
+        <TouchableOpacity
+          style={[styles.eventItem, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+          onPress={() => handleEventClick(item)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={iconName} size={24} color={iconColor} style={{ marginRight: 12 }} />
+          <View style={{ flex: 1 }}>
+            <ThemedText variant="h3" style={{ color: theme.colors.text }}>
+              {item.title || 'Sin título'}
             </ThemedText>
-          ) : null}
-          
-          {/* Mostrar curso y salón de manera sutil */}
-          {(item.location || item.classroom) ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              {item.location && item.classroom ? (
-                <>
+            {item.description ? (
+              <ThemedText variant="body" style={{ color: theme.colors.secondary }}>
+                {item.description}
+              </ThemedText>
+            ) : null}
+            
+            {/* Mostrar curso y salón de manera sutil */}
+            {(item.location || item.classroom) ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                {item.location && item.classroom ? (
+                  <>
+                    <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
+                      📍 {item.location}
+                    </ThemedText>
+                    <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12, marginLeft: 8 }}>
+                      🏫 {item.classroom}
+                    </ThemedText>
+                  </>
+                ) : (
                   <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
-                    � {item.location}
+                    {item.location ? `📍 ${item.location}` : `🏫 ${item.classroom}`}
                   </ThemedText>
-                  <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12, marginLeft: 8 }}>
-                    🏫 {item.classroom}
-                  </ThemedText>
-                </>
-              ) : (
-                <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
-                  {item.location ? `� ${item.location}` : `🏫 ${item.classroom}`}
+                )}
+              </View>
+            ) : null}
+            
+            {/* Mostrar información de zona horaria si hay discrepancia */}
+            {hasTimezoneDiscrepancy && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                <ThemedText variant="body" style={{ color: theme.colors.accent, fontSize: 11 }}>
+                      🌍 {timezoneInfo.localTime} ({timezoneInfo.offset})
                 </ThemedText>
-              )}
-            </View>
-          ) : null}
-        </View>
-        <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
-          {formatTimeForDisplay(startDateTime) || '--:--'}
-        </ThemedText>
-      </TouchableOpacity>
-    )
-  }
+              </View>
+            )}
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12 }}>
+              {formatTimeForDisplay(startDateTime) || '--:--'}
+            </ThemedText>
+            {(isToday || isTomorrow) && (
+              <ThemedText variant="body" style={{ 
+                color: isToday ? theme.colors.primary : theme.colors.accent, 
+                fontSize: 10, 
+                marginTop: 2 
+              }}>
+                {isToday ? 'Hoy' : 'Mañana'}
+              </ThemedText>
+            )}
+          </View>
+        </TouchableOpacity>
+      )
+    }
+    
+    EventItem.displayName = 'EventItem'
+    return EventItem
+  }, [theme.colors, handleEventClick])
 
   return (
     <>
@@ -351,9 +476,17 @@ export default function CalendarScreen() {
             <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.arrowButton}>
               <Ionicons name="chevron-back-outline" size={28} color={theme.colors.primary} />
             </TouchableOpacity>
-            <ThemedText variant="h1" style={{ color: theme.colors.primary }}>
-              {months[month] || 'Mes'} {year || new Date().getFullYear()}
-            </ThemedText>
+            <View style={{ alignItems: 'center' }}>
+              <ThemedText variant="h1" style={{ color: theme.colors.primary }}>
+                {months[month] || 'Mes'} {year || new Date().getFullYear()}
+              </ThemedText>
+              <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 12, marginTop: 2 }}>
+                {getTimezoneInfo().timezone} ({getTimezoneInfo().offsetString})
+              </ThemedText>
+              <ThemedText variant="body" style={{ color: theme.colors.textMuted, fontSize: 10, marginTop: 1 }}>
+                Los eventos se muestran en tu zona horaria local
+              </ThemedText>
+            </View>
             <TouchableOpacity onPress={() => changeMonth(1)} style={styles.arrowButton}>
               <Ionicons name="chevron-forward-outline" size={28} color={theme.colors.primary} />
             </TouchableOpacity>

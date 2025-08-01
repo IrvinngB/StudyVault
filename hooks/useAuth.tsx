@@ -11,6 +11,7 @@ interface AuthContextType {
   session: AuthSession | null
   isLoading: boolean
   isAuthenticated: boolean
+  isTransitioning: boolean
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signUp: (
     email: string,
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<AuthSession | null>(null)
   const [user, setUser] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isTransitioning, setIsTransitioning] = useState(false)
   const isInitialized = useRef(false)
   const initializationPromise = useRef<Promise<void> | null>(null)
 
@@ -115,6 +117,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signIn = useCallback(async (email: string, password: string) => {
     console.log("🔑 Intentando iniciar sesión para:", email)
     setIsLoading(true)
+    setIsTransitioning(true)
     try {
       const result = await authService.signIn(email, password)
 
@@ -122,13 +125,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.log("✅ Inicio de sesión exitoso")
         setSession(result.data)
         setUser(result.data.user)
+        // Pequeño delay para evitar parpadeo
+        setTimeout(() => {
+          setIsTransitioning(false)
+        }, 500)
       } else {
         console.log("❌ Error en inicio de sesión:", result.error)
+        setIsTransitioning(false)
       }
 
       return result
     } catch (error) {
       console.error("💥 Sign in error:", error)
+      setIsTransitioning(false)
       return {
         success: false,
         error: error instanceof Error ? error.message : "Error al iniciar sesión",
@@ -141,19 +150,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signUp = useCallback(async (email: string, password: string, userData?: { name?: string }) => {
     console.log("📝 Intentando registrar usuario:", email)
     setIsLoading(true)
+    setIsTransitioning(true)
     try {
       const result = await authService.signUp(email, password, userData)
 
       if (result.success) {
         console.log("✅ Registro exitoso - NO estableciendo sesión automáticamente")
         // NO establecer sesión automáticamente para que el usuario confirme su email primero
+        // Pequeño delay para evitar parpadeo
+        setTimeout(() => {
+          setIsTransitioning(false)
+        }, 500)
       } else {
         console.log("❌ Error en registro:", result.error)
+        setIsTransitioning(false)
       }
 
       return result
     } catch (error) {
       console.error("💥 Sign up error:", error)
+      setIsTransitioning(false)
       return {
         success: false,
         error: error instanceof Error ? error.message : "Error al crear la cuenta",
@@ -247,6 +263,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     session,
     isLoading,
     isAuthenticated: !!session && !!user && isInitialized.current,
+    isTransitioning,
     signIn,
     signUp,
     signOut,

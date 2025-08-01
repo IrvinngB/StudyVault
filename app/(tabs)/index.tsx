@@ -1,7 +1,7 @@
 "use client"
 
 import { IconSymbol } from "@/components/ui/IconSymbol"
-import { ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
+import { ThemedButton, ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { AVAILABLE_AVATARS } from "@/database/models/userTypes"
 import { useGlobalModal } from "@/hooks/ModalProvider"
 import { useAuth } from "@/hooks/useAuth"
@@ -43,36 +43,42 @@ export default function HomeScreen() {
     refreshStreak
   } = useStreakSystem(tasks, profile)
 
-  // Debug logs para verificar el sistema de rachas
-  console.log('🔥 Streak System Debug:', {
-    currentStreak: streakData.current,
-    longestStreak: streakData.longest,
-    lastActivityDate: streakData.lastActivityDate,
-    totalTasks: tasks.length,
-    completedTasks: tasks.filter(t => t.status === 'completed').length,
-    todayTasks: tasks.filter(t => {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const completedDate = new Date(t.completed_at || 0)
-      completedDate.setHours(0, 0, 0, 0)
-      return t.status === 'completed' && completedDate.getTime() === today.getTime()
-    }).length,
-    streakStatus: streakStatus.status,
-    motivation: motivation
-  })
+
 
   // Stats para hoy
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const todayActivity = recentActivities.find(a => a.date === today.toISOString().split('T')[0])
+  
+  // Obtener tareas de hoy (completadas y pendientes)
+  const todayTasks = tasks.filter((task) => {
+    const taskDate = new Date(task.due_date || task.start_datetime)
+    taskDate.setHours(0, 0, 0, 0)
+    return taskDate.getTime() === today.getTime()
+  })
+  
+  const completedToday = todayTasks.filter(task => task.status === "completed").length
+  const pendingToday = todayTasks.filter(task => task.status !== "completed").length
+  
   const dailyStats = {
-    tasksCompleted: todayActivity?.tasksCompleted || 0,
-    totalTasks: tasks.filter((task) => {
-      const taskDate = new Date(task.due_date || task.start_datetime)
-      taskDate.setHours(0, 0, 0, 0)
-      return taskDate.getTime() === today.getTime()
-    }).length,
+    tasksCompleted: completedToday,
+    totalTasks: todayTasks.length,
     streak: streakData.current
+  }
+
+  // Función para obtener el color del icono basado en el progreso
+  const getTaskIconColor = () => {
+    if (dailyStats.totalTasks === 0) return theme.colors.textMuted
+    if (dailyStats.tasksCompleted === dailyStats.totalTasks) return theme.colors.success
+    if (dailyStats.tasksCompleted > 0) return theme.colors.warning
+    return theme.colors.error
+  }
+
+  // Función para obtener el icono basado en el progreso
+  const getTaskIcon = () => {
+    if (dailyStats.totalTasks === 0) return "calendar"
+    if (dailyStats.tasksCompleted === dailyStats.totalTasks) return "checkmark.circle"
+    if (dailyStats.tasksCompleted > 0) return "clock"
+    return "exclamationmark.triangle"
   }
 
   const getGreeting = () => {
@@ -110,7 +116,7 @@ export default function HomeScreen() {
         }
       },
       () => {
-        console.log("Logout cancelado")
+  
       },
       "Cerrar Sesión",
     )
@@ -126,12 +132,13 @@ export default function HomeScreen() {
       (a, b) => new Date(a.due_date || a.start_datetime).getTime() - new Date(b.due_date || b.start_datetime).getTime(),
     )
     .slice(0, 3)
-    .map((task) => {
+    .map((task, index) => {
       // Find the class name from classes array
       const taskClass = classes.find((cls) => cls.id === task.class_id)
       return {
         ...task,
         class_name: taskClass?.name || "Sin materia",
+        key: task.calendar_event_id || `task-${index}`,
       }
     })
 
@@ -254,13 +261,13 @@ export default function HomeScreen() {
             >
               <View
                 style={{
-                  backgroundColor: theme.colors.success + "20",
+                  backgroundColor: getTaskIconColor() + "20",
                   padding: theme.spacing.sm,
                   borderRadius: theme.borderRadius.full,
                   marginBottom: theme.spacing.sm,
                 }}
               >
-                <IconSymbol name="checkmark.circle" size={24} color={theme.colors.success} />
+                <IconSymbol name={getTaskIcon()} size={24} color={getTaskIconColor()} />
               </View>
               <ThemedText variant="caption" color="secondary" style={{ marginBottom: 4 }}>
                 Tareas Hoy
@@ -268,6 +275,16 @@ export default function HomeScreen() {
               <ThemedText variant="h2" style={{ fontWeight: "700" }}>
                 {dailyStats.tasksCompleted}/{dailyStats.totalTasks}
               </ThemedText>
+              {dailyStats.totalTasks > 0 && (
+                <ThemedText variant="caption" color="secondary" style={{ marginTop: 2, textAlign: 'center' }}>
+                  {pendingToday > 0 ? `${pendingToday} pendientes` : '¡Todas completadas!'}
+                </ThemedText>
+              )}
+              {dailyStats.totalTasks === 0 && (
+                <ThemedText variant="caption" color="secondary" style={{ marginTop: 2, textAlign: 'center' }}>
+                  Sin tareas hoy
+                </ThemedText>
+              )}
             </ThemedCard>
 
             {/* Streak - Nuevo sistema */}
@@ -303,21 +320,92 @@ export default function HomeScreen() {
                   Próximo logro: {nextMilestone} días
                 </ThemedText>
               )}
+              {/* Botón de debug temporal */}
+              <TouchableOpacity
+                onPress={() => {
+              
+                  refreshStreak()
+                }}
+                style={{
+                  backgroundColor: theme.colors.primary + "20",
+                  paddingHorizontal: theme.spacing.sm,
+                  paddingVertical: 4,
+                  borderRadius: theme.borderRadius.sm,
+                  marginTop: theme.spacing.sm,
+                }}
+              >
+                
+              </TouchableOpacity>
             </ThemedCard>
           </ThemedView>
 
-          {/* Upcoming Tasks */}
-          <ThemedCard variant="elevated" padding="large">
-            <ThemedView
+          {/* Próximas Tareas */}
+          {upcomingTasks.length > 0 && (
+            <ThemedCard
+              variant="outlined"
+              padding="medium"
               style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: theme.spacing.md,
+                marginBottom: theme.spacing.lg,
               }}
             >
-              <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
-                <IconSymbol name="clock" size={24} color={theme.colors.primary} />
+              <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.sm }}>
+                <IconSymbol name="calendar" size={20} color={theme.colors.primary} />
+                <ThemedText variant="h3" style={{ marginLeft: theme.spacing.sm, fontWeight: "600" }}>
+                  Próximas tareas
+                </ThemedText>
+              </ThemedView>
+              
+              {upcomingTasks.map((task, index) => (
+                <TouchableOpacity
+                  key={task.calendar_event_id}
+                  onPress={() => navigateTo("/tasks")}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingVertical: theme.spacing.sm,
+                    borderBottomWidth: index < upcomingTasks.length - 1 ? 1 : 0,
+                    borderBottomColor: theme.colors.border,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: theme.colors.primary,
+                      marginRight: theme.spacing.sm,
+                    }}
+                  />
+                  <ThemedView style={{ flex: 1 }}>
+                    <ThemedText variant="body" style={{ fontWeight: "500", marginBottom: 2 }}>
+                      {task.event_title}
+                    </ThemedText>
+                    <ThemedText variant="caption" color="secondary">
+                      {task.class_name} • {new Date(task.due_date || task.start_datetime).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </ThemedText>
+                  </ThemedView>
+                  <IconSymbol name="chevron.right" size={16} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              ))}
+            </ThemedCard>
+          )}
+
+          {/* Instrucciones para probar la app */}
+          {true && (
+            <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+              <ThemedView
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: theme.spacing.md,
+                }}
+              >
+                <IconSymbol name="lightbulb" size={24} color={theme.colors.primary} />
                 <ThemedText
                   variant="h2"
                   style={{
@@ -325,106 +413,98 @@ export default function HomeScreen() {
                     fontWeight: "700",
                   }}
                 >
-                  Próximas Tareas
+                  ¡Bienvenido a StudyVault! 🎓
                 </ThemedText>
               </ThemedView>
-              <TouchableOpacity
-                onPress={() => navigateTo("/tasks")}
-                style={{
-                  backgroundColor: theme.colors.surface,
-                  paddingHorizontal: theme.spacing.md,
-                  paddingVertical: theme.spacing.sm,
-                  borderRadius: theme.borderRadius.md,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                }}
-              >
-                <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600" }}>
-                  + Agregar
-                </ThemedText>
-              </TouchableOpacity>
-            </ThemedView>
 
-            {upcomingTasks.length === 0 ? (
-              <ThemedView style={{ alignItems: "center", paddingVertical: theme.spacing.lg }}>
-                <IconSymbol name="checkmark.circle" size={48} color={theme.colors.success} />
-                <ThemedText variant="body" color="secondary" style={{ marginTop: theme.spacing.sm }}>
-                  ¡No tienes tareas pendientes!
-                </ThemedText>
+              <ThemedText variant="body" color="secondary" style={{ marginBottom: theme.spacing.md }}>
+                Aquí tienes algunas ideas para comenzar a usar la app:
+              </ThemedText>
+
+              <ThemedView style={{ gap: theme.spacing.sm }}>
+                <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                  <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600", marginRight: theme.spacing.xs }}>
+                    1.
+                  </ThemedText>
+                  <ThemedText variant="body" color="secondary" style={{ flex: 1 }}>
+                    <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600" }}>
+                      Crea una materia:
+                    </ThemedText>{" "}
+                    Ve a &quot;Clases&quot; y agrega tus materias del semestre
+                  </ThemedText>
+                </ThemedView>
+
+                <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                  <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600", marginRight: theme.spacing.xs }}>
+                    2.
+                  </ThemedText>
+                  <ThemedText variant="body" color="secondary" style={{ flex: 1 }}>
+                    <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600" }}>
+                      Agrega tareas:
+                    </ThemedText>{" "}
+                    Ve a &quot;Tareas&quot; y crea tareas con fechas de vencimiento
+                  </ThemedText>
+                </ThemedView>
+
+                <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                  <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600", marginRight: theme.spacing.xs }}>
+                    3.
+                  </ThemedText>
+                  <ThemedText variant="body" color="secondary" style={{ flex: 1 }}>
+                    <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600" }}>
+                      Completa tareas:
+                    </ThemedText>{" "}
+                    Marca las tareas como completadas para mantener tu racha
+                  </ThemedText>
+                </ThemedView>
+
+                <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                  <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600", marginRight: theme.spacing.xs }}>
+                    4.
+                  </ThemedText>
+                  <ThemedText variant="body" color="secondary" style={{ flex: 1 }}>
+                    <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600" }}>
+                      Sistema de rachas:
+                    </ThemedText>{" "}
+                    Tu racha aumenta si completas tareas sin tener atrasadas, o si no tienes tareas atrasadas
+                  </ThemedText>
+                </ThemedView>
               </ThemedView>
-            ) : (
-              <ThemedView style={{ gap: theme.spacing.md }}>
-                {upcomingTasks.map((task, index) => {
-                  const dueDate = new Date(task.due_date || task.start_datetime)
-                  const isOverdue = dueDate < new Date() && task.status !== "completed"
-                  const diffDays = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
 
-                  let priorityColor = theme.colors.success
-                  let priorityLabel = "Baja"
+              <ThemedView style={{ 
+                backgroundColor: theme.colors.primary + "10", 
+                padding: theme.spacing.md, 
+                borderRadius: theme.borderRadius.md,
+                marginTop: theme.spacing.md,
+                borderLeftWidth: 4,
+                borderLeftColor: theme.colors.primary
+              }}>
+                <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600", marginBottom: theme.spacing.xs }}>
+                  💡 Tip para probar el sistema de rachas:
+                </ThemedText>
+                <ThemedText variant="bodySmall" color="secondary" style={{ marginBottom: theme.spacing.md }}>
+                  Crea una tarea para hoy, complétala y verás cómo aumenta tu racha. También puedes crear tareas para días futuros y ver cómo se mantiene la racha sin tareas atrasadas.
+                </ThemedText>
 
-                  if (isOverdue) {
-                    priorityColor = theme.colors.error
-                    priorityLabel = "Atrasada"
-                  } else if (diffDays <= 1) {
-                    priorityColor = theme.colors.error
-                    priorityLabel = "Alta"
-                  } else if (diffDays <= 3) {
-                    priorityColor = theme.colors.warning
-                    priorityLabel = "Media"
-                  }
-
-                  return (
-                    <TouchableOpacity
-                      key={task.task_id || index}
-                      onPress={() => navigateTo("/tasks")}
-                      style={{
-                        backgroundColor: theme.colors.surface,
-                        padding: theme.spacing.md,
-                        borderRadius: theme.borderRadius.md,
-                        borderWidth: 1,
-                        borderColor: theme.colors.border,
-                      }}
-                    >
-                      <ThemedView
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start",
-                        }}
-                      >
-                        <ThemedView style={{ flex: 1 }}>
-                          <ThemedText variant="button" style={{ fontWeight: "600", marginBottom: 4 }}>
-                            {task.task_title || task.event_title}
-                          </ThemedText>
-                          <ThemedText variant="caption" color="secondary">
-                            {task.class_name}
-                          </ThemedText>
-                        </ThemedView>
-                        <ThemedView style={{ alignItems: "flex-end" }}>
-                          <View
-                            style={{
-                              backgroundColor: priorityColor + "20",
-                              paddingHorizontal: theme.spacing.sm,
-                              paddingVertical: 4,
-                              borderRadius: theme.borderRadius.sm,
-                              marginBottom: 4,
-                            }}
-                          >
-                            <ThemedText variant="caption" style={{ color: priorityColor, fontWeight: "600" }}>
-                              {priorityLabel}
-                            </ThemedText>
-                          </View>
-                          <ThemedText variant="caption" color="secondary">
-                            {dueDate.toLocaleDateString()}
-                          </ThemedText>
-                        </ThemedView>
-                      </ThemedView>
-                    </TouchableOpacity>
-                  )
-                })}
+                <ThemedView style={{ flexDirection: "row", gap: theme.spacing.sm }}>
+                  <ThemedButton
+                    title="Crear Materia"
+                    variant="primary"
+                    size="small"
+                    onPress={() => navigateTo("/courses/create")}
+                    style={{ flex: 1 }}
+                  />
+                  <ThemedButton
+                    title="Crear Tarea"
+                    variant="secondary"
+                    size="small"
+                    onPress={() => navigateTo("/tasks")}
+                    style={{ flex: 1 }}
+                  />
+                </ThemedView>
               </ThemedView>
-            )}
-          </ThemedCard>
+            </ThemedCard>
+          )}
         </ScrollView>
       </ThemedView>
     </KeyboardAvoidingView>

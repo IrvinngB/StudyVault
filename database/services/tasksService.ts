@@ -649,37 +649,14 @@ class TasksService {
 
   /**
    * Crear nueva tarea
+   * NOTA: Las tareas son vistas que combinan eventos de calendario y calificaciones
+   * No se pueden crear directamente. Para crear una "tarea":
+   * 1. Crear un evento de calendario con event_type: "tarea"
+   * 2. Crear una calificación linkeada al evento
+   * 3. Los views automáticamente los combinan
    */
   async createTask(request: CreateTaskRequest): Promise<TaskWithEvent> {
-    try {
-      // Por ahora, simulamos la creación de una tarea
-      // En el futuro, esto debería crear un evento de calendario y una calificación
-      const newTask: TaskWithEvent = {
-        calendar_event_id: `temp-${Date.now()}`,
-        event_title: request.title,
-        start_datetime: request.due_date || new Date().toISOString(),
-        end_datetime: request.due_date || new Date().toISOString(),
-        event_type: "assignment",
-        event_description: request.description,
-        class_id: request.class_id,
-        task_id: `task-${Date.now()}`,
-        task_title: request.title,
-        task_description: request.description,
-        due_date: request.due_date,
-        status: "pending",
-        completion_percentage: 0,
-        priority: request.priority || "medium",
-        user_id: "current-user", // Esto debería venir del contexto de autenticación
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-
-      console.log("Task created (simulated):", newTask)
-      return newTask
-    } catch (error) {
-      console.error("Error creating task:", error)
-      throw error
-    }
+    throw new Error("Las tareas no se pueden crear directamente. Son vistas que combinan eventos de calendario y calificaciones.")
   }
 
   /**

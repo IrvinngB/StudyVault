@@ -4,7 +4,7 @@
     "slug": "StudyVault",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/Assets.xcassets/AppIcon.appiconset/1024.png",
     "scheme": "studyvault",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -15,29 +15,29 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
+        "foregroundImage": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
         "backgroundColor": "#2563EB"
       },
-      "icon": "./assets/images/icon.png",
+      "icon": "./assets/android/mipmap-xxxhdpi/StudyVaultLOGO.png",
       "edgeToEdgeEnabled": true,
       "package": "com.studyteam.StudyVault"
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/Assets.xcassets/AppIcon.appiconset/32.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/icon.png",
+          "image": "./assets/Assets.xcassets/AppIcon.appiconset/1024.png",
           "imageWidth": 220,
           "resizeMode": "contain",
           "backgroundColor": "#0F172A",
           "dark": {
-            "image": "./assets/images/icon.png",
+            "image": "./assets/Assets.xcassets/AppIcon.appiconset/1024.png",
             "backgroundColor": "#0F172A"
           }
         }

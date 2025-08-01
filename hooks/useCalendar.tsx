@@ -48,6 +48,7 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastFilters, setLastFilters] = useState<CalendarEventFilters | undefined>(initialFilters)
+  const [isInitialized, setIsInitialized] = useState(false) // Bandera para evitar llamadas duplicadas
 
   const clearError = useCallback(() => {
     setError(null)
@@ -58,18 +59,12 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
     setError(null)
     setLastFilters(filters)
 
-    console.log("🔄 Fetching events with filters:", filters)
-    console.log("📊 Current events before fetch:", events.length)
-
     try {
       const response = await calendarService.getEvents(filters)
 
       if (response.success && response.data) {
-        console.log("✅ Successfully fetched", response.data.length, "events")
-        console.log("📋 Events fetched:", response.data.map(e => ({ id: e.id, title: e.title, type: e.event_type })))
         setEvents(response.data)
       } else {
-        console.error("❌ Failed to fetch events:", response.error)
         setError(response.error || "Error al cargar eventos")
       }
     } catch (err: any) {
@@ -77,11 +72,10 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
     } finally {
       setLoading(false)
     }
-  }, [events.length])
+  }, [])
 
   const fetchEventsForDay = useCallback(
     async (date: string) => {
-      console.log("📅 Fetching events for day:", date)
       await fetchEvents({ start_date: date, end_date: date })
     },
     [fetchEvents],
@@ -99,11 +93,9 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
     setError(null)
 
     try {
-      console.log("🔄 Creando evento de calendario:", eventData.title)
       const response = await calendarService.createEvent(eventData)
 
       if (response.success && response.data) {
-        console.log("✅ Evento creado exitosamente:", response.data.id)
         
         // Add new event to the current list
         setEvents((prevEvents) => [...prevEvents, response.data!])
@@ -131,9 +123,6 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
                 minutosAntes: eventData.reminder_minutes,
                 eventId: response.data.id,
               })
-              console.log(
-                `📱 Notification scheduled for event ${eventData.title}, ${eventData.reminder_minutes} minutes before`,
-              )
             } else {
               console.warn("No permission granted for notifications")
             }
@@ -145,12 +134,10 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
 
         return response.data
       } else {
-        console.error("❌ Error en respuesta del servidor:", response.error)
         setError(response.error || "Error al crear evento")
         return null
       }
     } catch (err: any) {
-      console.error("❌ Error inesperado al crear evento:", err)
       setError(err.message || "Error inesperado al crear evento")
       return null
     } finally {
@@ -198,9 +185,6 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
                   minutosAntes: eventData.reminder_minutes,
                   eventId: eventId,
                 })
-                console.log(
-                  `📱 Notification updated for event ${response.data.title}, ${eventData.reminder_minutes} minutes before`,
-                )
               } else {
                 console.warn("No permission granted for notifications")
               }
@@ -261,98 +245,93 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
       return []
     }
 
-    // Crear fechas usando solo la fecha, sin horas para evitar problemas de zona horaria
-    const eventStartDate = new Date(event.start_datetime)
-    const eventDateOnly = new Date(eventStartDate.getFullYear(), eventStartDate.getMonth(), eventStartDate.getDate())
-    const targetDateObj = new Date(targetDate + "T00:00:00")
-    const targetDateOnly = new Date(targetDateObj.getFullYear(), targetDateObj.getMonth(), targetDateObj.getDate())
+    try {
+      // Crear fechas usando solo la fecha, sin horas para evitar problemas de zona horaria
+      const eventStartDate = new Date(event.start_datetime)
+      
+      // Verificar que la fecha sea válida
+      if (isNaN(eventStartDate.getTime())) {
+        return []
+      }
 
-    // Obtener día de la semana del evento original y del target
-    const eventDayOfWeek = eventDateOnly.getDay()
-    const targetDayOfWeek = targetDateOnly.getDay()
+      const eventDateOnly = new Date(eventStartDate.getFullYear(), eventStartDate.getMonth(), eventStartDate.getDate())
+      const targetDateObj = new Date(targetDate + "T00:00:00")
+      const targetDateOnly = new Date(targetDateObj.getFullYear(), targetDateObj.getMonth(), targetDateObj.getDate())
 
-    console.log("🔄 Recurring check:", {
-      eventTitle: event.title,
-      eventStartDate: eventStartDate.toISOString(),
-      eventDateOnly: eventDateOnly.toString(),
-      eventDayOfWeek,
-      targetDate,
-      targetDateOnly: targetDateOnly.toString(),
-      targetDayOfWeek,
-      patternDaysOfWeek: pattern.days_of_week,
-      eventDayName: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][eventDayOfWeek],
-      targetDayName: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][targetDayOfWeek],
-    })
+      // Obtener día de la semana del evento original y del target
+      const eventDayOfWeek = eventDateOnly.getDay()
+      const targetDayOfWeek = targetDateOnly.getDay()
 
-    // Verificar si el día de la semana coincide con el patrón
-    if (!pattern.days_of_week || !pattern.days_of_week.includes(targetDayOfWeek)) {
+      // Verificar si el día de la semana coincide con el patrón
+      if (!pattern.days_of_week || !pattern.days_of_week.includes(targetDayOfWeek)) {
+        return []
+      }
+
+      // Calcular la diferencia en días desde el evento original
+      const timeDiff = targetDateOnly.getTime() - eventDateOnly.getTime()
+      const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
+
+      // Solo generar instancias futuras (o el mismo día si es el evento original)
+      if (daysDiff < 0) {
+        return []
+      }
+
+      // Para eventos semanales, verificar que la diferencia sea múltiplo de 7 * interval
+      const expectedWeekInterval = 7 * (pattern.interval || 1)
+      if (daysDiff % expectedWeekInterval !== 0) {
+        return []
+      }
+
+      // Si es el mismo día que el evento original, no crear instancia duplicada
+      if (daysDiff === 0) {
+        return []
+      }
+
+      // Calcular las nuevas fechas para esta instancia
+      const instanceStartDate = new Date(targetDateOnly)
+      const instanceEndDate = new Date(targetDateOnly)
+
+      // Mantener la misma hora que el evento original
+      const eventEndDate = new Date(event.end_datetime)
+      instanceStartDate.setHours(eventStartDate.getHours(), eventStartDate.getMinutes(), eventStartDate.getSeconds())
+      instanceEndDate.setHours(eventEndDate.getHours(), eventEndDate.getMinutes(), eventEndDate.getSeconds())
+
+      // Crear una instancia virtual del evento
+      const recurringInstance: CalendarEvent = {
+        ...event,
+        id: `${event.id}_recurring_${targetDate}`, // ID único para esta instancia
+        start_datetime: instanceStartDate.toISOString(),
+        end_datetime: instanceEndDate.toISOString(),
+        title: `${event.title}`, // Puedes agregar un indicador si quieres
+      }
+
+      return [recurringInstance]
+    } catch (error) {
       return []
     }
-
-    // Calcular la diferencia en días desde el evento original
-    const timeDiff = targetDateOnly.getTime() - eventDateOnly.getTime()
-    const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
-
-    // Solo generar instancias futuras (o el mismo día si es el evento original)
-    if (daysDiff < 0) {
-      return []
-    }
-
-    // Para eventos semanales, verificar que la diferencia sea múltiplo de 7 * interval
-    const expectedWeekInterval = 7 * (pattern.interval || 1)
-    if (daysDiff % expectedWeekInterval !== 0) {
-      return []
-    }
-
-    // Si es el mismo día que el evento original, no crear instancia duplicada
-    if (daysDiff === 0) {
-      return []
-    }
-
-    // Calcular las nuevas fechas para esta instancia
-    const instanceStartDate = new Date(targetDateOnly)
-    const instanceEndDate = new Date(targetDateOnly)
-
-    // Mantener la misma hora que el evento original
-    const eventEndDate = new Date(event.end_datetime)
-    instanceStartDate.setHours(eventStartDate.getHours(), eventStartDate.getMinutes(), eventStartDate.getSeconds())
-    instanceEndDate.setHours(eventEndDate.getHours(), eventEndDate.getMinutes(), eventEndDate.getSeconds())
-
-    console.log("✅ Creating recurring instance:", {
-      originalDate: eventDateOnly.toString(),
-      targetDate: targetDateOnly.toString(),
-      daysDiff,
-      weeksDiff: daysDiff / 7,
-      instanceStart: instanceStartDate.toISOString(),
-      instanceEnd: instanceEndDate.toISOString(),
-    })
-
-    // Crear una instancia virtual del evento
-    const recurringInstance: CalendarEvent = {
-      ...event,
-      id: `${event.id}_recurring_${targetDate}`, // ID único para esta instancia
-      start_datetime: instanceStartDate.toISOString(),
-      end_datetime: instanceEndDate.toISOString(),
-      title: `${event.title}`, // Puedes agregar un indicador si quieres
-    }
-
-    return [recurringInstance]
   }, [])
 
   const getEventsForDate = useCallback(
     (date: string): CalendarEvent[] => {
       // Obtener eventos regulares que coincidan con la fecha
       const regularEvents = events.filter((event) => {
-        // Convertir la fecha del evento a formato local y extraer solo la fecha
-        const eventDate = new Date(event.start_datetime)
-        const eventDateString =
-          eventDate.getFullYear() +
-          "-" +
-          (eventDate.getMonth() + 1).toString().padStart(2, "0") +
-          "-" +
-          eventDate.getDate().toString().padStart(2, "0")
+        try {
+          // Usar una conversión más robusta de fechas
+          const eventDate = new Date(event.start_datetime)
+          
+          // Verificar que la fecha sea válida
+          if (isNaN(eventDate.getTime())) {
+            return false
+          }
 
-        return eventDateString === date
+          // Convertir a fecha local de manera consistente
+          const eventDateString = eventDate.toLocaleDateString('en-CA') // Formato YYYY-MM-DD
+          
+          return eventDateString === date
+        } catch (error) {
+          console.error("❌ Error processing event date:", error, event)
+          return false
+        }
       })
 
       // Generar instancias de eventos recurrentes para esta fecha
@@ -378,44 +357,23 @@ export const useCalendar = (initialFilters?: CalendarEventFilters): UseCalendarR
         return true
       })
 
-      // Solo loggear si hay cambios significativos
-      if (uniqueEvents.length > 0 || events.length > 0) {
-        console.log(
-          `📅 Events for date ${date}:`,
-          uniqueEvents.length,
-          "events found (",
-          regularEvents.length,
-          "regular +",
-          recurringInstances.length,
-          "recurring) out of",
-          events.length,
-          "total events",
-        )
-        if (uniqueEvents.length > 0) {
-          console.log(
-            "Found events:",
-            uniqueEvents.map((e) => ({
-              title: e.title,
-              start: e.start_datetime,
-              isRecurring: e.id.includes("_recurring_"),
-            })),
-          )
-        }
-      }
-
       return uniqueEvents
     },
     [events, generateRecurringInstances],
   )
 
   const refetch = useCallback(async () => {
+    setIsInitialized(false) // Resetear la bandera para permitir nueva carga
     await fetchEvents(lastFilters)
   }, [fetchEvents, lastFilters])
 
   // Load initial data
   useEffect(() => {
-    fetchEvents(initialFilters)
-  }, [fetchEvents, initialFilters])
+    if (!isInitialized && initialFilters) {
+      setIsInitialized(true)
+      fetchEvents(initialFilters)
+    }
+  }, [fetchEvents, initialFilters, isInitialized])
 
   return {
     // State

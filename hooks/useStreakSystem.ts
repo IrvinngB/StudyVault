@@ -1,6 +1,5 @@
 // hooks/useStreakSystem.ts
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useUserProfile } from './useUserProfile'
 
 interface StreakData {
@@ -38,45 +37,24 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
   })
 
   const [recentActivities, setRecentActivities] = useState<DailyActivity[]>([])
+  
+  // Referencias para evitar bucles infinitos
+  const isCalculating = useRef(false)
+  const lastTasksHash = useRef<string>('')
+  const lastProfileHash = useRef<string>('')
 
-  // Cargar datos de racha al inicializar
-  useEffect(() => {
-    loadStreakData()
+  // Función para normalizar fechas y evitar problemas de zona horaria
+  const normalizeDate = useCallback((date: Date): Date => {
+    const normalized = new Date(date)
+    normalized.setHours(0, 0, 0, 0)
+    return normalized
   }, [])
 
-  // Recalcular racha cuando cambien las tareas
-  useEffect(() => {
-    if (tasks.length > 0) {
-      calculateCurrentStreak()
-    }
-  }, [tasks])
+  const getDateString = useCallback((date: Date): string => {
+    return date.toISOString().split('T')[0]
+  }, [])
 
-  const loadStreakData = async () => {
-    try {
-      // Primero intentar cargar desde la base de datos (user_preferences)
-      if (profile?.preferences?.streakData) {
-        const dbStreakData = profile.preferences.streakData
-        setStreakData(dbStreakData)
-        console.log('📊 Streak data loaded from DB:', dbStreakData)
-        return
-      }
-
-      // Fallback a AsyncStorage
-      const saved = await AsyncStorage.getItem('streakData')
-      if (saved) {
-        const parsedData = JSON.parse(saved)
-        setStreakData(parsedData)
-        console.log('📊 Streak data loaded from AsyncStorage:', parsedData)
-        
-        // Migrar a la base de datos
-        await saveStreakDataToDB(parsedData)
-      }
-    } catch (error) {
-      console.error('Error loading streak data:', error)
-    }
-  }
-
-  const saveStreakDataToDB = async (data: StreakData) => {
+  const saveStreakDataToDB = useCallback(async (data: StreakData) => {
     try {
       await updateProfile({
         preferences: {
@@ -88,90 +66,25 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     } catch (error) {
       console.error('Error saving streak data to DB:', error)
     }
-  }
+  }, [updateProfile, profile?.preferences])
 
-  const saveStreakData = async (data: StreakData) => {
+  const saveStreakData = useCallback(async (data: StreakData) => {
     try {
-      // Guardar en AsyncStorage como backup
-      await AsyncStorage.setItem('streakData', JSON.stringify(data))
-      
-      // Guardar en la base de datos
-      await saveStreakDataToDB(data)
-      
+      // Actualizar el estado local primero
       setStreakData(data)
-      console.log('💾 Streak data saved:', data)
+      
+      // Guardar en la base de datos de forma asíncrona
+      await saveStreakDataToDB(data)
+      console.log('💾 Streak data saved to DB:', data)
     } catch (error) {
       console.error('Error saving streak data:', error)
     }
-  }
+  }, [saveStreakDataToDB])
 
-  const calculateCurrentStreak = () => {
-    const today = new Date()
-    const todayStr = today.toISOString().split('T')[0]
-    
-    // Obtener actividades de los últimos 30 días
-    const activities = getLast30DaysActivities()
-    setRecentActivities(activities)
-
-    // Calcular racha actual
-    let currentStreak = 0
-    let checkDate = new Date(today)
-    
-    // Verificar actividad de hoy
-    let hasActivityToday = checkTodayActivity()
-    console.log('📅 Today activity check:', hasActivityToday)
-    
-    // Si no hay actividad hoy, empezar desde ayer
-    if (!hasActivityToday) {
-      checkDate.setDate(checkDate.getDate() - 1)
-    }
-
-    // Contar días consecutivos con actividad
-    while (checkDate >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) {
-      const dateStr = checkDate.toISOString().split('T')[0]
-      const dayActivity = activities.find(a => a.date === dateStr)
-      
-      if (dayActivity && dayActivity.hasActivity) {
-        currentStreak++
-        console.log(`✅ Day ${dateStr}: Activity found, streak: ${currentStreak}`)
-      } else {
-        console.log(`❌ Day ${dateStr}: No activity, breaking streak`)
-        break
-      }
-      
-      checkDate.setDate(checkDate.getDate() - 1)
-    }
-
-    // Actualizar datos de racha
-    const newStreakData = {
-      ...streakData,
-      current: currentStreak,
-      longest: Math.max(streakData.longest, currentStreak),
-      lastActivityDate: hasActivityToday ? todayStr : streakData.lastActivityDate
-    }
-
-    console.log('🔥 New streak calculation:', {
-      current: currentStreak,
-      longest: newStreakData.longest,
-      lastActivity: newStreakData.lastActivityDate
-    })
-
-    if (JSON.stringify(newStreakData) !== JSON.stringify(streakData)) {
-      saveStreakData(newStreakData)
-    }
-  }
-
-  const checkTodayActivity = (): boolean => {
+  const checkTodayActivity = useCallback((): boolean => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
-    // Obtener tareas de hoy
-    const todayTasks = tasks.filter(task => {
-      const taskDate = new Date(task.due_date || task.start_datetime)
-      taskDate.setHours(0, 0, 0, 0)
-      return taskDate.getTime() === today.getTime()
-    })
-
     // Obtener tareas completadas hoy
     const todayCompletedTasks = tasks.filter(task => {
       if (task.status !== 'completed' || !task.completed_at) return false
@@ -187,26 +100,44 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
       return hasActivity
     })
 
-    // Si no hay tareas para hoy, considerar como "actividad completada"
-    if (todayTasks.length === 0) {
-      console.log('📅 No tasks scheduled for today - considering as completed day')
+    // Verificar si hay tareas atrasadas (solo las que no están completadas)
+    const overdueTasks = tasks.filter(task => {
+      if (task.status === 'completed') return false
+      
+      const dueDate = new Date(task.due_date || task.start_datetime)
+      dueDate.setHours(0, 0, 0, 0)
+      
+      return dueDate < today
+    })
+
+    const hasOverdueTasks = overdueTasks.length > 0
+    const hasCompletedTaskToday = todayCompletedTasks.length > 0
+
+    console.log('📊 Today activity analysis:', {
+      completedToday: todayCompletedTasks.length,
+      overdueTasks: overdueTasks.length,
+      hasOverdueTasks,
+      hasCompletedTaskToday
+    })
+
+    // NUEVA LÓGICA SIMPLIFICADA: Se considera actividad válida si:
+    // 1. Se completó al menos una tarea hoy (sin importar tareas atrasadas)
+    // 2. O no hay tareas atrasadas (día libre)
+    if (hasCompletedTaskToday) {
+      console.log('🎉 Activity: Completed task today')
       return true
     }
 
-    // Si hay tareas para hoy, verificar si todas están completadas
-    const allTasksCompleted = todayTasks.every(task => task.status === 'completed')
-    if (allTasksCompleted && todayTasks.length > 0) {
-      console.log('🎉 All today tasks completed!')
+    if (!hasOverdueTasks) {
+      console.log('✅ Activity: No overdue tasks (day off)')
       return true
     }
 
-    // Si hay tareas completadas hoy, es actividad
-    const hasActivity = todayCompletedTasks.length > 0
-    console.log(`📊 Today's completed tasks: ${todayCompletedTasks.length}/${todayTasks.length}`)
-    return hasActivity
-  }
+    console.log('❌ No activity: Has overdue tasks and no completed tasks')
+    return false
+  }, [tasks])
 
-  const getLast30DaysActivities = (): DailyActivity[] => {
+  const getLast30DaysActivities = useCallback((): DailyActivity[] => {
     const activities: DailyActivity[] = []
     const today = new Date()
     
@@ -216,13 +147,6 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
       checkDate.setHours(0, 0, 0, 0)
       
       const dateStr = checkDate.toISOString().split('T')[0]
-      
-      // Tareas programadas para ese día
-      const scheduledTasks = tasks.filter(task => {
-        const taskDate = new Date(task.due_date || task.start_datetime)
-        taskDate.setHours(0, 0, 0, 0)
-        return taskDate.getTime() === checkDate.getTime()
-      })
 
       // Tareas completadas ese día
       const completedTasks = tasks.filter(task => {
@@ -232,13 +156,23 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
         return completedDate.getTime() === checkDate.getTime()
       })
 
-      // Determinar si hay actividad:
-      // 1. Si no hay tareas programadas para ese día = actividad (día libre)
-      // 2. Si todas las tareas programadas están completadas = actividad
-      // 3. Si hay al menos una tarea completada = actividad
-      const hasActivity = scheduledTasks.length === 0 || 
-                         (scheduledTasks.length > 0 && scheduledTasks.every(t => t.status === 'completed')) ||
-                         completedTasks.length > 0
+      // Verificar tareas atrasadas hasta ese día (solo las no completadas)
+      const overdueTasks = tasks.filter(task => {
+        if (task.status === 'completed') return false
+        
+        const dueDate = new Date(task.due_date || task.start_datetime)
+        dueDate.setHours(0, 0, 0, 0)
+        
+        return dueDate < checkDate
+      })
+
+      const hasOverdueTasks = overdueTasks.length > 0
+      const hasCompletedTaskOnDay = completedTasks.length > 0
+
+      // NUEVA LÓGICA SIMPLIFICADA: Se considera actividad válida si:
+      // 1. Se completó al menos una tarea ese día (sin importar tareas atrasadas)
+      // 2. O no hay tareas atrasadas (día libre)
+      const hasActivity = hasCompletedTaskOnDay || !hasOverdueTasks
 
       activities.push({
         date: dateStr,
@@ -249,9 +183,142 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     }
     
     return activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }
+  }, [tasks])
 
-  const getStreakStatus = () => {
+  const loadStreakData = useCallback(async () => {
+    try {
+      // Cargar desde la base de datos (user_preferences)
+      if (profile?.preferences?.streakData) {
+        const dbStreakData = profile.preferences.streakData
+        setStreakData(dbStreakData)
+        console.log('📊 Streak data loaded from DB:', dbStreakData)
+        return
+      }
+
+      // Si no hay datos en la BDD, usar valores por defecto
+      console.log('📊 No streak data found, using defaults')
+    } catch (error) {
+      console.error('Error loading streak data:', error)
+    }
+  }, [profile?.preferences?.streakData])
+
+  const calculateCurrentStreak = useCallback(() => {
+    if (isCalculating.current) {
+      console.log('🔄 Already calculating streak, skipping...')
+      return
+    }
+    
+    isCalculating.current = true
+    
+    try {
+      const today = normalizeDate(new Date())
+      const todayStr = getDateString(today)
+      
+      console.log('🔄 Calculating streak for date:', todayStr)
+      
+      // Obtener actividades de los últimos 30 días
+      const activities = getLast30DaysActivities()
+      setRecentActivities(activities)
+
+      // Calcular racha actual
+      let currentStreak = 0
+      let checkDate = new Date(today)
+      
+      // Verificar actividad de hoy
+      let hasActivityToday = checkTodayActivity()
+      console.log('📅 Today activity check:', hasActivityToday)
+      
+      // Si no hay actividad hoy, empezar desde ayer
+      if (!hasActivityToday) {
+        checkDate.setDate(checkDate.getDate() - 1)
+      }
+
+      // Contar días consecutivos con actividad
+      while (checkDate >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) {
+        const dateStr = getDateString(checkDate)
+        const dayActivity = activities.find(a => a.date === dateStr)
+        
+        if (dayActivity && dayActivity.hasActivity) {
+          currentStreak++
+          console.log(`✅ Day ${dateStr}: Activity found, streak: ${currentStreak}`)
+        } else {
+          console.log(`❌ Day ${dateStr}: No activity, breaking streak`)
+          break
+        }
+        
+        checkDate.setDate(checkDate.getDate() - 1)
+      }
+
+      // Actualizar datos de racha
+      const newStreakData = {
+        ...streakData,
+        current: currentStreak,
+        longest: Math.max(streakData.longest, currentStreak),
+        lastActivityDate: hasActivityToday ? todayStr : streakData.lastActivityDate
+      }
+
+      console.log('🔥 New streak calculation:', {
+        current: currentStreak,
+        longest: newStreakData.longest,
+        lastActivity: newStreakData.lastActivityDate,
+        previousStreak: streakData.current
+      })
+
+      // Solo guardar si hay cambios reales
+      if (JSON.stringify(newStreakData) !== JSON.stringify(streakData)) {
+        console.log('💾 Streak data changed, saving to DB...')
+        saveStreakData(newStreakData)
+      } else {
+        console.log('📊 No changes in streak data')
+        // Actualizar el estado local sin guardar en DB
+        setStreakData(newStreakData)
+      }
+    } finally {
+      isCalculating.current = false
+    }
+  }, [normalizeDate, getDateString, getLast30DaysActivities, checkTodayActivity, streakData, saveStreakData])
+
+  // Cargar datos de racha al inicializar
+  useEffect(() => {
+    loadStreakData()
+  }, [loadStreakData])
+
+  // Recalcular racha cuando cambien las tareas (con protección anti-bucle)
+  useEffect(() => {
+    if (isCalculating.current) return
+    
+    // Crear un hash simple de las tareas para detectar cambios reales
+    const tasksHash = JSON.stringify(tasks.map(t => ({
+      id: t.task_id || t.event_id,
+      status: t.status,
+      completed_at: (t as any).completed_at,
+      due_date: t.due_date || t.start_datetime
+    })))
+    
+    // Solo recalcular si realmente cambiaron las tareas
+    if (tasksHash !== lastTasksHash.current) {
+      lastTasksHash.current = tasksHash
+      console.log('🔄 Tasks changed, recalculating streak...')
+      calculateCurrentStreak()
+    }
+  }, [tasks, calculateCurrentStreak])
+
+  // Recalcular cuando cambie el perfil (para sincronizar con BDD)
+  useEffect(() => {
+    if (isCalculating.current || !profile) return
+    
+    // Crear un hash del perfil para detectar cambios reales
+    const profileHash = JSON.stringify(profile.preferences?.streakData || {})
+    
+    // Solo recargar si realmente cambió el perfil
+    if (profileHash !== lastProfileHash.current) {
+      lastProfileHash.current = profileHash
+      console.log('🔄 Profile changed, reloading streak data...')
+      loadStreakData()
+    }
+  }, [profile, loadStreakData])
+
+  const getStreakStatus = useCallback(() => {
     const today = new Date().toISOString().split('T')[0]
     const hasActivityToday = checkTodayActivity()
     
@@ -291,17 +358,17 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
       message: '¡Comienza tu racha! 🚀',
       color: '#007AFF'
     }
-  }
+  }, [checkTodayActivity, streakData.lastActivityDate])
 
-  const getNextMilestone = () => {
+  const getNextMilestone = useCallback(() => {
     return streakData.milestones.find(milestone => milestone > streakData.current) || null
-  }
+  }, [streakData.milestones, streakData.current])
 
-  const getAchievedMilestones = () => {
+  const getAchievedMilestones = useCallback(() => {
     return streakData.milestones.filter(milestone => milestone <= streakData.longest)
-  }
+  }, [streakData.milestones, streakData.longest])
 
-  const getStreakMotivation = () => {
+  const getStreakMotivation = useCallback(() => {
     const { current } = streakData
     
     if (current === 0) {
@@ -315,10 +382,10 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     } else {
       return "¡Eres una leyenda del estudio! 👑"
     }
-  }
+  }, [streakData])
 
   // Función para restablecer la racha (reset completo)
-  const resetStreak = async () => {
+  const resetStreak = useCallback(async () => {
     const newStreakData = {
       ...streakData,
       current: 0,
@@ -327,10 +394,10 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     
     await saveStreakData(newStreakData)
     console.log('🔄 Streak reset successfully')
-  }
+  }, [streakData, saveStreakData])
 
   // Función para restaurar la racha perdida
-  const restoreStreak = async () => {
+  const restoreStreak = useCallback(async () => {
     const currentMonth = new Date().toISOString().slice(0, 7) // "YYYY-MM"
     
     // Verificar si es un nuevo mes
@@ -365,10 +432,10 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     await saveStreakData(newStreakData)
     console.log('🔄 Streak restored successfully')
     return true
-  }
+  }, [streakData, saveStreakData])
 
   // Verificar si se puede restaurar la racha
-  const canRestoreStreak = () => {
+  const canRestoreStreak = useCallback(() => {
     const currentMonth = new Date().toISOString().slice(0, 7)
     
     // Si es un nuevo mes, resetear contador
@@ -377,10 +444,10 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     }
     
     return streakData.restorationsUsed < 3
-  }
+  }, [streakData.lastRestorationMonth, streakData.restorationsUsed])
 
   // Obtener restauraciones restantes
-  const getRemainingRestorations = () => {
+  const getRemainingRestorations = useCallback(() => {
     const currentMonth = new Date().toISOString().slice(0, 7)
     
     if (streakData.lastRestorationMonth !== currentMonth) {
@@ -388,17 +455,17 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     }
     
     return Math.max(0, 3 - streakData.restorationsUsed)
-  }
+  }, [streakData.lastRestorationMonth, streakData.restorationsUsed])
 
   // Función para "congelar" racha (como en Duolingo)
-  const useStreakFreeze = async () => {
+  const useStreakFreeze = useCallback(async () => {
     // Implementar lógica para usar un "congelador de racha"
     // Requiere sistema de coins o premium
-  }
+  }, [])
 
-  // FUNCIONES ADICIONALES PARA GAMIFICACIÓN:
+  // FUNCIONES ADICIONALES PARA GAMIFICACIÓN (solo las que se exportan):
 
-  const getStreakEmoji = () => {
+  const getStreakEmoji = useCallback(() => {
     const { current } = streakData
     if (current === 0) return '🎯'
     if (current < 3) return '🔥'
@@ -406,23 +473,23 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     if (current < 30) return '🚀'
     if (current < 100) return '👑'
     return '🏆'
-  }
+  }, [streakData])
 
-  const getStreakTitle = () => {
+  const getStreakTitle = useCallback(() => {
     const { current } = streakData
     if (current === 0) return 'Principiante'
     if (current < 7) return 'Estudiante Dedicado'
     if (current < 30) return 'Académico Consistente'
     if (current < 100) return 'Máquina de Estudio'
     return 'Leyenda Académica'
-  }
+  }, [streakData])
 
-  const shouldShowCelebration = () => {
+  const shouldShowCelebration = useCallback(() => {
     // Mostrar celebración en milestones
     return streakData.milestones.includes(streakData.current)
-  }
+  }, [streakData.milestones, streakData.current])
 
-  const getWeeklyProgress = () => {
+  const getWeeklyProgress = useCallback(() => {
     const currentWeek = recentActivities.slice(0, 7)
     const activeDays = currentWeek.filter(day => day.hasActivity).length
     return {
@@ -430,7 +497,16 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
       total: 7,
       percentage: (activeDays / 7) * 100
     }
-  }
+  }, [recentActivities])
+
+  const refreshStreak = useCallback(() => {
+    console.log('🔄 Manual streak refresh requested')
+    // Resetear las referencias para forzar el recálculo
+    lastTasksHash.current = ''
+    lastProfileHash.current = ''
+    isCalculating.current = false
+    calculateCurrentStreak()
+  }, [calculateCurrentStreak])
 
   return {
     streakData,
@@ -439,11 +515,16 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     nextMilestone: getNextMilestone(),
     achievedMilestones: getAchievedMilestones(),
     motivation: getStreakMotivation(),
-    refreshStreak: calculateCurrentStreak,
+    refreshStreak,
     resetStreak,
     restoreStreak,
     canRestoreStreak,
     getRemainingRestorations,
-    useStreakFreeze
+    useStreakFreeze,
+    // Exportar funciones adicionales para gamificación
+    getStreakEmoji,
+    getStreakTitle,
+    shouldShowCelebration,
+    getWeeklyProgress
   }
 }

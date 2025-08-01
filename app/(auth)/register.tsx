@@ -24,6 +24,7 @@ export default function RegisterScreen() {
     confirmPassword: ''
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [registrationEmail, setRegistrationEmail] = useState<string>('');
 
   const handleRegister = async () => {
     // Limpiar errores
@@ -69,12 +70,15 @@ export default function RegisterScreen() {
       );
 
       if (result.success) {
-        console.log('✅ Registration successful! Redirecting to login...');
+        console.log('✅ Registration successful! Redirecting to email confirmation...');
+        // Guardar el email para mostrarlo en la pantalla de confirmación
+        setRegistrationEmail(formData.email.trim());
+        
         showSuccess(
           'Te hemos enviado un correo para confirmar tu email. Por favor, revisa tu bandeja de entrada.',
           'Registro exitoso',
           () => {
-            console.log('🔄 Redirecting to login page...');
+            console.log('🔄 Redirecting to email confirmation page...');
             // Limpiar el formulario antes de redirigir
             setFormData({
               name: '',
@@ -83,8 +87,11 @@ export default function RegisterScreen() {
               confirmPassword: ''
             });
             setErrors({});
-            // Usar replace para evitar que el usuario pueda volver atrás
-            router.replace('/login');
+            // Redirigir a confirm-email con el email como parámetro
+            router.replace({
+              pathname: '/confirm-email',
+              params: { email: formData.email.trim() }
+            });
           }
         );
       } else {

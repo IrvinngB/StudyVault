@@ -50,6 +50,7 @@ export interface UserProfileUpdate {
     grade_notifications?: boolean
     calendar_reminders?: boolean
   }
+  preferences?: any
 }
 
 export interface UserDevice {
