@@ -85,11 +85,17 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
+    // Si no hay tareas cargadas, no considerar como actividad
+    if (!tasks || tasks.length === 0) {
+      console.log('📊 No tasks available, cannot determine activity')
+      return false
+    }
+    
     // Obtener tareas completadas hoy
     const todayCompletedTasks = tasks.filter(task => {
-      if (task.status !== 'completed' || !task.completed_at) return false
+      if (task.status !== 'completed' || !task.updated_at) return false
       
-      const completedDate = new Date(task.completed_at)
+      const completedDate = new Date(task.updated_at)
       completedDate.setHours(0, 0, 0, 0)
       
       const hasActivity = completedDate.getTime() === today.getTime()
@@ -110,24 +116,43 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
       return dueDate < today
     })
 
+    // Verificar si hay tareas para hoy o futuras (para determinar si es realmente un "día libre")
+    const todayOrFutureTasks = tasks.filter(task => {
+      if (task.status === 'completed') return false
+      
+      const dueDate = new Date(task.due_date || task.start_datetime)
+      dueDate.setHours(0, 0, 0, 0)
+      
+      return dueDate >= today
+    })
+
     const hasOverdueTasks = overdueTasks.length > 0
     const hasCompletedTaskToday = todayCompletedTasks.length > 0
+    const hasTodayOrFutureTasks = todayOrFutureTasks.length > 0
 
     console.log('📊 Today activity analysis:', {
       completedToday: todayCompletedTasks.length,
       overdueTasks: overdueTasks.length,
+      todayOrFutureTasks: todayOrFutureTasks.length,
       hasOverdueTasks,
-      hasCompletedTaskToday
+      hasCompletedTaskToday,
+      hasTodayOrFutureTasks
     })
 
-    // NUEVA LÓGICA SIMPLIFICADA: Se considera actividad válida si:
-    // 1. Se completó al menos una tarea hoy (sin importar tareas atrasadas)
-    // 2. O no hay tareas atrasadas (día libre)
+    // LÓGICA MEJORADA:
+    // 1. Si completó al menos una tarea hoy = actividad válida
     if (hasCompletedTaskToday) {
       console.log('🎉 Activity: Completed task today')
       return true
     }
 
+    // 2. Si no hay tareas atrasadas Y no hay tareas para hoy = día libre válido
+    if (!hasOverdueTasks && !hasTodayOrFutureTasks) {
+      console.log('✅ Activity: True day off (no overdue, no tasks for today)')
+      return true
+    }
+
+    // 3. Si no hay tareas atrasadas pero sí hay tareas para hoy/futuro = puede ser día libre válido también
     if (!hasOverdueTasks) {
       console.log('✅ Activity: No overdue tasks (day off)')
       return true
@@ -141,6 +166,23 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     const activities: DailyActivity[] = []
     const today = new Date()
     
+    // Si no hay tareas, retornar actividades vacías
+    if (!tasks || tasks.length === 0) {
+      console.log('📊 No tasks available for activities calculation')
+      for (let i = 0; i < 30; i++) {
+        const checkDate = new Date(today)
+        checkDate.setDate(today.getDate() - i)
+        const dateStr = checkDate.toISOString().split('T')[0]
+        activities.push({
+          date: dateStr,
+          tasksCompleted: 0,
+          studyMinutes: 0,
+          hasActivity: false
+        })
+      }
+      return activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    }
+    
     for (let i = 0; i < 30; i++) {
       const checkDate = new Date(today)
       checkDate.setDate(today.getDate() - i)
@@ -150,8 +192,8 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
 
       // Tareas completadas ese día
       const completedTasks = tasks.filter(task => {
-        if (task.status !== 'completed' || !task.completed_at) return false
-        const completedDate = new Date(task.completed_at)
+        if (task.status !== 'completed' || !task.updated_at) return false
+        const completedDate = new Date(task.updated_at)
         completedDate.setHours(0, 0, 0, 0)
         return completedDate.getTime() === checkDate.getTime()
       })
@@ -169,10 +211,16 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
       const hasOverdueTasks = overdueTasks.length > 0
       const hasCompletedTaskOnDay = completedTasks.length > 0
 
-      // NUEVA LÓGICA SIMPLIFICADA: Se considera actividad válida si:
-      // 1. Se completó al menos una tarea ese día (sin importar tareas atrasadas)
-      // 2. O no hay tareas atrasadas (día libre)
-      const hasActivity = hasCompletedTaskOnDay || !hasOverdueTasks
+      // LÓGICA MEJORADA: Se considera actividad válida si:
+      // 1. Se completó al menos una tarea ese día
+      // 2. O no había tareas atrasadas (día libre válido)
+      let hasActivity = false
+      
+      if (hasCompletedTaskOnDay) {
+        hasActivity = true
+      } else if (!hasOverdueTasks) {
+        hasActivity = true
+      }
 
       activities.push({
         date: dateStr,
@@ -215,10 +263,18 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
       const todayStr = getDateString(today)
       
       console.log('🔄 Calculating streak for date:', todayStr)
+      console.log('📊 Available tasks:', tasks?.length || 0)
       
       // Obtener actividades de los últimos 30 días
       const activities = getLast30DaysActivities()
       setRecentActivities(activities)
+
+      console.log('📊 Activities calculated:', activities.length)
+      console.log('📊 Recent activities sample:', activities.slice(0, 5).map(a => ({
+        date: a.date,
+        completed: a.tasksCompleted,
+        hasActivity: a.hasActivity
+      })))
 
       // Calcular racha actual
       let currentStreak = 0
@@ -289,9 +345,9 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
     
     // Crear un hash simple de las tareas para detectar cambios reales
     const tasksHash = JSON.stringify(tasks.map(t => ({
-      id: t.task_id || t.event_id,
+      id: t.task_id || t.calendar_event_id,
       status: t.status,
-      completed_at: (t as any).completed_at,
+      updated_at: t.updated_at,
       due_date: t.due_date || t.start_datetime
     })))
     
@@ -501,12 +557,21 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
 
   const refreshStreak = useCallback(() => {
     console.log('🔄 Manual streak refresh requested')
+    console.log('📊 Current tasks count:', tasks?.length || 0)
+    console.log('📊 Tasks sample:', tasks?.slice(0, 3).map(t => ({
+      id: t.task_id || t.calendar_event_id,
+      title: t.task_title || t.event_title,
+      status: t.status,
+      due_date: t.due_date || t.start_datetime,
+      updated_at: t.updated_at
+    })))
+    
     // Resetear las referencias para forzar el recálculo
     lastTasksHash.current = ''
     lastProfileHash.current = ''
     isCalculating.current = false
     calculateCurrentStreak()
-  }, [calculateCurrentStreak])
+  }, [calculateCurrentStreak, tasks])
 
   return {
     streakData,

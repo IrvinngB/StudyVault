@@ -80,7 +80,7 @@ export function BottomNavBar() {
           paddingBottom: insets.bottom + 8,
           ...Platform.select({
             ios: {
-              shadowColor: theme.colors.shadow,
+              shadowColor: '#000',
               shadowOffset: { width: 0, height: -2 },
               shadowOpacity: 0.1,
               shadowRadius: 8,
@@ -103,7 +103,7 @@ export function BottomNavBar() {
           >
             <View style={styles.iconContainer}>
               <IconSymbol
-                name={active ? item.activeIcon : item.icon}
+                name={(active ? item.activeIcon : item.icon) as any}
                 size={24}
                 color={active ? theme.colors.primary : theme.colors.textMuted}
               />

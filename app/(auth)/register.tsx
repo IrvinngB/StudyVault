@@ -11,12 +11,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from 'react-native';
 
 export default function RegisterScreen() {
   const { theme } = useTheme();
   const { signUp, isLoading } = useAuth();
-  const { modalProps, showSuccess, showError } = useModal();
+  const { modalProps, showError } = useModal();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -24,7 +24,27 @@ export default function RegisterScreen() {
     confirmPassword: ''
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [registrationEmail, setRegistrationEmail] = useState<string>('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Función para validar la fortaleza de la contraseña
+  const getPasswordStrength = (password: string) => {
+    const checks = {
+      length: password.length >= 8 && password.length <= 20,
+      uppercase: /[A-Z]/.test(password),
+      number: /[0-9]/.test(password),
+      noSpaces: !/\s/.test(password)
+    };
+    
+    const passedChecks = Object.values(checks).filter(Boolean).length;
+    
+    return {
+      checks,
+      strength: passedChecks === 4 ? 'strong' : passedChecks >= 2 ? 'medium' : 'weak',
+      score: passedChecks
+    };
+  };
+
+  const passwordStrength = getPasswordStrength(formData.password);
 
   const handleRegister = async () => {
     // Limpiar errores
@@ -48,8 +68,17 @@ export default function RegisterScreen() {
     
     if (!formData.password) {
       newErrors.password = 'La contraseña es requerida';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
+    } else {
+      const strength = getPasswordStrength(formData.password);
+      if (!strength.checks.length) {
+        newErrors.password = 'La contraseña debe tener entre 8 y 20 caracteres';
+      } else if (!strength.checks.uppercase) {
+        newErrors.password = 'La contraseña debe tener al menos una letra mayúscula';
+      } else if (!strength.checks.number) {
+        newErrors.password = 'La contraseña debe tener al menos un número';
+      } else if (!strength.checks.noSpaces) {
+        newErrors.password = 'La contraseña no debe contener espacios';
+      }
     }
     
     if (formData.password !== formData.confirmPassword) {
@@ -71,29 +100,21 @@ export default function RegisterScreen() {
 
       if (result.success) {
         console.log('✅ Registration successful! Redirecting to email confirmation...');
-        // Guardar el email para mostrarlo en la pantalla de confirmación
-        setRegistrationEmail(formData.email.trim());
         
-        showSuccess(
-          'Te hemos enviado un correo para confirmar tu email. Por favor, revisa tu bandeja de entrada.',
-          'Registro exitoso',
-          () => {
-            console.log('🔄 Redirecting to email confirmation page...');
-            // Limpiar el formulario antes de redirigir
-            setFormData({
-              name: '',
-              email: '',
-              password: '',
-              confirmPassword: ''
-            });
-            setErrors({});
-            // Redirigir a confirm-email con el email como parámetro
-            router.replace({
-              pathname: '/confirm-email',
-              params: { email: formData.email.trim() }
-            });
-          }
-        );
+        // Limpiar el formulario antes de redirigir
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: ''
+        });
+        setErrors({});
+        
+        // Redirigir inmediatamente a confirm-email con el email como parámetro
+        router.replace({
+          pathname: '/confirm-email',
+          params: { email: formData.email.trim() }
+        });
       } else {
         console.log('❌ Registration failed:', result.error);
         showError(
@@ -157,14 +178,111 @@ export default function RegisterScreen() {
                 error={errors.email}
               />
 
-              <ThemedInput
-                label="Contraseña"
-                placeholder="••••••••"
-                value={formData.password}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, password: text }))}
-                secureTextEntry
-                error={errors.password}
-              />
+              <View>
+                <ThemedInput
+                  label="Contraseña"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, password: text }))}
+                  secureTextEntry={!showPassword}
+                  error={errors.password}
+                />
+                <TouchableOpacity 
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={{ 
+                    position: 'absolute', 
+                    right: theme.spacing.md, 
+                    top: 35, 
+                    padding: theme.spacing.xs 
+                  }}
+                >
+                  <ThemedText color="primary" variant="bodySmall">
+                    {showPassword ? "Ocultar" : "Mostrar"}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              {/* Password Strength Indicator */}
+              {formData.password.length > 0 && (
+                <View style={{
+                  backgroundColor: theme.colors.surface,
+                  padding: theme.spacing.md,
+                  borderRadius: theme.borderRadius.md,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                }}>
+                  {/* Strength Bar */}
+                  <View style={{ marginBottom: theme.spacing.sm }}>
+                    <View style={{
+                      height: 4,
+                      backgroundColor: theme.colors.border,
+                      borderRadius: 2,
+                      overflow: 'hidden'
+                    }}>
+                      <View style={{
+                        height: '100%',
+                        width: `${(passwordStrength.score / 4) * 100}%`,
+                        backgroundColor: passwordStrength.strength === 'strong' ? theme.colors.success :
+                                       passwordStrength.strength === 'medium' ? theme.colors.warning :
+                                       theme.colors.error,
+                        borderRadius: 2,
+                      }} />
+                    </View>
+                    <ThemedText 
+                      variant="caption" 
+                      color={passwordStrength.strength === 'strong' ? 'success' : 
+                            passwordStrength.strength === 'medium' ? 'warning' : 'error'}
+                      style={{ marginTop: theme.spacing.xs, textAlign: 'center' }}
+                    >
+                      {passwordStrength.strength === 'strong' ? 'Fuerte' :
+                       passwordStrength.strength === 'medium' ? 'Media' : 'Débil'}
+                    </ThemedText>
+                  </View>
+
+                  <ThemedText variant="bodySmall" color="secondary" style={{ marginBottom: theme.spacing.sm }}>
+                    La contraseña debe incluir:
+                  </ThemedText>
+
+                  {/* Password Requirements */}
+                  <View style={{ gap: theme.spacing.xs }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <ThemedText color={passwordStrength.checks.length ? 'success' : 'error'} style={{ marginRight: theme.spacing.sm }}>
+                        {passwordStrength.checks.length ? '✓' : '✗'}
+                      </ThemedText>
+                      <ThemedText variant="bodySmall" color={passwordStrength.checks.length ? 'success' : 'secondary'}>
+                        8-20 caracteres
+                      </ThemedText>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <ThemedText color={passwordStrength.checks.uppercase ? 'success' : 'error'} style={{ marginRight: theme.spacing.sm }}>
+                        {passwordStrength.checks.uppercase ? '✓' : '✗'}
+                      </ThemedText>
+                      <ThemedText variant="bodySmall" color={passwordStrength.checks.uppercase ? 'success' : 'secondary'}>
+                        Al menos una letra mayúscula
+                      </ThemedText>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <ThemedText color={passwordStrength.checks.number ? 'success' : 'error'} style={{ marginRight: theme.spacing.sm }}>
+                        {passwordStrength.checks.number ? '✓' : '✗'}
+                      </ThemedText>
+                      <ThemedText variant="bodySmall" color={passwordStrength.checks.number ? 'success' : 'secondary'}>
+                        Al menos un número
+                      </ThemedText>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <ThemedText color={passwordStrength.checks.noSpaces ? 'success' : 'error'} style={{ marginRight: theme.spacing.sm }}>
+                        {passwordStrength.checks.noSpaces ? '✓' : '✗'}
+                      </ThemedText>
+                      <ThemedText variant="bodySmall" color={passwordStrength.checks.noSpaces ? 'success' : 'secondary'}>
+                        Sin espacios
+                      </ThemedText>
+                    </View>
+                  </View>
+                </View>
+              )}
 
               <ThemedInput
                 label="Confirmar contraseña"

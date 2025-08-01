@@ -22,12 +22,21 @@ export class UserDeviceService {
    * Obtener información del dispositivo actual
    */
   private getCurrentDeviceInfo(): UserDeviceCreate {
+    // Mapear Device.deviceType a nuestros tipos permitidos
+    const getDeviceType = (): "ios" | "android" | "web" => {
+      if (Device.deviceType) {
+        const deviceTypeString = Device.DeviceType[Device.deviceType]?.toLowerCase()
+        if (deviceTypeString === "phone" || deviceTypeString === "tablet") {
+          return Device.osName?.toLowerCase().includes('ios') ? "ios" : "android"
+        }
+      }
+      return "web" // fallback por defecto
+    }
+
     return {
       device_id: Constants.deviceId || `unknown-${Date.now()}`,
       device_name: Device.deviceName || "Unknown Device",
-      device_type: Device.deviceType ? Device.DeviceType[Device.deviceType] : "Unknown",
-      platform: Device.osName || "Unknown",
-      app_version: Constants.manifest?.version || "1.0.0",
+      device_type: getDeviceType(),
     }
   }
 

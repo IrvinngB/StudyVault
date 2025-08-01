@@ -6,6 +6,7 @@ export class ApiClient {
   private baseURL: string
   private authSession: AuthSession | null = null
   private isInitialized = false
+  private authInvalidationCallbacks: (() => void)[] = []
 
   private constructor() {
     this.baseURL = __DEV__
@@ -62,6 +63,40 @@ export class ApiClient {
     this.authSession = null
     await AsyncStorage.removeItem("auth_session")
     console.log("🗑️ Sesión eliminada del storage")
+  }
+
+  // Método para notificar invalidación de autenticación
+  private notifyAuthInvalidation(): void {
+    console.log("📢 Notificando invalidación de autenticación...")
+    this.authInvalidationCallbacks.forEach(callback => {
+      try {
+        callback()
+      } catch (error) {
+        console.error("❌ Error en callback de invalidación:", error)
+      }
+    })
+  }
+
+  // Método para registrar callbacks de invalidación
+  public onAuthInvalidation(callback: () => void): () => void {
+    this.authInvalidationCallbacks.push(callback)
+    
+    // Retornar función para desregistrar el callback
+    return () => {
+      const index = this.authInvalidationCallbacks.indexOf(callback)
+      if (index > -1) {
+        this.authInvalidationCallbacks.splice(index, 1)
+      }
+    }
+  }
+
+  // Método de debug para probar invalidación (solo en desarrollo)
+  public debugForceAuthInvalidation(): void {
+    if (__DEV__) {
+      console.log("🧪 DEBUG: Forzando invalidación de autenticación...")
+      this.clearAuthSession()
+      this.notifyAuthInvalidation()
+    }
   }
 
   private getAuthHeaders(requireAuth: boolean = true): Record<string, string> {
@@ -128,9 +163,14 @@ export class ApiClient {
         console.error("❌ API Error:", response.status, data)
 
         // Manejar errores de autenticación
-        if (response.status === 401) {
-          console.log("🔄 Token inválido, limpiando sesión...")
+        if (response.status === 401 || response.status === 403) {
+          console.log("🔄 Token inválido o prohibido, limpiando sesión...")
           await this.clearAuthSession()
+          
+          // Notificar al AuthProvider que la sesión ha sido invalidada
+          // Esto se puede hacer mediante un event emitter o callback
+          this.notifyAuthInvalidation()
+          
           return {
             success: false,
             error: data.detail || data.message || "Sesión expirada. Por favor, inicia sesión nuevamente.",

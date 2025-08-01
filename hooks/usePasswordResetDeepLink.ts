@@ -123,25 +123,45 @@ export function usePasswordResetDeepLink() {
 
           const accessToken = parsedUrl.queryParams?.access_token as string
           const refreshToken = parsedUrl.queryParams?.refresh_token as string
+          const email = parsedUrl.queryParams?.email as string
 
           if (accessToken && refreshToken) {
-            console.log("✅ Tokens encontrados, navegando a confirm-email")
+            console.log("✅ Tokens de confirmación encontrados, navegando a confirm-email con estado confirmado")
             setTimeout(() => {
               router.replace({
                 pathname: "/(auth)/confirm-email",
                 params: {
-                  access_token: accessToken,
-                  refresh_token: refreshToken,
+                  confirmed: "true",
+                  email: email || "",
                 },
               } as any)
             }, 100)
           } else {
-            console.log("❌ Tokens no encontrados en URL de confirmación")
+            console.log("❌ Tokens no encontrados en URL de confirmación, navegando a login")
             setTimeout(() => {
               router.replace("/(auth)/login" as any)
             }, 100)
           }
           return
+        }
+
+        // Handle Supabase email confirmation URLs
+        if (url.includes("supabase.co/auth/v1/verify") && url.includes("type=signup")) {
+          console.log("📧 Detectado enlace de confirmación de email de Supabase")
+          
+          const urlObj = new URL(url)
+          const token = urlObj.searchParams.get("token")
+          const type = urlObj.searchParams.get("type")
+          
+          if (token && type === "signup") {
+            console.log("✅ Token de confirmación de email encontrado")
+            
+            // Navegar directamente al login con mensaje de confirmación
+            setTimeout(() => {
+              router.replace("/(auth)/login" as any)
+            }, 100)
+            return
+          }
         }
 
         // For any other unrecognized URLs, redirect to login instead of showing error

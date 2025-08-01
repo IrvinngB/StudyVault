@@ -22,7 +22,7 @@ export default function ProfileScreen() {
 
   // Estados para los campos del formulario
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
-    fullName: user?.user_metadata?.full_name || "Nombre Apellido",
+    fullName: user?.name || "Nombre Apellido",
     email: user?.email || "correo.estudiante@email.com",
     timeZone: "America/Panama (UTC-5)",
   })
@@ -452,7 +452,7 @@ export default function ProfileScreen() {
                 justifyContent: "space-between",
                 paddingVertical: theme.spacing.sm,
               }}
-              onPress={() => router.push("/settings/privacy")}
+              onPress={() => router.push("/settings/Privacy" as any)}
             >
               <ThemedView style={{ flexDirection: "row", alignItems: "center" }}>
                 <View

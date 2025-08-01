@@ -20,7 +20,7 @@ export interface UseModalReturn {
   showModal: (config: Omit<ModalState, 'visible' | 'onClose'>) => void;
   hideModal: () => void;
   showError: (message: string, title?: string, onConfirm?: () => void) => void;
-  showSuccess: (message: string, title?: string, onConfirm?: () => void) => void;
+  showSuccess: (message: string, title?: string, onConfirm?: () => void, autoClose?: number) => void;
   showWarning: (message: string, title?: string, onConfirm?: () => void) => void;
   showInfo: (message: string, title?: string, onConfirm?: () => void) => void;
   showConfirm: (
@@ -69,7 +69,8 @@ export const useModal = (): UseModalReturn => {
   const showSuccess = useCallback((
     message: string, 
     title?: string, 
-    onConfirm?: () => void
+    onConfirm?: () => void,
+    autoClose?: number
   ) => {
     showModal({
       type: 'success',
@@ -77,7 +78,7 @@ export const useModal = (): UseModalReturn => {
       title,
       onConfirm,
       showCancel: false,
-      autoClose: 3000, // Auto close success messages after 3 seconds
+      autoClose: autoClose, // Permitir override del autoClose
     });
   }, [showModal]);
 

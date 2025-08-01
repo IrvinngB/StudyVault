@@ -27,7 +27,7 @@ const PersonalInformationScreen: React.FC = () => {
 
   // Estados para los campos del formulario
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
-    fullName: user?.user_metadata?.full_name || "Nombre Apellido",
+    fullName: user?.name || "Nombre Apellido",
     email: user?.email || "correo.estudiante@email.com",
     timeZone: "America/Panama (UTC-5)",
     phoneNumber: "+507 0000-0000",
@@ -46,7 +46,8 @@ const PersonalInformationScreen: React.FC = () => {
 
   // Función para guardar cambios
   const handleSave = (): void => {
-    recordProfileUpdated() // Registrar acción para Easter egg
+    // TODO: Implementar la lógica para guardar en la base de datos
+    // recordProfileUpdated() // Registrar acción para Easter egg
     Alert.alert("Información actualizada", "Tus datos personales han sido guardados correctamente.", [
       { text: "OK", onPress: () => setIsEditing(false) },
     ])

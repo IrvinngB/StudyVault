@@ -3,7 +3,7 @@
 import { ClassSelector } from "@/components/calendar/ClassSelector"
 import { ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { EVENT_TYPES_CONFIG } from "@/constants/Calendar"
-import type { CalendarEvent, EventType, UpdateCalendarEventRequest } from "@/database/models/calendarTypes"
+import type { CalendarEvent, EventCategory, EventType, UpdateCalendarEventRequest } from "@/database/models/calendarTypes"
 import type { ClassData as ClassDataWithClassroom } from "@/database/models/types"
 import { useClasses } from "@/hooks/useClasses"
 import { useTheme } from "@/hooks/useTheme"
@@ -305,7 +305,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
           start_datetime: startDateTimeString,
           end_datetime: endDateTimeString,
           event_type: eventType,
-          event_category: currentEventConfig?.category || "general_event",
+          event_category: (currentEventConfig?.category as EventCategory) || "general_event",
           class_id: selectedClass?.id || undefined,
           location: currentEventConfig?.supportsClassroom 
             ? (classroom.trim() || undefined) // Para eventos con aula, guardar el classroom en location

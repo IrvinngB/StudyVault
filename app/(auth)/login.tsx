@@ -44,6 +44,7 @@ export default function LoginScreen() {
       setBiometricReady(available)
     })()
   }, [isAuthenticated, params.email])
+  
   // Login normal
   const handleLogin = async () => {
     setErrors({})
@@ -128,8 +129,12 @@ export default function LoginScreen() {
 
   return (
     <>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <ThemedView variant="background" style={{ flex: 1 }}>
+      <ThemedView variant="background" style={{ flex: 1 }}>
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
           <ScrollView
             contentContainerStyle={{
               flexGrow: 1,
@@ -169,19 +174,6 @@ export default function LoginScreen() {
                   error={errors.password}
                 />
 
-                {/* Forgot password link */}
-                {/* <View style={{ alignItems: "flex-end" }}>
-                  <ThemedButton
-                    title="¿Olvidaste tu contraseña?"
-                    variant="ghost"
-                    size="small"
-                    onPress={() => {
-                      console.log("Navegando a forgot-password") // Para debug
-                      router.push("/(auth)/forgot-password")
-                    }}
-                  />
-                </View> */}
-
                 <ThemedButton
                   title={isLoading ? "Iniciando sesión..." : "🔑 Iniciar Sesión"}
                   variant="primary"
@@ -194,16 +186,13 @@ export default function LoginScreen() {
                 {/* Botón biométrico */}
                 {biometricReady && (
                   <ThemedButton
-                    title="Iniciar sesión con biometría"
+                    title="🔐 Iniciar sesión con biometría"
                     variant="secondary"
                     size="large"
                     onPress={handleBiometricLogin}
                     style={{ marginTop: theme.spacing.sm }}
                   />
                 )}
-
-                {/* Botones para probar modales */}
-               
 
                 {/* Register Link */}
                 <View
@@ -228,8 +217,8 @@ export default function LoginScreen() {
               </View>
             </ThemedCard>
           </ScrollView>
-        </ThemedView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </ThemedView>
       {/* Modal usando useModal hook */}
       <AppModal {...modalProps} onClose={modalProps.onClose || (() => {})} />
     </>

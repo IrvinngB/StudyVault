@@ -2,6 +2,7 @@
 
 import type React from "react"
 
+import { apiClient } from "@/database/api/client"
 import type { AuthSession, UserProfile } from "@/database/models/types"
 import { authService } from "@/database/services/authService"
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
@@ -109,8 +110,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(session?.user || null)
     })
 
+    // Listen for auth invalidation from API client (403/401 errors)
+    const unregisterAuthInvalidation = apiClient.onAuthInvalidation(() => {
+      console.log("🚨 Invalidación de autenticación detectada por API client")
+      setSession(null)
+      setUser(null)
+      setIsLoading(false)
+      setIsTransitioning(false)
+      // Forzar reinicialización
+      isInitialized.current = false
+      initializationPromise.current = null
+    })
+
     return () => {
       subscription?.unsubscribe()
+      unregisterAuthInvalidation()
     }
   }, [initialize])
 
