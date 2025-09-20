@@ -259,6 +259,91 @@ export const useNotes = (initialParams?: NotesSearchParams): UseNotesResult => {
   };
 };
 
+// --- Hook para manejo de archivos de notas ---
+
+export interface UseNoteFilesResult {
+  uploadFile: (noteId: string, file: File) => Promise<{ message: string; attachment: AttachmentData; file_path: string } | null>;
+  downloadFile: (noteId: string, fileId: string) => Promise<Blob | null>;
+  deleteFile: (noteId: string, fileId: string) => Promise<{ message: string } | null>;
+  listFiles: (noteId: string) => Promise<{ id: number; filename: string; type: string; size: number; mime_type?: string; uploaded_at?: string }[] | null>;
+  loading: boolean;
+  error: string | null;
+}
+
+export const useNoteFiles = (): UseNoteFilesResult => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const uploadFile = useCallback(async (noteId: string, file: File) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await notesService.uploadFileToNote(noteId, file);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al subir archivo');
+      console.error('Error uploading file:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const downloadFile = useCallback(async (noteId: string, fileId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const blob = await notesService.downloadFileFromNote(noteId, fileId);
+      return blob;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al descargar archivo');
+      console.error('Error downloading file:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteFile = useCallback(async (noteId: string, fileId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await notesService.deleteFileFromNote(noteId, fileId);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar archivo');
+      console.error('Error deleting file:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const listFiles = useCallback(async (noteId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await notesService.listNoteFiles(noteId);
+      return result.files;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al listar archivos');
+      console.error('Error listing files:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    uploadFile,
+    downloadFile,
+    deleteFile,
+    listFiles,
+    loading,
+    error,
+  };
+};
+
 // --- Otros Hooks relacionados con Notas (Mantenerlos si los necesitas en tu app) ---
 
 /**

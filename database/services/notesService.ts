@@ -294,6 +294,87 @@ class NotesService {
   }
 
   /**
+   * Subir un archivo a una nota
+   */
+  async uploadFileToNote(noteId: string, file: File): Promise<{ message: string; attachment: AttachmentData; file_path: string }> {
+    try {
+      console.log('📁 NotesService: Subiendo archivo a nota:', noteId, file.name);
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await this.apiClient.upload<{ message: string; attachment: AttachmentData; file_path: string }>(`/notes/${noteId}/upload-file`, formData);
+      
+      console.log('✅ NotesService: Archivo subido exitosamente');
+      return response;
+    } catch (error) {
+      console.error('❌ NotesService: Error al subir archivo:', error);
+      throw new Error(`No se pudo subir el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
+  }
+
+  /**
+   * Descargar un archivo de una nota
+   */
+  async downloadFileFromNote(noteId: string, fileId: string): Promise<Blob> {
+    try {
+      console.log('📁 NotesService: Descargando archivo de nota:', noteId, fileId);
+      
+      const response = await fetch(`${this.apiClient.getBaseURL()}/notes/${noteId}/download/${fileId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.apiClient.getCurrentUser()?.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error al descargar archivo: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      console.log('✅ NotesService: Archivo descargado exitosamente');
+      return blob;
+    } catch (error) {
+      console.error('❌ NotesService: Error al descargar archivo:', error);
+      throw new Error(`No se pudo descargar el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
+  }
+
+  /**
+   * Eliminar un archivo de una nota
+   */
+  async deleteFileFromNote(noteId: string, fileId: string): Promise<{ message: string }> {
+    try {
+      console.log('📁 NotesService: Eliminando archivo de nota:', noteId, fileId);
+      
+      const response = await this.apiClient.delete<{ message: string }>(`/notes/${noteId}/files/${fileId}`);
+      
+      console.log('✅ NotesService: Archivo eliminado exitosamente');
+      return response;
+    } catch (error) {
+      console.error('❌ NotesService: Error al eliminar archivo:', error);
+      throw new Error(`No se pudo eliminar el archivo: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
+  }
+
+  /**
+   * Listar archivos de una nota
+   */
+  async listNoteFiles(noteId: string): Promise<{ files: { id: number; filename: string; type: string; size: number; mime_type?: string; uploaded_at?: string }[] }> {
+    try {
+      console.log('📁 NotesService: Listando archivos de nota:', noteId);
+      
+      const response = await this.apiClient.get<{ files: { id: number; filename: string; type: string; size: number; mime_type?: string; uploaded_at?: string }[] }>(`/notes/${noteId}/files`);
+      
+      console.log('✅ NotesService: Archivos listados exitosamente:', response.files.length);
+      return response;
+    } catch (error) {
+      console.error('❌ NotesService: Error al listar archivos:', error);
+      throw new Error(`No se pudieron listar los archivos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
+  }
+
+  /**
    * Buscar notas por texto (búsqueda local en el cliente)
    */
   searchNotesLocally(notes: NoteData[], searchText: string): NoteData[] {
