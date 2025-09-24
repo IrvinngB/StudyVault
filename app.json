@@ -7,7 +7,7 @@
     "icon": "./assets/Assets.xcassets/AppIcon.appiconset/1024.png",
     "scheme": "studyvault",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/Assets.xcassets/AppIcon.appiconset/1024.png",
