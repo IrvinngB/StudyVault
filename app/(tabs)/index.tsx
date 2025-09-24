@@ -3,45 +3,34 @@
 import { IconSymbol } from "@/components/ui/IconSymbol"
 import { ThemedButton, ThemedCard, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { AVAILABLE_AVATARS } from "@/database/models/userTypes"
-import { useGlobalModal } from "@/hooks/ModalProvider"
 import { useAuth } from "@/hooks/useAuth"
 import { useClasses } from "@/hooks/useClasses"
+import { useNotes } from "@/hooks/useNotes"
 import { useStreakSystem } from "@/hooks/useStreakSystem"
 import { useTasks } from "@/hooks/useTasks"
 import { useTheme } from "@/hooks/useTheme"
 import { useUserProfile } from "@/hooks/useUserProfile"
-import { clearCredentialsIfNeeded } from "@/utils/biometricAuth"
 import { router } from "expo-router"
-import { Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native"
+import { Image, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-const { width } = Dimensions.get("window")
-
-interface DailyStats {
-  tasksCompleted: number
-  totalTasks: number
-  streak: number
-}
 
 export default function HomeScreen() {
   const { theme } = useTheme()
-  const { signOut, user } = useAuth()
-  const { showConfirm, showModal } = useGlobalModal()
+  const { user } = useAuth()
   const { tasks } = useTasks()
   const { classes } = useClasses()
-  const insets = useSafeAreaInsets()
+  const { recentNotes, notesStats } = useNotes()
   const { profile } = useUserProfile()
-
-  // Nuevo sistema de rachas
-  const {
-    streakData,
-    streakStatus,
-    motivation,
-    nextMilestone,
-    achievedMilestones,
-    recentActivities,
-    refreshStreak
+  const { 
+    streakData, 
+    streakStatus, 
+    motivation, 
+    getStreakTitle, 
+    getWeeklyProgress
   } = useStreakSystem(tasks, profile)
+  const insets = useSafeAreaInsets()
+
 
 
 
@@ -61,8 +50,19 @@ export default function HomeScreen() {
   
   const dailyStats = {
     tasksCompleted: completedToday,
-    totalTasks: todayTasks.length,
-    streak: streakData.current
+    totalTasks: todayTasks.length
+  }
+
+  // Progreso semanal
+  const weeklyProgress = getWeeklyProgress()
+  
+  // Estadísticas adicionales
+  const additionalStats = {
+    totalNotes: notesStats.total,
+    favoriteNotes: notesStats.favorites,
+    notesWithAI: notesStats.withAISummary,
+    streakDays: streakData.current,
+    longestStreak: streakData.longest
   }
 
   // Función para obtener el color del icono basado en el progreso
@@ -102,25 +102,6 @@ export default function HomeScreen() {
 
   const avatarSource = getAvatarSource()
 
-  const handleLogout = () => {
-    showConfirm(
-      "¿Estás seguro de que quieres cerrar sesión?",
-      async () => {
-        try {
-          const currentEmail = user?.email || null
-          await signOut()
-          await clearCredentialsIfNeeded(currentEmail)
-          router.replace("/(auth)/login")
-        } catch (error) {
-          console.error("Error al cerrar sesión:", error)
-        }
-      },
-      () => {
-  
-      },
-      "Cerrar Sesión",
-    )
-  }
 
   // Get upcoming tasks with proper class names
   const upcomingTasks = tasks
@@ -163,7 +144,7 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           scrollIndicatorInsets={{ top: insets.top }}
         >
-          {/* Header */}
+          {/* Header simplificado */}
           <ThemedView
             style={{
               flexDirection: "row",
@@ -176,71 +157,137 @@ export default function HomeScreen() {
               <ThemedText
                 variant="h1"
                 style={{
-                  fontSize: 28,
-                  fontWeight: "800",
+                  fontSize: 24,
+                  fontWeight: "700",
                   marginBottom: theme.spacing.xs,
                 }}
               >
-                {getGreeting()}, {userName}! 👋
+                {getGreeting()}, {userName}!
               </ThemedText>
-              <ThemedText variant="body" color="secondary" style={{ fontSize: 16 }}>
-                Continúa con tu racha de estudio
+              <ThemedText variant="body" color="secondary" style={{ fontSize: 14 }}>
+                {new Date().toLocaleDateString('es-ES', { 
+                  weekday: 'long', 
+                  day: 'numeric', 
+                  month: 'long' 
+                })}
               </ThemedText>
             </ThemedView>
 
-            <ThemedView style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
-              <TouchableOpacity>
-                <IconSymbol name="bell" size={24} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  if (profile) {
-                    const avatar = AVAILABLE_AVATARS.find((a) => a.id === profile.avatar_url)
-                    const avatarName = avatar?.name || "No seleccionado"
-                    showModal({
-                      type: "info",
-                      title: "Perfil de Usuario",
-                      message: `Nombre: ${profile.full_name || "No especificado"}\nEmail: ${profile.email || user?.email || "No especificado"}\nAvatar: ${avatarName}`,
-                      confirmText: "Ir a Ajustes",
-                      cancelText: "Cerrar",
-                      onConfirm: () => navigateTo("/settings"),
-                    })
-                  } else {
-                    navigateTo("/settings")
-                  }
-                }}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: avatarSource ? "transparent" : theme.colors.primary,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  overflow: "hidden",
-                }}
-              >
-                {avatarSource ? (
-                  <Image
-                    source={avatarSource}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 22,
-                    }}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <ThemedText variant="button" style={{ color: "white", fontWeight: "600" }}>
-                    {userInitials}
-                  </ThemedText>
-                )}
-              </TouchableOpacity>
-            </ThemedView>
+            <TouchableOpacity
+              onPress={() => navigateTo("/settings")}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: avatarSource ? "transparent" : theme.colors.primary,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                overflow: "hidden",
+              }}
+            >
+              {avatarSource ? (
+                <Image
+                  source={avatarSource}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                  }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <ThemedText variant="button" style={{ color: "white", fontWeight: "600", fontSize: 14 }}>
+                  {userInitials}
+                </ThemedText>
+              )}
+            </TouchableOpacity>
           </ThemedView>
 
-          {/* Stats Cards */}
+          {/* Sección de Racha */}
+          {streakData.current > 0 && (
+            <ThemedCard
+              variant="elevated"
+              padding="medium"
+              style={{
+                marginBottom: theme.spacing.lg,
+                backgroundColor: streakStatus.color + "10",
+                borderWidth: 1,
+                borderColor: streakStatus.color + "30",
+              }}
+            >
+              <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.sm }}>
+                <ThemedView
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: theme.colors.background,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    marginRight: theme.spacing.sm,
+                    ...theme.shadows.small,
+                  }}
+                >
+                  <IconSymbol name="flame" size={22} color={streakStatus.color} />
+                </ThemedView>
+                <ThemedView style={{ flex: 1 }}>
+                  <ThemedText variant="h3" style={{ fontWeight: "700", marginBottom: 2 }}>
+                    {streakData.current} días de racha
+                  </ThemedText>
+                  <ThemedText variant="caption" color="secondary">
+                    {getStreakTitle()} • {streakStatus.message}
+                  </ThemedText>
+                </ThemedView>
+                <ThemedView style={{ alignItems: "flex-end" }}>
+                  <ThemedText variant="h2" style={{ fontWeight: "700", color: streakStatus.color }}>
+                    {streakData.current}
+                  </ThemedText>
+                  <ThemedText variant="caption" color="secondary">
+                    días
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+              
+              <ThemedText variant="body" color="secondary" style={{ marginBottom: theme.spacing.sm }}>
+                {motivation}
+              </ThemedText>
+              
+
+              
+              {/* Progreso semanal */}
+              <ThemedView style={{ marginBottom: theme.spacing.sm }}>
+                <ThemedView style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: theme.spacing.xs }}>
+                  <ThemedText variant="caption" color="secondary">
+                    Progreso semanal
+                  </ThemedText>
+                  <ThemedText variant="caption" color="secondary">
+                    {weeklyProgress.completed}/7 días
+                  </ThemedText>
+                </ThemedView>
+                <ThemedView
+                  style={{
+                    height: 6,
+                    backgroundColor: theme.colors.border,
+                    borderRadius: 3,
+                    overflow: "hidden",
+                  }}
+                >
+                  <ThemedView
+                    style={{
+                      height: "100%",
+                      width: `${weeklyProgress.percentage}%`,
+                      backgroundColor: streakStatus.color,
+                      borderRadius: 3,
+                    }}
+                  />
+                </ThemedView>
+              </ThemedView>
+            </ThemedCard>
+          )}
+
+          {/* Stats Cards expandidas */}
           <ThemedView
             style={{
               flexDirection: "row",
@@ -250,12 +297,13 @@ export default function HomeScreen() {
               gap: theme.spacing.sm,
             }}
           >
-            {/* Tasks */}
+            {/* Tareas de hoy */}
             <ThemedCard
               variant="outlined"
               padding="medium"
               style={{
-                width: (width - theme.spacing.md * 2 - theme.spacing.sm) / 2,
+                flex: 1,
+                minWidth: "48%",
                 alignItems: "center",
               }}
             >
@@ -287,55 +335,97 @@ export default function HomeScreen() {
               )}
             </ThemedCard>
 
-            {/* Streak - Nuevo sistema */}
+            {/* Total de materias */}
             <ThemedCard
               variant="outlined"
               padding="medium"
               style={{
-                width: (width - theme.spacing.md * 2 - theme.spacing.sm) / 2,
+                flex: 1,
+                minWidth: "48%",
                 alignItems: "center",
               }}
             >
               <View
                 style={{
-                  backgroundColor: streakStatus.color + "20",
+                  backgroundColor: theme.colors.primary + "20",
                   padding: theme.spacing.sm,
                   borderRadius: theme.borderRadius.full,
                   marginBottom: theme.spacing.sm,
                 }}
               >
-                <IconSymbol name="flame" size={24} color={streakStatus.color} />
+                <IconSymbol name="book.closed.fill" size={24} color={theme.colors.primary} />
+              </View>
+              <ThemedText variant="caption" color="secondary" style={{ marginBottom: 4 }}>
+                Materias
+              </ThemedText>
+              <ThemedText variant="h2" style={{ fontWeight: "700" }}>
+                {classes.length}
+              </ThemedText>
+              <ThemedText variant="caption" color="secondary" style={{ marginTop: 2, textAlign: 'center' }}>
+                {classes.length > 0 ? 'En curso' : 'Sin materias'}
+              </ThemedText>
+            </ThemedCard>
+
+            {/* Notas totales */}
+            <ThemedCard
+              variant="outlined"
+              padding="medium"
+              style={{
+                flex: 1,
+                minWidth: "48%",
+                alignItems: "center",
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: theme.colors.success + "20",
+                  padding: theme.spacing.sm,
+                  borderRadius: theme.borderRadius.full,
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
+                <IconSymbol name="doc.text.fill" size={24} color={theme.colors.success} />
+              </View>
+              <ThemedText variant="caption" color="secondary" style={{ marginBottom: 4 }}>
+                Notas
+              </ThemedText>
+              <ThemedText variant="h2" style={{ fontWeight: "700" }}>
+                {additionalStats.totalNotes}
+              </ThemedText>
+              <ThemedText variant="caption" color="secondary" style={{ marginTop: 2, textAlign: 'center' }}>
+                {additionalStats.favoriteNotes > 0 ? `${additionalStats.favoriteNotes} favoritas` : 'Sin notas'}
+              </ThemedText>
+            </ThemedCard>
+
+            {/* Racha actual */}
+            <ThemedCard
+              variant="outlined"
+              padding="medium"
+              style={{
+                flex: 1,
+                minWidth: "48%",
+                alignItems: "center",
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: (streakStatus.color || theme.colors.warning) + "20",
+                  padding: theme.spacing.sm,
+                  borderRadius: theme.borderRadius.full,
+                  marginBottom: theme.spacing.sm,
+                }}
+              >
+                <IconSymbol name="flame" size={24} color={streakStatus.color || theme.colors.warning} />
               </View>
               <ThemedText variant="caption" color="secondary" style={{ marginBottom: 4 }}>
                 Racha
               </ThemedText>
-              <ThemedText variant="h2" style={{ fontWeight: "700", color: streakStatus.color }}>
-                {streakData.current} días
+              <ThemedText variant="h2" style={{ fontWeight: "700" }}>
+                {additionalStats.streakDays}
               </ThemedText>
-              <ThemedText variant="body" color="secondary" style={{ marginTop: 2, textAlign: 'center' }}>
-                {motivation}
+              <ThemedText variant="caption" color="secondary" style={{ marginTop: 2, textAlign: 'center' }}>
+                {additionalStats.longestStreak > additionalStats.streakDays ? `Mejor: ${additionalStats.longestStreak}` : '¡Nuevo récord!'}
               </ThemedText>
-              {nextMilestone && (
-                <ThemedText variant="caption" color="primary" style={{ marginTop: 2, textAlign: 'center' }}>
-                  Próximo logro: {nextMilestone} días
-                </ThemedText>
-              )}
-              {/* Botón de debug temporal */}
-              <TouchableOpacity
-                onPress={() => {
-              
-                  refreshStreak()
-                }}
-                style={{
-                  backgroundColor: theme.colors.primary + "20",
-                  paddingHorizontal: theme.spacing.sm,
-                  paddingVertical: 4,
-                  borderRadius: theme.borderRadius.sm,
-                  marginTop: theme.spacing.sm,
-                }}
-              >
-                
-              </TouchableOpacity>
             </ThemedCard>
           </ThemedView>
 
@@ -395,116 +485,132 @@ export default function HomeScreen() {
             </ThemedCard>
           )}
 
-          {/* Instrucciones para probar la app */}
-          {true && (
-            <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
-              <ThemedView
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginBottom: theme.spacing.md,
-                }}
-              >
-                <IconSymbol name="lightbulb" size={24} color={theme.colors.primary} />
-                <ThemedText
-                  variant="h2"
-                  style={{
-                    marginLeft: theme.spacing.sm,
-                    fontWeight: "700",
-                  }}
-                >
-                  ¡Bienvenido a StudyVault! 🎓
+          {/* Notas Recientes */}
+          {recentNotes.length > 0 && (
+            <ThemedCard
+              variant="outlined"
+              padding="medium"
+              style={{
+                marginBottom: theme.spacing.lg,
+              }}
+            >
+              <ThemedView style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.sm }}>
+                <IconSymbol name="doc.text" size={20} color={theme.colors.primary} />
+                <ThemedText variant="h3" style={{ marginLeft: theme.spacing.sm, fontWeight: "600" }}>
+                  Notas recientes
                 </ThemedText>
               </ThemedView>
-
-              <ThemedText variant="body" color="secondary" style={{ marginBottom: theme.spacing.md }}>
-                Aquí tienes algunas ideas para comenzar a usar la app:
-              </ThemedText>
-
-              <ThemedView style={{ gap: theme.spacing.sm }}>
-                <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                  <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600", marginRight: theme.spacing.xs }}>
-                    1.
-                  </ThemedText>
-                  <ThemedText variant="body" color="secondary" style={{ flex: 1 }}>
-                    <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600" }}>
-                      Crea una materia:
-                    </ThemedText>{" "}
-                    Ve a &quot;Clases&quot; y agrega tus materias del semestre
-                  </ThemedText>
-                </ThemedView>
-
-                <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                  <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600", marginRight: theme.spacing.xs }}>
-                    2.
-                  </ThemedText>
-                  <ThemedText variant="body" color="secondary" style={{ flex: 1 }}>
-                    <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600" }}>
-                      Agrega tareas:
-                    </ThemedText>{" "}
-                    Ve a &quot;Tareas&quot; y crea tareas con fechas de vencimiento
-                  </ThemedText>
-                </ThemedView>
-
-                <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                  <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600", marginRight: theme.spacing.xs }}>
-                    3.
-                  </ThemedText>
-                  <ThemedText variant="body" color="secondary" style={{ flex: 1 }}>
-                    <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600" }}>
-                      Completa tareas:
-                    </ThemedText>{" "}
-                    Marca las tareas como completadas para mantener tu racha
-                  </ThemedText>
-                </ThemedView>
-
-                <ThemedView style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                  <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600", marginRight: theme.spacing.xs }}>
-                    4.
-                  </ThemedText>
-                  <ThemedText variant="body" color="secondary" style={{ flex: 1 }}>
-                    <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600" }}>
-                      Sistema de rachas:
-                    </ThemedText>{" "}
-                    Tu racha aumenta si completas tareas sin tener atrasadas, o si no tienes tareas atrasadas
-                  </ThemedText>
-                </ThemedView>
-              </ThemedView>
-
-              <ThemedView style={{ 
-                backgroundColor: theme.colors.primary + "10", 
-                padding: theme.spacing.md, 
-                borderRadius: theme.borderRadius.md,
-                marginTop: theme.spacing.md,
-                borderLeftWidth: 4,
-                borderLeftColor: theme.colors.primary
-              }}>
-                <ThemedText variant="body" style={{ color: theme.colors.primary, fontWeight: "600", marginBottom: theme.spacing.xs }}>
-                  💡 Tip para probar el sistema de rachas:
-                </ThemedText>
-                <ThemedText variant="bodySmall" color="secondary" style={{ marginBottom: theme.spacing.md }}>
-                  Crea una tarea para hoy, complétala y verás cómo aumenta tu racha. También puedes crear tareas para días futuros y ver cómo se mantiene la racha sin tareas atrasadas.
-                </ThemedText>
-
-                <ThemedView style={{ flexDirection: "row", gap: theme.spacing.sm }}>
-                  <ThemedButton
-                    title="Crear Materia"
-                    variant="primary"
-                    size="small"
-                    onPress={() => navigateTo("/courses/create")}
-                    style={{ flex: 1 }}
-                  />
-                  <ThemedButton
-                    title="Crear Tarea"
-                    variant="secondary"
-                    size="small"
-                    onPress={() => navigateTo("/tasks")}
-                    style={{ flex: 1 }}
-                  />
-                </ThemedView>
-              </ThemedView>
+              
+              {recentNotes.slice(0, 3).map((note, index) => {
+                const noteClass = classes.find((cls) => cls.id === note.class_id)
+                return (
+                  <TouchableOpacity
+                    key={note.id}
+                    onPress={() => navigateTo(`/notes/${note.id}`)}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      paddingVertical: theme.spacing.sm,
+                      borderBottomWidth: index < Math.min(recentNotes.length, 3) - 1 ? 1 : 0,
+                      borderBottomColor: theme.colors.border,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: note.is_favorite ? theme.colors.warning : theme.colors.primary,
+                        marginRight: theme.spacing.sm,
+                      }}
+                    />
+                    <ThemedView style={{ flex: 1 }}>
+                      <ThemedText variant="body" style={{ fontWeight: "500", marginBottom: 2 }}>
+                        {note.title}
+                      </ThemedText>
+                      <ThemedText variant="caption" color="secondary">
+                        {noteClass?.name || "Sin materia"} • {note.updated_at ? new Date(note.updated_at).toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'short'
+                        }) : 'Sin fecha'}
+                      </ThemedText>
+                    </ThemedView>
+                    {note.is_favorite && (
+                      <IconSymbol name="heart.fill" size={16} color={theme.colors.warning} />
+                    )}
+                    <IconSymbol name="chevron.right" size={16} color={theme.colors.textSecondary} />
+                  </TouchableOpacity>
+                )
+              })}
             </ThemedCard>
           )}
+
+          {/* Acciones rápidas */}
+          <ThemedCard variant="elevated" padding="large" style={{ marginBottom: theme.spacing.lg }}>
+            <ThemedView
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: theme.spacing.md,
+              }}
+            >
+              <IconSymbol name="bolt.fill" size={24} color={theme.colors.primary} />
+              <ThemedText
+                variant="h3"
+                style={{
+                  marginLeft: theme.spacing.sm,
+                  fontWeight: "600",
+                }}
+              >
+                Acciones rápidas
+              </ThemedText>
+            </ThemedView>
+
+            <ThemedView style={{ gap: theme.spacing.sm }}>
+              <ThemedView style={{ flexDirection: "row", gap: theme.spacing.sm }}>
+                <ThemedButton
+                  title="Nueva Tarea"
+                  variant="primary"
+                  onPress={() => navigateTo("/tasks")}
+                  icon={<IconSymbol name="plus" size={18} color="white" />}
+                  style={{ flex: 1 }}
+                />
+                <ThemedButton
+                  title="Nueva Nota"
+                  variant="secondary"
+                  onPress={() => navigateTo("/notes/create")}
+                  icon={<IconSymbol name="doc.text" size={18} color="white" />}
+                  style={{ flex: 1 }}
+                />
+              </ThemedView>
+
+              <ThemedView style={{ flexDirection: "row", gap: theme.spacing.sm }}>
+                <ThemedButton
+                  title="Ver Calendario"
+                  variant="outline"
+                  onPress={() => navigateTo("/calendar")}
+                  icon={<IconSymbol name="calendar" size={18} color={theme.colors.primary} />}
+                  style={{ flex: 1 }}
+                />
+                <ThemedButton
+                  title="Ver Notas"
+                  variant="outline"
+                  onPress={() => navigateTo("/notes")}
+                  icon={<IconSymbol name="doc.text.fill" size={18} color={theme.colors.primary} />}
+                  style={{ flex: 1 }}
+                />
+              </ThemedView>
+
+              {classes.length === 0 && (
+                <ThemedButton
+                  title="Crear Primera Materia"
+                  variant="ghost"
+                  onPress={() => navigateTo("/courses/create")}
+                  icon={<IconSymbol name="book.closed" size={18} color={theme.colors.primary} />}
+                />
+              )}
+            </ThemedView>
+          </ThemedCard>
         </ScrollView>
       </ThemedView>
     </KeyboardAvoidingView>
