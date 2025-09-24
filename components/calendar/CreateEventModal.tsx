@@ -9,6 +9,7 @@ import type { ClassData } from "@/database/services"
 import { useAuth } from "@/hooks/useAuth"
 import { useAutoCategory } from "@/hooks/useAutoCategory"
 import { useTheme } from "@/hooks/useTheme"
+import { useModal } from "@/hooks/modals"
 import { scheduleCalendarNotification } from "@/utils/notifications"
 import { convertLocalToUTC, formatTimeWithPreferences, getTimezoneInfo } from "@/utils/timezoneHelpers"
 import { Ionicons } from "@expo/vector-icons"
@@ -33,6 +34,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   const { theme } = useTheme()
   const { user } = useAuth()
   const { createAutoGradeForEvent } = useAutoCategory()
+  const { showError, showSuccess } = useModal()
   const [loading, setLoading] = useState(false)
   const [use24HourFormat, setUse24HourFormat] = useState(false)
 
@@ -157,18 +159,18 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      Alert.alert("Error", "El título es requerido")
+      showError("El título es requerido", "Error")
       return
     }
 
     // Validar horarios
     if (startTime >= endTime) {
-      Alert.alert("Error", "La hora de inicio debe ser anterior a la hora de fin")
+      showError("La hora de inicio debe ser anterior a la hora de fin", "Error")
       return
     }
 
     if (currentEventConfig?.requiresClass && !selectedClass) {
-      Alert.alert("Error", "Por favor selecciona una clase para este tipo de evento")
+      showError("Por favor selecciona una clase para este tipo de evento", "Error")
       return
     }
 
@@ -295,10 +297,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       }
 
       // Cerrar modal automáticamente al completar exitosamente
-      setTimeout(() => {
-        Alert.alert("Éxito", "Evento creado correctamente")
-        handleClose()
-      }, 100)
+      showSuccess("Evento creado correctamente", "Éxito", () => handleClose(), 1200)
     } catch (error: any) {
       console.error("Error creating calendar event:", error)
 
@@ -313,7 +312,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
         errorMessage = error
       }
 
-      Alert.alert("Error", errorMessage)
+      showError(errorMessage, "Error")
     } finally {
       setLoading(false)
     }

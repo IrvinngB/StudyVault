@@ -139,26 +139,30 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
       hasTodayOrFutureTasks
     })
 
-    // LÓGICA MEJORADA:
+    // LÓGICA CORREGIDA:
     // 1. Si completó al menos una tarea hoy = actividad válida
     if (hasCompletedTaskToday) {
       console.log('🎉 Activity: Completed task today')
       return true
     }
 
-    // 2. Si no hay tareas atrasadas Y no hay tareas para hoy = día libre válido
-    if (!hasOverdueTasks && !hasTodayOrFutureTasks) {
-      console.log('✅ Activity: True day off (no overdue, no tasks for today)')
+    // 2. Verificar si hay tareas programadas para hoy
+    const todayTasks = tasks.filter(task => {
+      if (task.status === 'completed') return false
+      
+      const dueDate = new Date(task.due_date || task.start_datetime)
+      dueDate.setHours(0, 0, 0, 0)
+      
+      return dueDate.getTime() === today.getTime()
+    })
+
+    // 3. Solo considerar como actividad si hay tareas programadas para hoy
+    if (todayTasks.length > 0) {
+      console.log('✅ Activity: Has tasks scheduled for today')
       return true
     }
 
-    // 3. Si no hay tareas atrasadas pero sí hay tareas para hoy/futuro = puede ser día libre válido también
-    if (!hasOverdueTasks) {
-      console.log('✅ Activity: No overdue tasks (day off)')
-      return true
-    }
-
-    console.log('❌ No activity: Has overdue tasks and no completed tasks')
+    console.log('❌ No activity: No completed tasks and no tasks scheduled for today')
     return false
   }, [tasks])
 
@@ -211,15 +215,26 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
       const hasOverdueTasks = overdueTasks.length > 0
       const hasCompletedTaskOnDay = completedTasks.length > 0
 
-      // LÓGICA MEJORADA: Se considera actividad válida si:
+      // LÓGICA CORREGIDA: Se considera actividad válida SOLO si:
       // 1. Se completó al menos una tarea ese día
-      // 2. O no había tareas atrasadas (día libre válido)
+      // 2. O había tareas programadas para ese día (aunque no se completaran)
       let hasActivity = false
       
       if (hasCompletedTaskOnDay) {
         hasActivity = true
-      } else if (!hasOverdueTasks) {
-        hasActivity = true
+      } else {
+        // Verificar si había tareas programadas para ese día
+        const tasksForDay = tasks.filter(task => {
+          if (task.status === 'completed') return false
+          
+          const dueDate = new Date(task.due_date || task.start_datetime)
+          dueDate.setHours(0, 0, 0, 0)
+          
+          return dueDate.getTime() === checkDate.getTime()
+        })
+        
+        // Solo considerar como actividad si había tareas programadas para ese día
+        hasActivity = tasksForDay.length > 0
       }
 
       activities.push({
@@ -265,12 +280,23 @@ export const useStreakSystem = (tasks: any[], profile: any) => {
       console.log('🔄 Calculating streak for date:', todayStr)
       console.log('📊 Available tasks:', tasks?.length || 0)
       
+      // Debug: Mostrar información de las tareas
+      if (tasks && tasks.length > 0) {
+        console.log('📊 Tasks sample:', tasks.slice(0, 3).map(t => ({
+          id: t.task_id || t.calendar_event_id,
+          title: t.task_title || t.event_title,
+          status: t.status,
+          due_date: t.due_date || t.start_datetime,
+          updated_at: t.updated_at
+        })))
+      }
+      
       // Obtener actividades de los últimos 30 días
       const activities = getLast30DaysActivities()
       setRecentActivities(activities)
 
       console.log('📊 Activities calculated:', activities.length)
-      console.log('📊 Recent activities sample:', activities.slice(0, 5).map(a => ({
+      console.log('📊 Recent activities sample:', activities.slice(0, 7).map(a => ({
         date: a.date,
         completed: a.tasksCompleted,
         hasActivity: a.hasActivity

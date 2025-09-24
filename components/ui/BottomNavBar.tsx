@@ -4,6 +4,7 @@ import { IconSymbol } from "@/components/ui/IconSymbol"
 import { ThemedText } from "@/components/ui/ThemedComponents"
 import { useTheme } from "@/hooks/useTheme"
 import { usePathname, useRouter } from "expo-router"
+import { useCallback, useRef } from "react"
 import { TouchableOpacity, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
@@ -14,13 +15,12 @@ interface NavItem {
   route: string
 }
 
+// Reducido a 5 tabs principales según mejores prácticas de UI/UX
 const navItems: NavItem[] = [
   { key: "home", label: "Inicio", icon: "house.fill", route: "/" },
-  { key: "courses", label: "Clases", icon: "book.closed.fill", route: "/courses" },
+  { key: "notes", label: "Notas", icon: "note.text", route: "/notes" },
   { key: "tasks", label: "Tareas", icon: "checklist", route: "/tasks" },
   { key: "calendar", label: "Calendario", icon: "calendar", route: "/calendar" },
-  { key: "notes", label: "Notas", icon: "note.text", route: "/notes" },
-  { key: "settings", label: "Ajustes", icon: "gear", route: "/settings" },
 ]
 
 export default function BottomNavBar() {
@@ -28,17 +28,34 @@ export default function BottomNavBar() {
   const router = useRouter()
   const pathname = usePathname()
   const insets = useSafeAreaInsets()
+  
+  // Ref para controlar el debounce
+  const lastPressTime = useRef<number>(0)
+  const DEBOUNCE_TIME = 500 // 500ms de debounce
 
-  const isActive = (route: string) => {
+  const isActive = useCallback((route: string) => {
     if (route === "/") {
       return pathname === "/" || pathname === "/(tabs)"
     }
     return pathname.startsWith(route)
-  }
+  }, [pathname])
 
-  const handlePress = (route: string) => {
+  const handlePress = useCallback((route: string) => {
+    const now = Date.now()
+    
+    // Evitar navegación si ya estamos en esa ruta
+    if (isActive(route)) {
+      return
+    }
+    
+    // Aplicar debounce para evitar múltiples navegaciones
+    if (now - lastPressTime.current < DEBOUNCE_TIME) {
+      return
+    }
+    
+    lastPressTime.current = now
     router.push(route as any)
-  }
+  }, [router, isActive])
 
   return (
     <View
@@ -74,13 +91,15 @@ export default function BottomNavBar() {
                 paddingVertical: 8,
                 paddingHorizontal: 4,
                 borderRadius: 12,
-                backgroundColor: active ? theme.colors.text : "transparent",
+                backgroundColor: active ? theme.colors.primary + "20" : "transparent",
+                opacity: active ? 1 : 0.7,
               }}
+              activeOpacity={0.6}
             >
               <IconSymbol
                 name={item.icon as any}
                 size={22}
-                color={active ? theme.colors.background : theme.colors.textMuted}
+                color={active ? theme.colors.primary : theme.colors.textMuted}
                 style={{ marginBottom: 4 }}
               />
               <ThemedText
@@ -88,7 +107,7 @@ export default function BottomNavBar() {
                 style={{
                   fontSize: 11,
                   fontWeight: active ? "600" : "500",
-                  color: active ? theme.colors.background : theme.colors.textMuted,
+                  color: active ? theme.colors.primary : theme.colors.textMuted,
                 }}
               >
                 {item.label}

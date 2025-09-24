@@ -6,7 +6,6 @@ import { IconSymbol } from "@/components/ui/IconSymbol"
 import { ThemedButton, ThemedCard, ThemedInput, ThemedText, ThemedView } from "@/components/ui/ThemedComponents"
 import { classService } from "@/database/services/courseService"
 import {
-  type AttachmentData,
   type CreateNoteRequest,
   type NoteData,
   notesService,
@@ -15,18 +14,14 @@ import {
 import { useModal } from "@/hooks/modals"
 import { useTheme } from "@/hooks/useTheme"
 import * as DocumentPicker from "expo-document-picker"
-import * as FileSystem from 'expo-file-system'
 import * as ImagePicker from "expo-image-picker"
-import * as IntentLauncher from 'expo-intent-launcher'
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { useEffect, useState } from "react"
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Linking,
   Modal,
-  Platform,
   ScrollView,
   TouchableOpacity,
   View,
@@ -71,7 +66,11 @@ export default function NoteDetailScreen() {
 
   // Efecto para cargar la nota y las materias cuando cambia el ID
   useEffect(() => {
+    let isMounted = true
+    
     const loadNoteAndSubjects = async () => {
+      if (!isMounted) return
+      
       setLoading(true)
       setError(null)
 
@@ -116,13 +115,13 @@ export default function NoteDetailScreen() {
 
             // Cargar archivos adjuntos existentes
             if (loadedNote.attachments) {
-              const images = loadedNote.attachments.filter((att) => att.type === "image").map((att) => att.local_path)
+              const images = loadedNote.attachments.filter((att) => att.type === "image").map((att) => att.public_url || att.storage_path)
               const documents = loadedNote.attachments
                 .filter((att) => att.type === "document")
                 .map((att) => ({
-                  uri: att.local_path,
+                  uri: att.public_url || att.storage_path,
                   name: att.filename,
-                  mimeType: att.filename.endsWith('.pdf') ? 'application/pdf' : 'text/plain'
+                  mimeType: att.mime_type || (att.filename.endsWith('.pdf') ? 'application/pdf' : 'text/plain')
                 }))
 
               setAttachedImages(images)
@@ -138,32 +137,24 @@ export default function NoteDetailScreen() {
       } else {
         setError("ID de nota inválido.")
       }
-      setLoading(false)
+      if (isMounted) {
+        setLoading(false)
+      }
     }
+    
     loadNoteAndSubjects()
+    
+    return () => {
+      isMounted = false
+    }
   }, [id])
 
   // Manejador para guardar la nota
   const handleSaveNote = async () => {
     if (!noteForm.title.trim()) {
-      Alert.alert("Error", "El título es requerido")
+      showError("El título es requerido", "Error")
       return
     }
-
-    const attachmentsToSave: AttachmentData[] = [
-      ...attachedImages.map((uri) => ({
-        filename: uri.substring(uri.lastIndexOf("/") + 1),
-        type: "image" as const,
-        size: 0,
-        local_path: uri,
-      })),
-      ...attachedDocuments.map((doc) => ({
-        filename: doc.name,
-        type: "document" as const,
-        size: 0,
-        local_path: doc.uri,
-      })),
-    ]
 
     try {
       setLoading(true)
@@ -174,21 +165,56 @@ export default function NoteDetailScreen() {
         tags: noteForm.tags,
         is_favorite: noteForm.is_favorite,
         local_files_path: "StudyFiles",
-        attachments: attachmentsToSave,
+        attachments: [], // Los archivos se subirán por separado
         ai_summary: noteForm.ai_summary,
       }
 
+      let noteId: string
+
       if (isNewNote) {
         const createdNote = await notesService.createNote(dataToSave)
+        noteId = createdNote.id
         showSuccess("Nota creada exitosamente!", "Éxito")
-        router.replace(`/notes/${createdNote.id}`)
       } else {
         const updateRequest: UpdateNoteRequest = {
           id: noteForm.id!,
           ...dataToSave,
         }
         await notesService.updateNote(updateRequest)
+        noteId = noteForm.id!
         showSuccess("Nota actualizada exitosamente!", "Éxito")
+      }
+
+      // Subir archivos adjuntos a Supabase Storage vía FastAPI
+      if (attachedImages.length > 0 || attachedDocuments.length > 0) {
+        try {
+          // Filtrar SOLO archivos locales nuevos (evitar re-subir URLs públicas o rutas de storage)
+          const isLocalUri = (uri: string) => uri.startsWith('file://') || uri.startsWith('content://')
+
+          const newLocalImages = attachedImages.filter(isLocalUri)
+          const newLocalDocuments = attachedDocuments.filter((d) => isLocalUri(d.uri))
+
+          // Subir imágenes (solo locales recién agregadas)
+          for (const imageUri of newLocalImages) {
+            const fileName = `image_${Date.now()}.jpg`
+            await notesService.uploadFileToNote(noteId, imageUri, fileName, 'image/jpeg')
+          }
+
+          // Subir documentos (solo locales recién agregados)
+          for (const doc of newLocalDocuments) {
+            await notesService.uploadFileToNote(noteId, doc.uri, doc.name, doc.mimeType)
+          }
+
+          showSuccess("Archivos subidos exitosamente!", "Éxito")
+        } catch (uploadError: any) {
+          console.error("Error al subir archivos:", uploadError)
+          showError(`Error al subir archivos: ${uploadError.message}`, "Advertencia")
+        }
+      }
+
+      if (isNewNote) {
+        router.replace(`/notes/${noteId}`)
+      } else {
         router.back()
       }
     } catch (e: any) {
@@ -288,7 +314,7 @@ export default function NoteDetailScreen() {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const assets = result.assets
         setAttachedImages((prev) => [...prev, assets[0].uri])
-        showSuccess("Imagen adjuntada correctamente", "Éxito")
+        showSuccess("Imagen seleccionada correctamente", "Éxito")
       }
     } catch (err) {
       console.error("Error al seleccionar imagen:", err)
@@ -340,30 +366,36 @@ export default function NoteDetailScreen() {
   // Función para abrir documento
   const openDocument = async (uri: string, mimeType: string) => {
     try {
-      if (Platform.OS === 'android') {
-        if (!FileSystem.documentDirectory) {
-          throw new Error('Document directory is not available');
+      console.log('📄 Abriendo documento:', uri, 'MIME:', mimeType);
+      
+      // Verificar si la URL es válida
+      if (!uri || uri === '') {
+        showError('URL del documento no válida', 'Error');
+        return;
+      }
+      
+      // Para URLs de Supabase Storage, usar Linking directamente
+      if (uri.startsWith('http')) {
+        const canOpen = await Linking.canOpenURL(uri);
+        if (canOpen) {
+          await Linking.openURL(uri);
+          showSuccess('Documento abierto correctamente', 'Éxito', undefined, 2000);
+        } else {
+          showError('No se puede abrir este tipo de archivo', 'Error');
         }
-
-        const fileName = uri.split('/').pop();
-        if (!fileName) {
-          throw new Error('Invalid file URI');
-        }
-
-        const fileUri = FileSystem.documentDirectory + fileName;
-        await FileSystem.copyAsync({ from: uri, to: fileUri });
-
-        const contentUri = await FileSystem.getContentUriAsync(fileUri);
-        IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
-          data: contentUri,
-          flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
-          type: mimeType,
-        });
       } else {
-        Linking.openURL(uri);
+        // Para archivos locales (si los hay)
+        const canOpen = await Linking.canOpenURL(uri);
+        if (canOpen) {
+          await Linking.openURL(uri);
+          showSuccess('Documento abierto correctamente', 'Éxito', undefined, 2000);
+        } else {
+          showError('No se puede abrir este archivo local', 'Error');
+        }
       }
     } catch (error) {
       console.error('Error opening document:', error);
+      showError('No se pudo abrir el documento. Verifica que tengas una aplicación compatible instalada.', 'Error');
     }
   }
 
@@ -774,12 +806,23 @@ export default function NoteDetailScreen() {
           {/* Preview de adjuntos */}
           {totalAttachments > 0 && (
             <View style={{ marginTop: theme.spacing.md }}>
-              <ThemedText variant="body" style={{
-                fontWeight: "600",
-                marginBottom: theme.spacing.sm
+              <View style={{ 
+                flexDirection: "row", 
+                alignItems: "center", 
+                justifyContent: "space-between",
+                marginBottom: theme.spacing.sm 
               }}>
-                Vista previa:
-              </ThemedText>
+                <ThemedText variant="body" style={{ fontWeight: "600" }}>
+                  Archivos adjuntos ({totalAttachments})
+                </ThemedText>
+                {totalAttachments > 3 && (
+                  <TouchableOpacity onPress={() => setShowAttachmentsModal(true)}>
+                    <ThemedText variant="caption" style={{ color: theme.colors.primary }}>
+                      Ver todos
+                    </ThemedText>
+                  </TouchableOpacity>
+                )}
+              </View>
 
               {/* Mostrar solo las primeras 3 imágenes */}
               {attachedImages.length > 0 && (

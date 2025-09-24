@@ -21,9 +21,10 @@ export interface AttachmentData {
   filename: string;
   type: 'image' | 'document' | 'audio' | 'video' | 'other';
   size: number;
-  local_path: string;
+  storage_path: string;
+  public_url?: string;
   mime_type?: string;
-  thumbnail_path?: string;
+  uploaded_at?: string;
 }
 
 export interface CreateNoteRequest {
@@ -294,18 +295,31 @@ class NotesService {
   }
 
   /**
-   * Subir un archivo a una nota
+   * Subir un archivo a una nota usando Supabase Storage vía FastAPI
    */
-  async uploadFileToNote(noteId: string, file: File): Promise<{ message: string; attachment: AttachmentData; file_path: string }> {
+  async uploadFileToNote(noteId: string, fileUri: string, fileName: string, mimeType: string = 'application/octet-stream'): Promise<{ message: string; attachment: AttachmentData; file_path: string }> {
     try {
-      console.log('📁 NotesService: Subiendo archivo a nota:', noteId, file.name);
+      console.log('📁 NotesService: Subiendo archivo a nota vía Supabase Storage:', noteId, fileName);
+      console.log('📁 NotesService: File URI:', fileUri);
+      console.log('📁 NotesService: File name:', fileName);
+      console.log('📁 NotesService: MIME type:', mimeType);
       
+      // Crear FormData con el formato correcto para React Native
       const formData = new FormData();
-      formData.append('file', file);
+      
+      // Formato específico para React Native
+      formData.append('file', {
+        uri: fileUri,
+        name: fileName,
+        type: mimeType,
+      } as any);
+      
+      console.log('📁 NotesService: FormData creado, enviando...');
       
       const response = await this.apiClient.upload<{ message: string; attachment: AttachmentData; file_path: string }>(`/notes/${noteId}/upload-file`, formData);
       
-      console.log('✅ NotesService: Archivo subido exitosamente');
+      console.log('✅ NotesService: Archivo subido exitosamente a Supabase Storage');
+      console.log('✅ NotesService: Response:', response);
       return response;
     } catch (error) {
       console.error('❌ NotesService: Error al subir archivo:', error);
@@ -314,11 +328,11 @@ class NotesService {
   }
 
   /**
-   * Descargar un archivo de una nota
+   * Descargar un archivo de una nota desde Supabase Storage vía FastAPI
    */
   async downloadFileFromNote(noteId: string, fileId: string): Promise<Blob> {
     try {
-      console.log('📁 NotesService: Descargando archivo de nota:', noteId, fileId);
+      console.log('📁 NotesService: Descargando archivo de nota desde Supabase Storage:', noteId, fileId);
       
       const response = await fetch(`${this.apiClient.getBaseURL()}/notes/${noteId}/download/${fileId}`, {
         method: 'GET',
@@ -332,7 +346,7 @@ class NotesService {
       }
 
       const blob = await response.blob();
-      console.log('✅ NotesService: Archivo descargado exitosamente');
+      console.log('✅ NotesService: Archivo descargado exitosamente desde Supabase Storage');
       return blob;
     } catch (error) {
       console.error('❌ NotesService: Error al descargar archivo:', error);
@@ -341,15 +355,15 @@ class NotesService {
   }
 
   /**
-   * Eliminar un archivo de una nota
+   * Eliminar un archivo de una nota desde Supabase Storage vía FastAPI
    */
   async deleteFileFromNote(noteId: string, fileId: string): Promise<{ message: string }> {
     try {
-      console.log('📁 NotesService: Eliminando archivo de nota:', noteId, fileId);
+      console.log('📁 NotesService: Eliminando archivo de nota desde Supabase Storage:', noteId, fileId);
       
       const response = await this.apiClient.delete<{ message: string }>(`/notes/${noteId}/files/${fileId}`);
       
-      console.log('✅ NotesService: Archivo eliminado exitosamente');
+      console.log('✅ NotesService: Archivo eliminado exitosamente de Supabase Storage');
       return response;
     } catch (error) {
       console.error('❌ NotesService: Error al eliminar archivo:', error);
@@ -358,15 +372,15 @@ class NotesService {
   }
 
   /**
-   * Listar archivos de una nota
+   * Listar archivos de una nota desde Supabase Storage vía FastAPI
    */
-  async listNoteFiles(noteId: string): Promise<{ files: { id: number; filename: string; type: string; size: number; mime_type?: string; uploaded_at?: string }[] }> {
+  async listNoteFiles(noteId: string): Promise<{ files: { id: number; filename: string; type: string; size: number; mime_type?: string; public_url?: string; uploaded_at?: string }[] }> {
     try {
-      console.log('📁 NotesService: Listando archivos de nota:', noteId);
+      console.log('📁 NotesService: Listando archivos de nota desde Supabase Storage:', noteId);
       
-      const response = await this.apiClient.get<{ files: { id: number; filename: string; type: string; size: number; mime_type?: string; uploaded_at?: string }[] }>(`/notes/${noteId}/files`);
+      const response = await this.apiClient.get<{ files: { id: number; filename: string; type: string; size: number; mime_type?: string; public_url?: string; uploaded_at?: string }[] }>(`/notes/${noteId}/files`);
       
-      console.log('✅ NotesService: Archivos listados exitosamente:', response.files.length);
+      console.log('✅ NotesService: Archivos listados exitosamente desde Supabase Storage:', response.files.length);
       return response;
     } catch (error) {
       console.error('❌ NotesService: Error al listar archivos:', error);

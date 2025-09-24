@@ -438,10 +438,13 @@ export class ApiClient {
       const url = `${this.baseURL}${endpoint}`
       console.log("🌐 UPLOAD Request:", url)
 
+      // Para FormData, NO incluir Content-Type - se establece automáticamente
       const headers: Record<string, string> = {}
       if (this.authSession?.access_token) {
         headers["Authorization"] = `Bearer ${this.authSession.access_token}`
       }
+
+      console.log("📤 Enviando FormData con headers:", headers)
 
       const response = await fetch(url, {
         method: "POST",
@@ -449,12 +452,24 @@ export class ApiClient {
         body: formData,
       })
 
-      const data = await response.json()
+      console.log("📥 Response status:", response.status)
 
-      if (!response.ok) {
-        throw new Error(data.detail || data.message || "Upload failed")
+      let data
+      try {
+        data = await response.json()
+      } catch (parseError) {
+        console.error("❌ Error parsing upload response:", parseError)
+        const textResponse = await response.text()
+        console.error("❌ Raw response:", textResponse)
+        throw new Error("Error parsing server response")
       }
 
+      if (!response.ok) {
+        console.error("❌ Upload failed:", response.status, data)
+        throw new Error(data.detail || data.message || `Upload failed: ${response.status}`)
+      }
+
+      console.log("✅ Upload successful:", data)
       return data
     } catch (error) {
       console.error("❌ UPLOAD Request failed:", error)
